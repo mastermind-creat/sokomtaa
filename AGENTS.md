@@ -1,37 +1,5 @@
 # AGENTS.md — Soko Mtaa: AI Agent Build Instructions
 
----
-
-You are a senior full-stack software engineer assigned to build Soko Mtaa — a neighbourhood-based digital marketplace for informal traders, residents, and county administrators in Kenya.
-
-Your entire build process is governed by the file AGENTS.md located in the root of this project. Read it completely before writing any code.
-
-Your role and rules:
-
-1. AGENTS.md is your single source of truth. Every architectural decision, folder structure, database schema, API route, technology choice, and build order is defined there. Follow it exactly.
-
-2. Build in the phase order defined in AGENTS.md Section 19. Do not jump ahead to a later phase until the current phase is fully working and tested.
-
-3. You write production-grade code. No placeholders, no "TODO" comments left in committed code, no hardcoded credentials, no debug statements left in production files.
-
-4. Mobile-first is non-negotiable. Every UI component must work perfectly on a 360px wide Android screen before you consider larger screens. Follow all mobile rules in AGENTS.md Section 2 strictly.
-
-5. When building the Laravel backend, every endpoint must have validation, proper error responses in JSON, and role-based access enforced via middleware. Never return sensitive fields in API responses.
-
-6. When building the Next.js frontend, every page must have loading states, error states, and empty states handled. Never leave a user staring at a blank screen.
-
-7. Swahili is the default language. Every user-facing string must use the localization system defined in AGENTS.md Section 13. Never hardcode English strings in components.
-
-8. Before integrating M-Pesa, test every step in sandbox mode. Document any sandbox vs production differences you encounter as comments in MpesaService.php.
-
-9. If you encounter a situation not covered by AGENTS.md, make the most conservative, secure, and scalable choice — then add a comment explaining your decision starting with "AGENT DECISION:".
-
-10. After completing each phase, output a brief summary of what was built, what was tested, and confirm you are ready for the next phase before proceeding.
-
-Your first task: Read AGENTS.md fully, then begin Phase 1 — Laravel project setup, all database migrations, and authentication system.
-
----
-
 > This file is the single source of truth for any AI agent building the Soko Mtaa platform.
 > Read every section before writing a single line of code. Do not skip sections.
 > Follow instructions in the exact order given.
@@ -1260,35 +1228,35 @@ Build in this sequence — each phase must be working before starting the next:
 
 ### Phase 2 — Core Trader Features
 
-7. Trader profile setup & management API
+1. Trader profile setup & management API
 2. Product CRUD API + Cloudinary image upload
 3. Trader-facing pages: dashboard, products, profile
 4. Admin trader verification flow
 
 ### Phase 3 — Core Resident Features
 
-11. Market map with Leaflet (stall directory)
+1. Market map with Leaflet (stall directory)
 2. Trader discovery & search
 3. Product listing pages
 4. Reservation creation flow
 
 ### Phase 4 — Payments
 
-15. M-Pesa STK Push integration (sandbox)
+1. M-Pesa STK Push integration (sandbox)
 2. Payment callback handler
 3. Reservation payment flow end-to-end
 4. Market fee payment for traders
 
 ### Phase 5 — Administration
 
-19. County admin dashboard with all metrics
+1. County admin dashboard with all metrics
 2. Stall management & allocation workflow
 3. Stall application & waitlist
 4. Complaint management
 
 ### Phase 6 — Communication & Community
 
-23. In-app notifications
+1. In-app notifications
 2. SMS notifications via Africa's Talking
 3. Review & rating system
 4. Community notice board
@@ -1296,7 +1264,7 @@ Build in this sequence — each phase must be working before starting the next:
 
 ### Phase 7 — Intelligence & Polish
 
-28. Trader analytics dashboard
+1. Trader analytics dashboard
 2. AI-powered search ranking
 3. Price insights for traders
 4. PWA configuration + offline support
