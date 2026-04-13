@@ -1,0 +1,151 @@
+<?php
+
+namespace App\Http\Controllers\Resident;
+
+use App\Http\Controllers\Controller;
+use App\Models\Reservation;
+use App\Models\Product;
+use App\Services\NotificationService;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
+
+class ReservationController extends Controller
+{
+    use ApiResponse;
+
+    protected $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
+    /**
+     * Update reservation status (Trader only).
+     */
+    public function updateStatus($id, Request $request): JsonResponse
+    {
+        $request->validate([
+            'status' => 'required|in:ready,completed,cancelled',
+        ]);
+
+        $reservation = Reservation::findOrFail($id);
+        $user = Auth::user();
+
+        // Security check: Only the trader who owns the product can update status
+        if ($reservation->trader_id !== $user->trader?->id) {
+            return $this->error('Huruhusiwi kubadilisha hali ya uhifadhi huu. (Unauthorized.)', 'UNAUTHORIZED', 403);
+        }
+
+        $reservation->update(['status' => $request->status]);
+
+        // Trigger Notification
+        $this->notificationService->notifyReservationUpdate(
+            $reservation->resident, 
+            $reservation, 
+            $request->status
+        );
+
+        return $this->success($reservation, 'Hali ya uhifadhi imesasishwa. (Status updated.)');
+    }
+
+    /**
+     * List all reservations for the authenticated resident.
+     */
+    public function index(): JsonResponse
+    {
+        $user = Auth::user();
+        $reservations = Reservation::where('resident_id', $user->id)
+            ->with(['trader', 'product'])
+            ->latest()
+            ->paginate(15);
+
+        return $this->success($reservations);
+    }
+
+    /**
+     * Create a new reservation.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'quantity' => 'required|integer|min:1',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $product = Product::findOrFail($request->product_id);
+
+        // 1. Check Product availability
+        if (!$product->is_active || $product->stock_status === 'out_of_stock') {
+            return $this->error('Bidhaa hii haipatikani kwa sasa. (Product not currently available.)', 'NOT_AVAILABLE', 422);
+        }
+
+        if ($product->stock_quantity !== null && $product->stock_quantity < $request->quantity) {
+            return $this->error('Bidhaa haitoshi. (Insufficient stock available.)', 'INSUFFICIENT_STOCK', 422);
+        }
+
+        return DB::transaction(function () use ($request, $product) {
+            $user = Auth::user();
+            
+            // 2. Generate Unique Reservation Code
+            $code = 'SM-' . strtoupper(Str::random(6));
+            while (Reservation::where('reservation_code', $code)->exists()) {
+                $code = 'SM-' . strtoupper(Str::random(6));
+            }
+
+            // 3. Create Reservation
+            $reservation = Reservation::create([
+                'reservation_code' => $code,
+                'resident_id' => $user->id,
+                'trader_id' => $product->trader_id,
+                'product_id' => $product->id,
+                'quantity' => $request->quantity,
+                'unit_price' => $product->price,
+                'total_amount' => $product->price * $request->quantity,
+                'status' => 'pending',
+                'notes' => $request->notes,
+                'pickup_deadline' => now()->addHours(24), // Default 24h pickup window
+            ]);
+
+            // 4. Update Product Stock
+            if ($product->stock_quantity !== null) {
+                $product->stock_quantity -= $request->quantity;
+                
+                if ($product->stock_quantity <= 0) {
+                    $product->stock_status = 'out_of_stock';
+                    $product->stock_quantity = 0;
+                } elseif ($product->stock_quantity <= 5) {
+                    $product->stock_status = 'low';
+                }
+                
+                $product->save();
+            }
+
+            // 5. Update Product Lifetime Reservations
+            $product->increment('total_reservations');
+
+            return $this->success($reservation, 'Bidhaa imehifadhiwa. (Reservation created successfully.)', 201);
+        });
+    }
+
+    /**
+     * View details of a single reservation.
+     */
+    public function show(Reservation $reservation): JsonResponse
+    {
+        $user = Auth::user();
+        
+        if ($reservation->resident_id !== $user->id && $reservation->trader_id !== $user->trader?->id) {
+            return $this->error('Huruhusiwi kuona hii. (Unauthorized access.)', 'UNAUTHORIZED', 403);
+        }
+
+        $reservation->load(['trader', 'product', 'resident']);
+
+        return $this->success($reservation);
+    }
+}
