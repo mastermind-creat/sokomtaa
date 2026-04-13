@@ -77,7 +77,7 @@ class MpesaService
         ];
 
         $response = Http::withToken($token)
-            ->post($this->baseUrl . '/mpesa/stkpush/v1/query' ? $this->baseUrl . '/mpesa/stkpush/v1/processrequest' : $this->baseUrl . '/mpesa/stkpush/v1/processrequest', $payload);
+            ->post($this->baseUrl . '/mpesa/stkpush/v1/processrequest', $payload);
 
         if ($response->failed()) {
             Log::error('Mpesa STK Push Failed: ' . $response->body());

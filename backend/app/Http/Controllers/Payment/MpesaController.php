@@ -58,7 +58,7 @@ class MpesaController extends Controller
             $ref = 'FEE-' . $fee->id;
         }
 
-        $stkResponse = $this->mpesaService.stkPush(
+        $stkResponse = $this->mpesaService->stkPush(
             $request->phone_number,
             $amount,
             $ref,

@@ -59,7 +59,7 @@ class ComplaintController extends Controller
             'status'         => 'open',
         ]);
 
-        return $this->success($complaint, 'Lalamishi lako limepokelewa. (Your complaint has been received.)', 21)
+        return $this->success($complaint, 'Lalamishi lako limepokelewa. (Your complaint has been received.)', 201);
     }
 
     /**

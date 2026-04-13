@@ -3,9 +3,10 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { Search, MapPin, Tag, Menu, LayoutDashboard, Loader2, Sparkles } from 'lucide-react';
+import { Search, MapPin, LayoutDashboard, Loader2, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { ApiResponse } from '@/types';
 import BottomNav from '@/components/shared/BottomNav';
 import NotificationBell from '@/components/shared/NotificationBell';
@@ -25,6 +26,7 @@ interface Market {
 export default function HomePage() {
     const { user } = useAuthStore();
     const router = useRouter();
+    const { t } = useTranslation();
 
     // Fetch Markets
     const { data: marketData, isLoading: marketsLoading } = useQuery<ApiResponse<Market[]>>({
@@ -44,15 +46,28 @@ export default function HomePage() {
                     <span className="font-display font-black text-xl text-green-950 tracking-tighter">Soko Mtaa</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    {user?.role === 'trader' && (
-                        <button 
-                            onClick={() => router.push('/dashboard')}
-                            className="p-2 h-11 px-4 flex items-center gap-2 rounded-xl bg-brand-50 text-brand-700 font-bold text-xs border border-brand-100 active:scale-95 transition-all"
-                        >
-                            <LayoutDashboard size={18} /> Dash
-                        </button>
+                    {!user ? (
+                        <div className="flex items-center gap-3 mr-1">
+                            <button onClick={() => router.push('/login')} className="text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors">
+                                {t('home.sign_in')}
+                            </button>
+                            <button onClick={() => router.push('/register')} className="h-9 px-4 bg-brand-600 text-white rounded-xl text-xs font-black shadow-brand-sm active:scale-95 transition-all">
+                                {t('home.sign_up')}
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            {user.role === 'trader' && (
+                                <button 
+                                    onClick={() => router.push('/dashboard')}
+                                    className="p-2 h-11 px-4 flex items-center gap-2 rounded-xl bg-brand-50 text-brand-700 font-bold text-xs border border-brand-100 active:scale-95 transition-all"
+                                >
+                                    <LayoutDashboard size={18} /> Dash
+                                </button>
+                            )}
+                            <NotificationBell />
+                        </>
                     )}
-                    <NotificationBell />
                 </div>
             </header>
 
@@ -60,7 +75,7 @@ export default function HomePage() {
             <section className="p-6 pt-10 animate-fade-up">
                 <div className="flex items-center gap-2 mb-2">
                     <span className="bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
-                        {user ? user.role : 'Karibu'}
+                        {user ? user.role : t('common.register')}
                     </span>
                     {user?.role === 'trader' && (
                         <span className="flex items-center gap-1 text-[10px] bg-brand-100 text-brand-700 font-black uppercase tracking-widest px-2 py-0.5 rounded-full animate-pulse-brand">
@@ -68,9 +83,8 @@ export default function HomePage() {
                         </span>
                     )}
                 </div>
-                <h1 className="text-4xl mb-1 text-green-950 tracking-tight font-black">Hujambo, {user?.name || 'Mgeni'}!</h1>
-                <p className="text-text-secondary text-base leading-snug">Unatafuta nini sokoni leo?</p>
-                <p className="text-xs text-text-muted mt-0.5">(What are you looking for in the market today?)</p>
+                <h1 className="text-4xl mb-1 text-green-950 tracking-tight font-black">{t('home.greeting')}, {user?.name || t('home.guest')}!</h1>
+                <p className="text-text-secondary text-base leading-snug">{t('home.subtitle')}</p>
             </section>
 
             {/* Search Bar - Stickyish */}
@@ -79,7 +93,7 @@ export default function HomePage() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-500 transition-colors" size={20} />
                     <input 
                         className="w-full h-[56px] pl-12 pr-4 bg-[#FFFFFF] rounded-2xl border border-[#E5E7EB] shadow-none cursor-pointer pointer-events-none placeholder:text-[#9CA3AF] text-[#1C1C1C]" 
-                        placeholder="Tafuta bidhaa au mfanyabiashara..." 
+                        placeholder={t('common.search_placeholder')} 
                         readOnly
                     />
                 </div>
@@ -88,7 +102,7 @@ export default function HomePage() {
             {/* Categories */}
             <section className="mb-10">
                 <div className="flex items-center justify-between mb-5 px-6">
-                    <h2 className="text-xl text-green-900 font-black">Makundi / Categories</h2>
+                    <h2 className="text-xl text-green-900 font-black">{t('home.categories_title')}</h2>
                 </div>
                 <div className="pb-4">
                     <CategoryFilter 
@@ -110,7 +124,7 @@ export default function HomePage() {
             {/* Featured Markets */}
             <section className="px-6 pb-28">
                 <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-xl text-green-900 font-black">Masoko / Markets</h2>
+                    <h2 className="text-xl text-green-900 font-black">{t('home.markets_title')}</h2>
                 </div>
                 <div className="space-y-4">
                     {marketsLoading && Array(2).fill(0).map((_, i) => (
@@ -133,7 +147,7 @@ export default function HomePage() {
                                     {market.location}
                                 </p>
                                 <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full inline-block border border-brand-100">
-                                    {market.traders_count} Traders Online
+                                    {market.traders_count} {t('home.traders_online')}
                                 </div>
                             </div>
                         </div>
