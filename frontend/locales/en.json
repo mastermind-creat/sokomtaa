@@ -1,0 +1,62 @@
+{
+  "common": {
+    "search": "Search markets, traders, or products...",
+    "markets": "Markets",
+    "traders": "Traders",
+    "products": "Products",
+    "dashboard": "Dashboard",
+    "analytics": "Analytics",
+    "profile": "Profile",
+    "settings": "Settings",
+    "language": "Language",
+    "logout": "Logout",
+    "login": "Login",
+    "register": "Register",
+    "back": "Back",
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "stalls": "Stalls",
+    "categories": "Categories",
+    "search_placeholder": "Search products or traders..."
+  },
+  "home": {
+    "greeting": "Hello",
+    "guest": "Guest",
+    "subtitle": "What are you looking for in the market today?",
+    "categories_title": "Categories",
+    "markets_title": "Markets",
+    "sign_in": "Sign In",
+    "sign_up": "Register",
+    "traders_online": "Traders Online"
+  },
+  "nav": {
+    "home": "Home",
+    "discover": "Discover",
+    "reservations": "Reservations",
+    "account": "Account",
+    "dawati": "Dashboard"
+  },
+  "trader": {
+    "my_stall": "My Stall",
+    "manage_products": "Manage Products",
+    "view_analytics": "View Analytics",
+    "shop_status": "Shop Status",
+    "open": "Open",
+    "closed": "Closed",
+    "update_status": "Update Shop Status",
+    "revenue": "Total Revenue",
+    "views": "Profile Views",
+    "price_insights": "Price Insights",
+    "market_comparison": "Market Price Comparison"
+  },
+  "resident": {
+    "nearby": "Markets Near You",
+    "top_traders": "Top Rated Traders",
+    "reserve_now": "Reserve Now",
+    "my_bookings": "My Bookings",
+    "leave_review": "Leave a Review"
+  }
+}

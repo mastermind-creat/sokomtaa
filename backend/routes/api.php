@@ -81,6 +81,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/stats', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'dashboardStats']);
         Route::get('/revenue', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'revenueTrends']);
         Route::get('/top-products', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'topProducts']);
+        Route::get('/price-insights', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'priceInsights']);
     });
 
     // Products (Strictly for Traders)

@@ -87,4 +87,55 @@ class TraderAnalyticsController extends Controller
 
         return $this->success($top);
     }
+
+    /**
+     * Get price intelligence/insights compared to local market averages.
+     */
+    public function priceInsights(): JsonResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $trader = $user->trader;
+        $marketId = $trader->market_id;
+
+        // 1. Get average prices for each category in THIS specific market
+        $marketAverages = Product::query()
+            ->join('traders', 'products.trader_id', '=', 'traders.id')
+            ->where('traders.market_id', $marketId)
+            ->where('products.is_active', true)
+            ->select('category_id', DB::raw('AVG(price) as average_price'))
+            ->groupBy('category_id')
+            ->get()
+            ->pluck('average_price', 'category_id');
+
+        // 2. Get trader's products and compare
+        $traderProducts = Product::where('trader_id', $trader->id)
+            ->where('is_active', true)
+            ->get()
+            ->map(function ($product) use ($marketAverages) {
+                $avgPrice = $marketAverages[$product->category_id] ?? 0;
+                $sentiment = 'competitive';
+                $diffPercent = 0;
+
+                if ($avgPrice > 0) {
+                    $diffPercent = (($product->price - $avgPrice) / $avgPrice) * 100;
+                    if ($diffPercent > 10) $sentiment = 'high';
+                    if ($diffPercent < -10) $sentiment = 'low';
+                }
+
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'market_average' => round($avgPrice, 2),
+                    'difference_percent' => round($diffPercent, 1),
+                    'sentiment' => $sentiment
+                ];
+            });
+
+        return $this->success([
+            'market_id' => $marketId,
+            'insights' => $traderProducts
+        ]);
+    }
 }

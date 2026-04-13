@@ -1,0 +1,62 @@
+{
+  "common": {
+    "search": "Tafuta masoko, wafanyabiashara, au bidhaa...",
+    "markets": "Masoko",
+    "traders": "Wafanyabiashara",
+    "products": "Bidhaa",
+    "dashboard": "Dawati",
+    "analytics": "Takwimu",
+    "profile": "Wasifu",
+    "settings": "Mipangilio",
+    "language": "Lugha",
+    "logout": "Toka",
+    "login": "Ingia",
+    "register": "Jisajili",
+    "back": "Rudi",
+    "save": "Hifadhi Mabadiliko",
+    "cancel": "Ghairi",
+    "confirm": "Thibitisha",
+    "loading": "Inapakia...",
+    "error": "Kuna hitilafu iliyotokea",
+    "stalls": "Vibanda",
+    "categories": "Makundi",
+    "search_placeholder": "Tafuta bidhaa au mfanyabiashara..."
+  },
+  "home": {
+    "greeting": "Hujambo",
+    "guest": "Mgeni",
+    "subtitle": "Unatafuta nini sokoni leo?",
+    "categories_title": "Makundi / Categories",
+    "markets_title": "Masoko / Markets",
+    "sign_in": "Ingia",
+    "sign_up": "Jisajili",
+    "traders_online": "Wafanyabiashara Online"
+  },
+  "nav": {
+    "home": "Nyumbani",
+    "discover": "Gundua",
+    "reservations": "Uhifadhi",
+    "account": "Akaunti",
+    "dawati": "Dawati"
+  },
+  "trader": {
+    "my_stall": "Kibanda Changu",
+    "manage_products": "Simamia Bidhaa",
+    "view_analytics": "Angalia Takwimu",
+    "shop_status": "Hali ya Duka",
+    "open": "Wazi",
+    "closed": "Limefungwa",
+    "update_status": "Badilisha Hali ya Duka",
+    "revenue": "Mapato Jumla",
+    "views": "Watazamaji Wasifu",
+    "price_insights": "Mtazamo wa Bei",
+    "market_comparison": "Ulinganisho wa Bei Sokoni"
+  },
+  "resident": {
+    "nearby": "Masoko Karibu Nawe",
+    "top_traders": "Wafanyabiashara Bora",
+    "reserve_now": "Hifadhi Sasa",
+    "my_bookings": "Uhifadhi Wangu",
+    "leave_review": "Toa Maoni"
+  }
+}

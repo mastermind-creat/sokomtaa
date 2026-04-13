@@ -22,8 +22,18 @@ class SearchService
             ->get()
             ->map(function ($product) {
                 $ratingWeight = $product->trader?->average_rating ?? 0;
-                $popularityWeight = min($product->total_reservations / 10, 5); // Max 5 pts from reservations
-                $product->reliability_score = ($ratingWeight * 0.7) + ($popularityWeight * 0.3);
+                $popularityWeight = min($product->total_reservations / 10, 5); 
+                
+                $score = ($ratingWeight * 0.7) + ($popularityWeight * 0.3);
+                
+                // Stock Availability Intelligence
+                if ($product->stock_status === 'out_of_stock') {
+                    $score *= 0.1; // Sink to the bottom
+                } elseif ($product->stock_status === 'low') {
+                    $score *= 0.8; // Slight penalty
+                }
+                
+                $product->reliability_score = $score;
                 $product->search_type = 'product';
                 return $product;
             });
@@ -34,9 +44,15 @@ class SearchService
             ->where('verification_status', 'verified')
             ->get()
             ->map(function ($trader) {
-                // Focus entirely on rating and profile views
                 $popularityWeight = min($trader->profile_views / 100, 5);
-                $trader->reliability_score = ($trader->average_rating * 0.8) + ($popularityWeight * 0.2);
+                $score = ($trader->average_rating * 0.8) + ($popularityWeight * 0.2);
+                
+                // Operational Intelligence
+                if (!$trader->is_open) {
+                    $score *= 0.5; // Closed shops rank lower
+                }
+                
+                $trader->reliability_score = $score;
                 $trader->search_type = 'trader';
                 return $trader;
             });

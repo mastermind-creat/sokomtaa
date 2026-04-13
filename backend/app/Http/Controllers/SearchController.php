@@ -25,7 +25,7 @@ class SearchController extends Controller
         $query = $request->input('q');
 
         if (!$query || strlen($query) < 2) {
-            return $this->successResponse([
+            return $this->success([
                 'results' => [],
                 'total' => 0,
                 'breakdown' => []
@@ -34,7 +34,7 @@ class SearchController extends Controller
 
         $results = $this->searchService->globalSearch($query);
 
-        return $this->successResponse($results, 'Search completed successfully.');
+        return $this->success($results, 'Search completed successfully.');
     }
 
     /**
@@ -44,6 +44,6 @@ class SearchController extends Controller
     {
         $segments = $this->searchService->getDiscoverySegments();
 
-        return $this->successResponse($segments, 'Recommendations retrieved successfully.');
+        return $this->success($segments, 'Recommendations retrieved successfully.');
     }
 }
