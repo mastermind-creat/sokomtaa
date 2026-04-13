@@ -22,6 +22,7 @@ interface Market {
     image_url?: string;
 }
 
+import { Logo } from '@/components/shared/Logo';
 
 export default function HomePage() {
     const { user } = useAuthStore();
@@ -41,9 +42,8 @@ export default function HomePage() {
             <div className="flex-1 w-full max-w-full lg:max-h-screen lg:overflow-y-auto no-scrollbar">
             {/* Top Bar */}
             <header className="p-4 flex items-center justify-between sticky top-0 bg-surface-base/80 backdrop-blur-md z-20 border-b border-border-default h-18">
-                <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center text-white font-black shadow-brand-md">SM</div>
-                    <span className="font-display font-black text-xl text-green-950 tracking-tighter">Soko Mtaa</span>
+                <div onClick={() => router.push('/')} className="flex items-center gap-2 cursor-pointer active:scale-95 transition-all">
+                    <Logo variant="light" width={160} />
                 </div>
                 <div className="flex items-center gap-2">
                     {!user ? (
@@ -59,7 +59,7 @@ export default function HomePage() {
                         <>
                             {user.role === 'trader' && (
                                 <button 
-                                    onClick={() => router.push('/dashboard')}
+                                    onClick={() => router.push('/trader/dashboard')}
                                     className="p-2 h-11 px-4 flex items-center gap-2 rounded-xl bg-brand-50 text-brand-700 font-bold text-xs border border-brand-100 active:scale-95 transition-all"
                                 >
                                     <LayoutDashboard size={18} /> Dash

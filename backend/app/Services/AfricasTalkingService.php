@@ -16,7 +16,7 @@ class AfricasTalkingService
         $apiKey = config('africastalking.api_key');
 
         if ($username && $apiKey) {
-            $this->at = new AfricaTalking($username, $apiKey);
+            $this->at = new AfricasTalking($username, $apiKey);
         }
     }
 
