@@ -1,0 +1,38 @@
+# Laravel
+backend/.env
+backend/.env.backup
+backend/.env.production
+backend/auth.json
+backend/node_modules
+backend/public/build
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+backend/storage/pail
+backend/storage/logs/*.log
+backend/vendor
+backend/.phpunit.result.cache
+backend/.phpunit.cache
+
+# Next.js
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/node_modules
+frontend/.next/
+frontend/out/
+frontend/build
+frontend/.vercel
+
+# IDEs and Misc
+.DS_Store
+.idea/
+.vscode/
+.nova/
+.zed/
+.fleet/
+.phpactor.json
+Thumbs.db
+*.log
