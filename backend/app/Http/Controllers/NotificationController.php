@@ -23,6 +23,18 @@ class NotificationController extends Controller
     }
 
     /**
+     * Get the count of unread notifications.
+     */
+    public function unreadCount(Request $request)
+    {
+        $count = Notification::where('user_id', $request->user()->id)
+            ->where('is_read', false)
+            ->count();
+
+        return $this->success(['count' => $count], 'Idadi ya taarifa ambazo hazijasomwa. (Unread count retrieved.)');
+    }
+
+    /**
      * Mark a specific notification as read.
      */
     public function markAsRead($id, Request $request)

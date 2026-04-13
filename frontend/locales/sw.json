@@ -20,14 +20,19 @@
     "error": "Kuna hitilafu iliyotokea",
     "stalls": "Vibanda",
     "categories": "Makundi",
-    "search_placeholder": "Tafuta bidhaa au mfanyabiashara..."
+    "search_placeholder": "Tafuta bidhaa au mfanyabiashara...",
+    "allocations": "Ugawaji",
+    "complaints": "Malalamiko",
+    "fees": "Ada za Soko",
+    "reports": "Ripoti",
+    "verification": "Uhakiki"
   },
   "home": {
     "greeting": "Hujambo",
     "guest": "Mgeni",
     "subtitle": "Unatafuta nini sokoni leo?",
-    "categories_title": "Makundi / Categories",
-    "markets_title": "Masoko / Markets",
+    "categories_title": "Makundi",
+    "markets_title": "Masoko",
     "sign_in": "Ingia",
     "sign_up": "Jisajili",
     "traders_online": "Wafanyabiashara Online"
@@ -40,8 +45,11 @@
     "dawati": "Dawati"
   },
   "trader": {
+    "dashboard_title": "Dawati la Biashara",
+    "dashboard_subtitle": "Takwimu za Biashara",
     "my_stall": "Kibanda Changu",
-    "manage_products": "Simamia Bidhaa",
+    "manage_products": "Dhibiti Bidhaa",
+    "new_product": "Bidhaa Mpya",
     "view_analytics": "Angalia Takwimu",
     "shop_status": "Hali ya Duka",
     "open": "Wazi",
@@ -50,7 +58,13 @@
     "revenue": "Mapato Jumla",
     "views": "Watazamaji Wasifu",
     "price_insights": "Mtazamo wa Bei",
-    "market_comparison": "Ulinganisho wa Bei Sokoni"
+    "market_comparison": "Ulinganisho wa Bei Sokoni",
+    "completed_sales": "Zimekamika",
+    "stock_alert": "Tahadhari ya Akiba",
+    "top_products": "Bidhaa Zinazovuma",
+    "verified": "Umedhibitishwa",
+    "pending": "Inasubiri",
+    "revenue_trend": "Mwelekeo wa Mapato"
   },
   "resident": {
     "nearby": "Masoko Karibu Nawe",
@@ -58,5 +72,37 @@
     "reserve_now": "Hifadhi Sasa",
     "my_bookings": "Uhifadhi Wangu",
     "leave_review": "Toa Maoni"
+  },
+  "admin": {
+    "dashboard_title": "Muhtasari wa Kaunti",
+    "live_analytics": "Takwimu Mubashara",
+    "subtitle": "Mwenendo wa sasa katika masoko yote.",
+    "export_report": "Toa Ripoti",
+    "broadcast_notice": "Tuma Taarifa",
+    "revenue_daily": "Maendeleo ya malengo ya leo",
+    "revenue_actual": "Halisi",
+    "revenue_trends": "Mwenendo wa Mapato",
+    "revenue_subtitle": "Ukusanyaji wa ada za masoko kila mwezi.",
+    "priority_actions": "Hatua za Kipaumbele",
+    "priority_subtitle": "Vitu vinavyohitaji uangalizi wako wa haraka.",
+    "view_all_tasks": "Angalia Kazi Zote"
+  },
+  "help": {
+    "title": "Kituo cha Msaada",
+    "how_can_we_help": "Tunawezaje kukusaidia?",
+    "search_placeholder": "Tafuta msaada hapa...",
+    "categories": {
+      "all": "Zote",
+      "getting_started": "Mwanzo",
+      "orders": "Maagizo",
+      "payments": "Malipo",
+      "rules": "Sheria"
+    },
+    "faqs_title": "Maswali Yanayoulizwa Sana",
+    "no_results": "Samahani, hatujapata jibu unalotafuta.",
+    "show_all": "Onyesha maswali yote",
+    "contact_title": "Bado unahitaji msaada?",
+    "contact_subtitle": "Timu yetu ya msaada iko tayari kukusaidia.",
+    "contact_button": "WASILIANA NASI SASA"
   }
 }

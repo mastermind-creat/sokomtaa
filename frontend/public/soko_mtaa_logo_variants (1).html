@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soko Mtaa — Logo Variants</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Plus Jakarta Sans', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #FAFAF5;
+    color: #1C1C1C;
+    padding: 48px 32px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6B7280;
+    margin-bottom: 28px;
+  }
+  .logo-stage {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+  .logo-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-bg-light {
+    background: #FAFAF5;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+  }
+  .logo-bg-dark {
+    background: #0A2E16;
+    border: 1px solid #1B6B3A;
+    border-radius: 16px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+  }
+  .logo-bg-green {
+    background: #1B6B3A;
+    border-radius: 16px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+  }
+  .logo-label {
+    font-size: 11px;
+    color: #6B7280;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .section-head {
+    font-size: 11px;
+    color: #6B7280;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding-top: 32px;
+    padding-bottom: 16px;
+    border-top: 1px solid #E5E7EB;
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+  .sizes-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 24px;
+    padding: 16px 0 8px;
+    flex-wrap: wrap;
+  }
+  .size-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .size-label {
+    font-size: 11px;
+    color: #9CA3AF;
+    text-align: center;
+  }
+  .meaning-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding-top: 12px;
+    margin-bottom: 40px;
+  }
+  .meaning-card {
+    background: #F3F4F6;
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .meaning-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-bottom: 8px;
+  }
+  .meaning-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1C1C1C;
+    margin-bottom: 4px;
+  }
+  .meaning-desc {
+    font-size: 11px;
+    color: #6B7280;
+    line-height: 1.5;
+  }
+  .pill-demo {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: #1B6B3A;
+    border-radius: 20px;
+    padding: 7px 16px;
+  }
+  .pill-label {
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+  @media (max-width: 600px) {
+    body { padding: 24px 16px; }
+    .logo-stage { grid-template-columns: 1fr; }
+    .meaning-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Soko Mtaa — Logo Variants</h1>
+
+<!-- THREE BACKGROUND VARIANTS -->
+<div class="logo-stage">
+
+  <!-- LIGHT -->
+  <div class="logo-cell">
+    <div class="logo-bg-light">
+      <svg width="200" viewBox="0 0 220 75" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 28 Q8 14 22 14 L58 14 Q72 14 72 28 L72 32 L8 32 Z" fill="#1B6B3A"/>
+        <path d="M8 32 Q14 38 20 32 Q26 38 32 32 Q38 38 44 32 Q50 38 56 32 Q62 38 68 32 L72 32 L8 32 Z" fill="#22A34A"/>
+        <rect x="14" y="32" width="52" height="24" rx="2" fill="#E8F5EC"/>
+        <rect x="14" y="48" width="52" height="4" rx="1" fill="#1B6B3A"/>
+        <rect x="11" y="28" width="5" height="30" rx="2" fill="#0F5C2E"/>
+        <rect x="64" y="28" width="5" height="30" rx="2" fill="#0F5C2E"/>
+        <circle cx="30" cy="44" r="4" fill="#F59E0B"/>
+        <circle cx="30" cy="44" r="2.5" fill="#E8890A"/>
+        <rect x="38" y="40" width="7" height="8" rx="1" fill="#78502E"/>
+        <circle cx="50" cy="44" r="3.5" fill="#22A34A"/>
+        <line x1="16" y1="14" x2="16" y2="26" stroke="#0F5C2E" stroke-width="1.5" stroke-dasharray="2 2"/>
+        <line x1="28" y1="14" x2="28" y2="26" stroke="#0F5C2E" stroke-width="1.5" stroke-dasharray="2 2"/>
+        <line x1="40" y1="14" x2="40" y2="26" stroke="#0F5C2E" stroke-width="1.5" stroke-dasharray="2 2"/>
+        <line x1="52" y1="14" x2="52" y2="26" stroke="#0F5C2E" stroke-width="1.5" stroke-dasharray="2 2"/>
+        <line x1="64" y1="14" x2="64" y2="26" stroke="#0F5C2E" stroke-width="1.5" stroke-dasharray="2 2"/>
+        <circle cx="40" cy="6" r="3" fill="#F59E0B"/>
+        <path d="M40 9 L40 12" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round"/>
+        <text x="88" y="34" font-family="'Plus Jakarta Sans','DM Sans',sans-serif" font-size="22" font-weight="800" fill="#1B6B3A" letter-spacing="-0.5">SOKO</text>
+        <text x="88" y="56" font-family="'Plus Jakarta Sans','DM Sans',sans-serif" font-size="22" font-weight="800" fill="#0F5C2E" letter-spacing="-0.5">MTAA</text>
+        <circle cx="88" cy="66" r="2" fill="#F59E0B"/>
+        <text x="96" y="69" font-family="'DM Sans',sans-serif" font-size="9" font-weight="500" fill="#6B7280" letter-spacing="0.08em">SOKO YAKO MTAANI</text>
+      </svg>
+    </div>
+    <div class="logo-label">On light</div>
+  </div>
+
+  <!-- DARK -->
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="200" viewBox="0 0 220 75" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 28 Q8 14 22 14 L58 14 Q72 14 72 28 L72 32 L8 32 Z" fill="#22A34A"/>
+        <path d="M8 32 Q14 38 20 32 Q26 38 32 32 Q38 38 44 32 Q50 38 56 32 Q62 38 68 32 L72 32 L8 32 Z" fill="#34C75E"/>
+        <rect x="14" y="32" width="52" height="24" rx="2" fill="rgba(255,255,255,0.07)"/>
+        <rect x="14" y="48" width="52" height="4" rx="1" fill="#22A34A"/>
+        <rect x="11" y="28" width="5" height="30" rx="2" fill="#166534"/>
+        <rect x="64" y="28" width="5" height="30" rx="2" fill="#166534"/>
+        <circle cx="30" cy="44" r="4" fill="#F59E0B"/>
+        <circle cx="30" cy="44" r="2.5" fill="#E8890A"/>
+        <rect x="38" y="40" width="7" height="8" rx="1" fill="#C4956A"/>
+        <circle cx="50" cy="44" r="3.5" fill="#34C75E"/>
+        <line x1="16" y1="14" x2="16" y2="26" stroke="#166534" stroke-width="1.5" stroke-dasharray="2 2"/>
+        <line x1="28" y1="14" x2="28" y2="26" stroke="#166534" stroke-width="1.5" stroke-dasharray="2 2"/>
+        <line x1="40" y1="14" x2="40" y2="26" stroke="#166534" stroke-width="1.5" stroke-dasharray="2 2"/>
+        <line x1="52" y1="14" x2="52" y2="26" stroke="#166534" stroke-width="1.5" stroke-dasharray="2 2"/>
+        <line x1="64" y1="14" x2="64" y2="26" stroke="#166534" stroke-width="1.5" stroke-dasharray="2 2"/>
+        <circle cx="40" cy="6" r="3" fill="#F59E0B"/>
+        <path d="M40 9 L40 12" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round"/>
+        <text x="88" y="34" font-family="'Plus Jakarta Sans','DM Sans',sans-serif" font-size="22" font-weight="800" fill="#34C75E" letter-spacing="-0.5">SOKO</text>
+        <text x="88" y="56" font-family="'Plus Jakarta Sans','DM Sans',sans-serif" font-size="22" font-weight="800" fill="#6EE08A" letter-spacing="-0.5">MTAA</text>
+        <circle cx="88" cy="66" r="2" fill="#F59E0B"/>
+        <text x="96" y="69" font-family="'DM Sans',sans-serif" font-size="9" font-weight="500" fill="rgba(255,255,255,0.4)" letter-spacing="0.08em">SOKO YAKO MTAANI</text>
+      </svg>
+    </div>
+    <div class="logo-label">On dark</div>
+  </div>
+
+  <!-- GREEN -->
+  <div class="logo-cell">
+    <div class="logo-bg-green">
+      <svg width="200" viewBox="0 0 220 75" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 28 Q8 14 22 14 L58 14 Q72 14 72 28 L72 32 L8 32 Z" fill="rgba(255,255,255,0.95)"/>
+        <path d="M8 32 Q14 38 20 32 Q26 38 32 32 Q38 38 44 32 Q50 38 56 32 Q62 38 68 32 L72 32 L8 32 Z" fill="rgba(255,255,255,0.7)"/>
+        <rect x="14" y="32" width="52" height="24" rx="2" fill="rgba(255,255,255,0.12)"/>
+        <rect x="14" y="48" width="52" height="4" rx="1" fill="rgba(255,255,255,0.5)"/>
+        <rect x="11" y="28" width="5" height="30" rx="2" fill="rgba(255,255,255,0.6)"/>
+        <rect x="64" y="28" width="5" height="30" rx="2" fill="rgba(255,255,255,0.6)"/>
+        <circle cx="30" cy="44" r="4" fill="#F59E0B"/>
+        <circle cx="30" cy="44" r="2.5" fill="#E8890A"/>
+        <rect x="38" y="40" width="7" height="8" rx="1" fill="rgba(255,255,255,0.6)"/>
+        <circle cx="50" cy="44" r="3.5" fill="rgba(255,255,255,0.8)"/>
+        <circle cx="40" cy="6" r="3" fill="#F59E0B"/>
+        <path d="M40 9 L40 12" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round"/>
+        <text x="88" y="34" font-family="'Plus Jakarta Sans','DM Sans',sans-serif" font-size="22" font-weight="800" fill="#FFFFFF" letter-spacing="-0.5">SOKO</text>
+        <text x="88" y="56" font-family="'Plus Jakarta Sans','DM Sans',sans-serif" font-size="22" font-weight="800" fill="rgba(255,255,255,0.75)" letter-spacing="-0.5">MTAA</text>
+        <circle cx="88" cy="66" r="2" fill="#F59E0B"/>
+        <text x="96" y="69" font-family="'DM Sans',sans-serif" font-size="9" font-weight="500" fill="rgba(255,255,255,0.5)" letter-spacing="0.08em">SOKO YAKO MTAANI</text>
+      </svg>
+    </div>
+    <div class="logo-label">On brand green</div>
+  </div>
+
+</div>
+
+<!-- ICON SIZES -->
+<div class="section-head">Icon-only — app icon &amp; favicon sizes</div>
+<div class="sizes-row">
+
+  <!-- 64px -->
+  <div class="size-cell">
+    <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="14" fill="#1B6B3A"/>
+      <path d="M12 34 Q12 22 22 22 L42 22 Q52 22 52 34 L52 38 L12 38 Z" fill="rgba(255,255,255,0.95)"/>
+      <path d="M12 38 Q16.5 44 21 38 Q25.5 44 30 38 Q34.5 44 39 38 Q43.5 44 48 38 Q50 38 52 38 L12 38 Z" fill="rgba(255,255,255,0.65)"/>
+      <rect x="16" y="38" width="32" height="14" rx="2" fill="rgba(255,255,255,0.1)"/>
+      <rect x="16" y="48" width="32" height="3" rx="1" fill="rgba(255,255,255,0.5)"/>
+      <rect x="13" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+      <rect x="47" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+      <circle cx="24" cy="46" r="3" fill="#F59E0B"/>
+      <circle cx="34" cy="46" r="2.5" fill="rgba(255,255,255,0.7)"/>
+      <circle cx="44" cy="46" r="2.5" fill="rgba(255,255,255,0.5)"/>
+      <circle cx="32" cy="14" r="3" fill="#F59E0B"/>
+      <path d="M32 17 L32 21" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div class="size-label">64px</div>
+  </div>
+
+  <!-- 48px -->
+  <div class="size-cell">
+    <svg width="48" height="48" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="14" fill="#1B6B3A"/>
+      <path d="M12 34 Q12 22 22 22 L42 22 Q52 22 52 34 L52 38 L12 38 Z" fill="rgba(255,255,255,0.95)"/>
+      <path d="M12 38 Q16.5 44 21 38 Q25.5 44 30 38 Q34.5 44 39 38 Q43.5 44 48 38 Q50 38 52 38 L12 38 Z" fill="rgba(255,255,255,0.65)"/>
+      <rect x="16" y="38" width="32" height="14" rx="2" fill="rgba(255,255,255,0.1)"/>
+      <rect x="16" y="48" width="32" height="3" rx="1" fill="rgba(255,255,255,0.5)"/>
+      <rect x="13" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+      <rect x="47" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+      <circle cx="24" cy="46" r="3" fill="#F59E0B"/>
+      <circle cx="34" cy="46" r="2.5" fill="rgba(255,255,255,0.7)"/>
+      <circle cx="44" cy="46" r="2.5" fill="rgba(255,255,255,0.5)"/>
+      <circle cx="32" cy="14" r="3" fill="#F59E0B"/>
+      <path d="M32 17 L32 21" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div class="size-label">48px</div>
+  </div>
+
+  <!-- 36px -->
+  <div class="size-cell">
+    <svg width="36" height="36" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="14" fill="#1B6B3A"/>
+      <path d="M12 34 Q12 22 22 22 L42 22 Q52 22 52 34 L52 38 L12 38 Z" fill="rgba(255,255,255,0.95)"/>
+      <path d="M12 38 Q16.5 44 21 38 Q25.5 44 30 38 Q34.5 44 39 38 Q43.5 44 48 38 Q50 38 52 38 L12 38 Z" fill="rgba(255,255,255,0.65)"/>
+      <rect x="16" y="38" width="32" height="14" rx="2" fill="rgba(255,255,255,0.1)"/>
+      <rect x="16" y="48" width="32" height="3" rx="1" fill="rgba(255,255,255,0.5)"/>
+      <rect x="13" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+      <rect x="47" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+      <circle cx="24" cy="46" r="3" fill="#F59E0B"/>
+      <circle cx="32" cy="14" r="3" fill="#F59E0B"/>
+      <path d="M32 17 L32 21" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div class="size-label">36px</div>
+  </div>
+
+  <!-- 28px -->
+  <div class="size-cell">
+    <svg width="28" height="28" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="14" fill="#1B6B3A"/>
+      <path d="M12 34 Q12 22 22 22 L42 22 Q52 22 52 34 L52 38 L12 38 Z" fill="rgba(255,255,255,0.95)"/>
+      <path d="M12 38 Q16.5 44 21 38 Q25.5 44 30 38 Q34.5 44 39 38 Q43.5 44 48 38 Q50 38 52 38 L12 38 Z" fill="rgba(255,255,255,0.65)"/>
+      <rect x="16" y="38" width="32" height="14" rx="2" fill="rgba(255,255,255,0.1)"/>
+      <rect x="16" y="48" width="32" height="3" rx="1" fill="rgba(255,255,255,0.5)"/>
+      <rect x="13" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+      <rect x="47" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+      <circle cx="32" cy="14" r="3" fill="#F59E0B"/>
+    </svg>
+    <div class="size-label">28px</div>
+  </div>
+
+  <!-- 20px -->
+  <div class="size-cell">
+    <svg width="20" height="20" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="14" fill="#1B6B3A"/>
+      <path d="M12 34 Q12 22 22 22 L42 22 Q52 22 52 34 L52 38 L12 38 Z" fill="rgba(255,255,255,0.95)"/>
+      <path d="M12 38 Q16.5 44 21 38 Q25.5 44 30 38 Q34.5 44 39 38 Q43.5 44 48 38 Q50 38 52 38 L12 38 Z" fill="rgba(255,255,255,0.65)"/>
+      <rect x="16" y="38" width="32" height="14" rx="2" fill="rgba(255,255,255,0.1)"/>
+      <rect x="13" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+      <rect x="47" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+    </svg>
+    <div class="size-label">20px</div>
+  </div>
+
+  <!-- 16px favicon -->
+  <div class="size-cell">
+    <svg width="16" height="16" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="10" fill="#1B6B3A"/>
+      <path d="M12 34 Q12 22 22 22 L42 22 Q52 22 52 34 L52 38 L12 38 Z" fill="rgba(255,255,255,0.95)"/>
+      <path d="M12 38 Q18 44 24 38 Q30 44 36 38 Q42 44 48 38 L52 38 L12 38 Z" fill="rgba(255,255,255,0.6)"/>
+      <rect x="14" y="38" width="36" height="16" rx="2" fill="rgba(255,255,255,0.1)"/>
+      <rect x="11" y="33" width="5" height="22" rx="2" fill="rgba(255,255,255,0.5)"/>
+      <rect x="48" y="33" width="5" height="22" rx="2" fill="rgba(255,255,255,0.5)"/>
+    </svg>
+    <div class="size-label">16px</div>
+  </div>
+
+  <!-- Nav pill -->
+  <div class="size-cell" style="margin-left: 16px;">
+    <div class="pill-demo">
+      <svg width="18" height="18" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 34 Q12 22 22 22 L42 22 Q52 22 52 34 L52 38 L12 38 Z" fill="rgba(255,255,255,0.95)"/>
+        <path d="M12 38 Q16.5 44 21 38 Q25.5 44 30 38 Q34.5 44 39 38 Q43.5 44 48 38 Q50 38 52 38 L12 38 Z" fill="rgba(255,255,255,0.65)"/>
+        <rect x="16" y="38" width="32" height="14" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="13" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+        <rect x="47" y="33" width="4" height="20" rx="2" fill="rgba(255,255,255,0.55)"/>
+      </svg>
+      <span class="pill-label">Soko Mtaa</span>
+    </div>
+    <div class="size-label">Nav pill</div>
+  </div>
+
+</div>
+
+<!-- DESIGN MEANING -->
+<div class="section-head">Design meaning</div>
+<div class="meaning-grid">
+  <div class="meaning-card">
+    <div class="meaning-dot" style="background:#1B6B3A;"></div>
+    <div class="meaning-title">Stall canopy</div>
+    <div class="meaning-desc">The arched rooftop and scalloped edge represent a traditional African market stall awning — instantly recognisable across East Africa</div>
+  </div>
+  <div class="meaning-card">
+    <div class="meaning-dot" style="background:#F59E0B;"></div>
+    <div class="meaning-title">Location pin + amber dot</div>
+    <div class="meaning-desc">The amber pin above the stall signals "your neighbourhood market" — combining place, discovery, and the warmth of M-Pesa gold</div>
+  </div>
+  <div class="meaning-card">
+    <div class="meaning-dot" style="background:#E8890A;"></div>
+    <div class="meaning-title">Counter products</div>
+    <div class="meaning-desc">Small shapes on the counter — tomato, grain sack, produce — hint at the market's goods without cluttering the icon at small sizes</div>
+  </div>
+</div>
+
+<!-- SVG CODE REFERENCE -->
+<div class="section-head">SVG icon code — copy into your project</div>
+<pre style="background:#F3F4F6;border-radius:10px;padding:16px;font-size:11px;line-height:1.6;color:#374151;overflow-x:auto;margin-top:8px;"><code>&lt;!-- Soko Mtaa App Icon — 64x64 --&gt;
+&lt;svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"&gt;
+  &lt;rect width="64" height="64" rx="14" fill="#1B6B3A"/&gt;
+  &lt;path d="M12 34 Q12 22 22 22 L42 22 Q52 22 52 34 L52 38 L12 38 Z"
+        fill="rgba(255,255,255,0.95)"/&gt;
+  &lt;path d="M12 38 Q16.5 44 21 38 Q25.5 44 30 38 Q34.5 44 39 38
+           Q43.5 44 48 38 Q50 38 52 38 L12 38 Z"
+        fill="rgba(255,255,255,0.65)"/&gt;
+  &lt;rect x="16" y="38" width="32" height="14" rx="2" fill="rgba(255,255,255,0.1)"/&gt;
+  &lt;rect x="16" y="48" width="32" height="3" rx="1" fill="rgba(255,255,255,0.5)"/&gt;
+  &lt;rect x="13" y="33" width="4"  height="20" rx="2" fill="rgba(255,255,255,0.55)"/&gt;
+  &lt;rect x="47" y="33" width="4"  height="20" rx="2" fill="rgba(255,255,255,0.55)"/&gt;
+  &lt;circle cx="24" cy="46" r="3"   fill="#F59E0B"/&gt;
+  &lt;circle cx="34" cy="46" r="2.5" fill="rgba(255,255,255,0.7)"/&gt;
+  &lt;circle cx="44" cy="46" r="2.5" fill="rgba(255,255,255,0.5)"/&gt;
+  &lt;circle cx="32" cy="14" r="3"   fill="#F59E0B"/&gt;
+  &lt;path d="M32 17 L32 21" stroke="#F59E0B" stroke-width="1.5"
+        stroke-linecap="round"/&gt;
+&lt;/svg&gt;</code></pre>
+
+</body>
+</html>

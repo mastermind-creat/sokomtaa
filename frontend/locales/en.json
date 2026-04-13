@@ -20,7 +20,12 @@
     "error": "Something went wrong",
     "stalls": "Stalls",
     "categories": "Categories",
-    "search_placeholder": "Search products or traders..."
+    "search_placeholder": "Search products or traders...",
+    "allocations": "Allocations",
+    "complaints": "Complaints",
+    "fees": "Fees",
+    "reports": "Reports",
+    "verification": "Verification"
   },
   "home": {
     "greeting": "Hello",
@@ -40,8 +45,11 @@
     "dawati": "Dashboard"
   },
   "trader": {
+    "dashboard_title": "Trader Dashboard",
+    "dashboard_subtitle": "Trader Intelligence Dashboard",
     "my_stall": "My Stall",
     "manage_products": "Manage Products",
+    "new_product": "New Product",
     "view_analytics": "View Analytics",
     "shop_status": "Shop Status",
     "open": "Open",
@@ -50,7 +58,13 @@
     "revenue": "Total Revenue",
     "views": "Profile Views",
     "price_insights": "Price Insights",
-    "market_comparison": "Market Price Comparison"
+    "market_comparison": "Market Price Comparison",
+    "completed_sales": "Completed Sales",
+    "stock_alert": "Stock Alert",
+    "top_products": "Top Selling Products",
+    "verified": "Verified",
+    "pending": "Pending",
+    "revenue_trend": "Revenue Trend"
   },
   "resident": {
     "nearby": "Markets Near You",
@@ -58,5 +72,19 @@
     "reserve_now": "Reserve Now",
     "my_bookings": "My Bookings",
     "leave_review": "Leave a Review"
+  },
+  "admin": {
+    "dashboard_title": "County Overview",
+    "live_analytics": "Live System Analytics",
+    "subtitle": "Real-time performance across all managed markets.",
+    "export_report": "Export Report",
+    "broadcast_notice": "Broadcast Notice",
+    "revenue_daily": "Daily target progress",
+    "revenue_actual": "Actual",
+    "revenue_trends": "Revenue Trends",
+    "revenue_subtitle": "Monthly market fee collection performance.",
+    "priority_actions": "Priority Actions",
+    "priority_subtitle": "Items requiring your immediate attention.",
+    "view_all_tasks": "View All Tasks"
   }
 }

@@ -96,6 +96,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Notifications
     Route::prefix('notifications')->group(function () {
         Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index']);
+        Route::get('/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount']);
         Route::patch('/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
         Route::post('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
     });
@@ -112,6 +113,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [\App\Http\Controllers\NoticeController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\NoticeController::class, 'store']); // Admin can post
         Route::delete('/{id}', [\App\Http\Controllers\NoticeController::class, 'destroy']); // Admin can delete
+    });
+
+    // Admin Specific Dashboard
+    Route::middleware(['role:admin'])->prefix('admin')->group(function () {
+        Route::get('/stats', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'stats']);
+        Route::get('/trends', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'revenueTrends']);
     });
 });
 

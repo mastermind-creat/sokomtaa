@@ -4,8 +4,9 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { Loader2, Phone, User as UserIcon, Lock } from 'lucide-react';
+import { Loader2, Phone, User as UserIcon, Lock, ArrowRight, Store, Home, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { motion } from 'framer-motion';
 import { ApiResponse, AuthResponse } from '@/types';
 
 interface RegisterFormData {
@@ -16,149 +17,258 @@ interface RegisterFormData {
     password_confirmation: string;
     preferred_language: string;
 }
+import { Logo } from '@/components/shared/Logo';
 
 export default function RegisterPage() {
     const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterFormData>({
         defaultValues: {
-            preferred_language: 'sw',
+            preferred_language: 'en',
             role: 'resident'
         } as RegisterFormData
     });
     const setAuth = useAuthStore((state) => state.setAuth);
     const router = useRouter();
     const [error, setError] = React.useState<string | null>(null);
+    const [showPassword, setShowPassword] = React.useState(false);
 
     const selectedRole = watch('role');
+    const password = watch('password');
 
     const onSubmit = async (data: RegisterFormData) => {
         try {
             setError(null);
-            const response = await api.post<ApiResponse<AuthResponse>>('/auth/register', data) as unknown as ApiResponse<AuthResponse>;
+            // api interceptor already unwraps response.data
+            const response = await api.post('/auth/register', data) as unknown as ApiResponse<AuthResponse>;
             setAuth(response.data.user, response.data.token);
             router.push('/verify');
         } catch (err: unknown) {
-            const error = err as { response?: { data?: { message?: string } }, message?: string };
-            setError(error.response?.data?.message || error.message || 'Registration failed. Check your details.');
+            const errObj = err as { message?: string } | string;
+            const msg = typeof errObj === 'string' ? errObj : errObj?.message ?? 'Registration failed. Please check your details.';
+            setError(msg);
         }
     };
 
     return (
-        <div className="flex flex-col min-h-screen p-6 pt-12 animate-fade-up">
-            <div className="mb-8 text-center">
-                <h1 className="text-3xl mb-2 text-green-950 font-bold">Jiunge na Soko Mtaa</h1>
-                <p className="text-text-secondary">Unda akaunti yako ili kuanza safari yako.</p>
-                <p className="text-xs text-text-muted mt-1">(Create your account to start your journey.)</p>
+        <div className="min-h-screen w-full flex">
+            {/* Left Panel — Branding (desktop only) */}
+            <div className="hidden lg:flex flex-col justify-between w-[42%] bg-gradient-to-br from-green-900 via-brand-700 to-green-800 p-14 relative overflow-hidden">
+                <div className="absolute inset-0 opacity-10">
+                    <div className="absolute top-[-20%] right-[-20%] w-[600px] h-[600px] rounded-full bg-white" />
+                    <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-amber-400" />
+                </div>
+
+                <div className="relative z-10">
+                    <div className="mb-16 cursor-pointer" onClick={() => router.push('/')}>
+                        <Logo variant="green" width={180} />
+                    </div>
+                    <h2 className="text-4xl font-black text-white leading-tight mb-4">
+                        Join the Neighbourhood<br />Marketplace
+                    </h2>
+                    <p className="text-green-200 text-lg leading-relaxed">
+                        Create your free account and start buying, selling or managing your local market — all in one place.
+                    </p>
+                </div>
+
+                <div className="relative z-10 space-y-3">
+                    {[
+                        'Discover local traders near you',
+                        'Reserve products via M-Pesa',
+                        'Track your stall & revenue',
+                        'Get county market updates',
+                    ].map((item) => (
+                        <div key={item} className="flex items-center gap-3">
+                            <CheckCircle2 size={16} className="text-amber-400 shrink-0" />
+                            <span className="text-green-100 text-sm font-medium">{item}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-32">
-                {/* Full Name */}
-                <div>
-                    <label className="input-label">
-                        Jina Kamili / Full Name
-                    </label>
-                    <div className="relative">
-                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
-                        <input
-                            {...register('name', { required: 'Jina linahitajika' })}
-                            className="input pl-12"
-                            placeholder="John Doe"
-                        />
+            {/* Right Panel — Form */}
+            <motion.div
+                className="flex-1 flex flex-col justify-center items-center px-6 py-12 lg:px-14 bg-white overflow-y-auto"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4 }}
+            >
+                <div className="w-full max-w-md">
+                    {/* Mobile logo */}
+                    <div className="lg:hidden flex flex-col items-center mb-8">
+                        <Logo variant="icon" width={64} height={64} className="mb-4" />
                     </div>
-                    {errors.name && <p className="input-error-msg">{errors.name.message as string}</p>}
-                </div>
 
-                {/* Phone */}
-                <div>
-                    <label className="input-label">
-                        Namba ya Simu / Phone Number
-                    </label>
-                    <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
-                        <input
-                            {...register('phone', { required: 'Namba ya simu inahitajika' })}
-                            className="input pl-12"
-                            placeholder="07XXXXXXXX"
-                            type="tel"
-                        />
+                    <div className="mb-8">
+                        <h2 className="text-3xl font-black text-green-950 mb-2">Create your account</h2>
+                        <p className="text-text-secondary">Join thousands already using Soko Mtaa.</p>
                     </div>
-                    {errors.phone && <p className="input-error-msg">{errors.phone.message as string}</p>}
-                </div>
 
-                {/* Role Selection */}
-                <div>
-                    <label className="input-label">
-                        Wewe ni nani? / Who are you?
-                    </label>
-                    <div className="grid grid-cols-2 gap-4">
-                        <label className={`card p-4 flex flex-col items-center justify-center cursor-pointer transition-all ${selectedRole === 'resident' ? 'border-brand-500 bg-brand-50 bg-noise ring-2 ring-brand-500/20' : 'border-border'}`}>
-                            <input {...register('role')} type="radio" value="resident" className="hidden" />
-                            <span className={`font-bold text-sm ${selectedRole === 'resident' ? 'text-brand-700' : 'text-text-primary'}`}>Mkazi</span>
-                            <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Resident</span>
-                        </label>
-                        <label className={`card p-4 flex flex-col items-center justify-center cursor-pointer transition-all ${selectedRole === 'trader' ? 'border-brand-500 bg-brand-50 bg-noise ring-2 ring-brand-500/20' : 'border-border'}`}>
-                            <input {...register('role')} type="radio" value="trader" className="hidden" />
-                            <span className={`font-bold text-sm ${selectedRole === 'trader' ? 'text-brand-700' : 'text-text-primary'}`}>Mfanyabiashara</span>
-                            <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">Trader</span>
-                        </label>
-                    </div>
-                </div>
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                        {/* Full Name */}
+                        <div>
+                            <label className="block text-sm font-bold text-green-900 mb-2">Full Name</label>
+                            <div className="relative">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-500">
+                                    <UserIcon size={18} />
+                                </div>
+                                <input
+                                    {...register('name', { required: 'Full name is required' })}
+                                    className="w-full h-[54px] pl-12 pr-4 rounded-xl border border-gray-200 bg-gray-50 text-green-950 placeholder:text-gray-400 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white transition-all"
+                                    placeholder="e.g. John Kamau"
+                                    autoComplete="name"
+                                />
+                            </div>
+                            {errors.name && <p className="text-red-500 text-xs font-medium mt-1.5">{errors.name.message}</p>}
+                        </div>
 
-                {/* Password */}
-                <div>
-                    <label className="input-label">
-                        Nenosiri / Password
-                    </label>
-                    <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
-                        <input
-                            {...register('password', { required: 'Nenosiri linahitajika', minLength: { value: 8, message: 'Nenosiri lazima liwe na herufi 8+' } })}
-                            className="input pl-12"
-                            placeholder="••••••••"
-                            type="password"
-                        />
-                    </div>
-                    {errors.password && <p className="input-error-msg">{errors.password.message as string}</p>}
-                </div>
+                        {/* Phone */}
+                        <div>
+                            <label className="block text-sm font-bold text-green-900 mb-2">Phone Number</label>
+                            <div className="relative">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-500">
+                                    <Phone size={18} />
+                                </div>
+                                <input
+                                    {...register('phone', { required: 'Phone number is required' })}
+                                    className="w-full h-[54px] pl-12 pr-4 rounded-xl border border-gray-200 bg-gray-50 text-green-950 placeholder:text-gray-400 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white transition-all"
+                                    placeholder="07XXXXXXXX"
+                                    type="tel"
+                                    autoComplete="tel"
+                                />
+                            </div>
+                            {errors.phone && <p className="text-red-500 text-xs font-medium mt-1.5">{errors.phone.message}</p>}
+                        </div>
 
-                {/* Confirm Password */}
-                <div>
-                    <label className="input-label">
-                        Thibitisha Nenosiri / Confirm Password
-                    </label>
-                    <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
-                        <input
-                            {...register('password_confirmation', { required: 'Thibitisha nenosiri' })}
-                            className="input pl-12"
-                            placeholder="••••••••"
-                            type="password"
-                        />
-                    </div>
-                </div>
+                        {/* Role Selection */}
+                        <div>
+                            <label className="block text-sm font-bold text-green-900 mb-3">I am a...</label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <label className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                    selectedRole === 'resident'
+                                        ? 'border-brand-500 bg-brand-50'
+                                        : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                                }`}>
+                                    <input {...register('role')} type="radio" value="resident" className="sr-only" />
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selectedRole === 'resident' ? 'bg-brand-100' : 'bg-gray-100'}`}>
+                                        <Home size={20} className={selectedRole === 'resident' ? 'text-brand-600' : 'text-gray-400'} />
+                                    </div>
+                                    <span className={`font-black text-sm ${selectedRole === 'resident' ? 'text-brand-700' : 'text-gray-600'}`}>Resident</span>
+                                    <span className="text-[10px] text-gray-400 font-medium text-center">Buy & reserve products</span>
+                                    {selectedRole === 'resident' && (
+                                        <div className="absolute top-2 right-2 w-4 h-4 bg-brand-600 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-[8px]">✓</span>
+                                        </div>
+                                    )}
+                                </label>
+                                <label className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                    selectedRole === 'trader'
+                                        ? 'border-brand-500 bg-brand-50'
+                                        : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                                }`}>
+                                    <input {...register('role')} type="radio" value="trader" className="sr-only" />
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selectedRole === 'trader' ? 'bg-brand-100' : 'bg-gray-100'}`}>
+                                        <Store size={20} className={selectedRole === 'trader' ? 'text-brand-600' : 'text-gray-400'} />
+                                    </div>
+                                    <span className={`font-black text-sm ${selectedRole === 'trader' ? 'text-brand-700' : 'text-gray-600'}`}>Trader</span>
+                                    <span className="text-[10px] text-gray-400 font-medium text-center">Sell at the market</span>
+                                    {selectedRole === 'trader' && (
+                                        <div className="absolute top-2 right-2 w-4 h-4 bg-brand-600 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-[8px]">✓</span>
+                                        </div>
+                                    )}
+                                </label>
+                            </div>
+                        </div>
 
-                {error && (
-                    <div className="bg-color-error-bg text-color-error-dark p-4 rounded-xl text-sm border border-color-error/10">
-                        {error}
-                    </div>
-                )}
+                        {/* Password */}
+                        <div>
+                            <label className="block text-sm font-bold text-green-900 mb-2">Password</label>
+                            <div className="relative">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-500">
+                                    <Lock size={18} />
+                                </div>
+                                <input
+                                    {...register('password', {
+                                        required: 'Password is required',
+                                        minLength: { value: 8, message: 'Password must be at least 8 characters' }
+                                    })}
+                                    className="w-full h-[54px] pl-12 pr-12 rounded-xl border border-gray-200 bg-gray-50 text-green-950 placeholder:text-gray-400 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white transition-all"
+                                    placeholder="••••••••"
+                                    type={showPassword ? 'text' : 'password'}
+                                    autoComplete="new-password"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                                >
+                                    {showPassword ? 'HIDE' : 'SHOW'}
+                                </button>
+                            </div>
+                            {errors.password && <p className="text-red-500 text-xs font-medium mt-1.5">{errors.password.message}</p>}
+                        </div>
 
-                <div className="fixed bottom-0 left-0 right-0 p-6 bg-surface-glass backdrop-blur-md border-t border-border lg:absolute max-w-[480px] mx-auto z-20">
-                    <button
-                        disabled={isSubmitting}
-                        className="btn btn-primary w-full h-[56px] text-lg shadow-brand-lg"
-                        type="submit"
-                    >
-                        {isSubmitting ? <Loader2 className="animate-spin" /> : 'Jisajili / Register'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => router.push('/login')}
-                        className="w-full text-center text-sm font-bold text-brand-700 mt-4 h-10"
-                    >
-                        Tayari nina akaunti (I have an account)
-                    </button>
+                        {/* Confirm Password */}
+                        <div>
+                            <label className="block text-sm font-bold text-green-900 mb-2">Confirm Password</label>
+                            <div className="relative">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-500">
+                                    <Lock size={18} />
+                                </div>
+                                <input
+                                    {...register('password_confirmation', {
+                                        required: 'Please confirm your password',
+                                        validate: (val) => val === password || 'Passwords do not match'
+                                    })}
+                                    className="w-full h-[54px] pl-12 pr-4 rounded-xl border border-gray-200 bg-gray-50 text-green-950 placeholder:text-gray-400 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white transition-all"
+                                    placeholder="••••••••"
+                                    type="password"
+                                    autoComplete="new-password"
+                                />
+                            </div>
+                            {errors.password_confirmation && <p className="text-red-500 text-xs font-medium mt-1.5">{errors.password_confirmation.message}</p>}
+                        </div>
+
+                        {/* Error Banner */}
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex items-start gap-3 bg-red-50 text-red-700 p-4 rounded-xl text-sm border border-red-100"
+                            >
+                                <span className="text-red-400 mt-0.5">⚠</span>
+                                <span className="font-medium">{error}</span>
+                            </motion.div>
+                        )}
+
+                        {/* Submit Button */}
+                        <button
+                            disabled={isSubmitting}
+                            className="w-full h-[54px] bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-black text-base rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                            type="submit"
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="animate-spin" size={20} />
+                            ) : (
+                                <>
+                                    Create Account
+                                    <ArrowRight size={18} />
+                                </>
+                            )}
+                        </button>
+
+                        <p className="text-center text-sm text-gray-400 mt-2">
+                            Already have an account?{' '}
+                            <button
+                                type="button"
+                                onClick={() => router.push('/login')}
+                                className="text-brand-600 font-black hover:underline"
+                            >
+                                Sign in
+                            </button>
+                        </p>
+                    </form>
                 </div>
-            </form>
+            </motion.div>
         </div>
     );
 }
