@@ -165,6 +165,7 @@ export default function AdminDashboard() {
                             </div>
                             <select 
                                 aria-label="Filter revenue trends by date range"
+                                title="Filter revenue trends by date range"
                                 className="h-10 pl-4 pr-10 bg-gray-50 border-none rounded-xl text-xs font-bold text-text-secondary outline-none appearance-none cursor-pointer hover:bg-gray-100 transition-colors"
                             >
                                 <option>Last 6 Months</option>
