@@ -119,6 +119,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         Route::get('/stats', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'stats']);
         Route::get('/trends', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'revenueTrends']);
+        Route::get('/activity', [\App\Http\Controllers\Admin\AdminActivityController::class, 'index']);
+        Route::get('/stalls', [\App\Http\Controllers\Admin\StallController::class, 'index']);
+        Route::get('/stalls/summary', [\App\Http\Controllers\Admin\StallController::class, 'summary']);
     });
 });
 

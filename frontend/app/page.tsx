@@ -3,16 +3,27 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { Search, MapPin, LayoutDashboard, Loader2, Sparkles } from 'lucide-react';
+import { 
+    Search, 
+    MapPin, 
+    LayoutDashboard, 
+    Loader2, 
+    Sparkles, 
+    ArrowRight,
+    ShoppingBag,
+    Star,
+    ChevronRight,
+    Map as MapIcon,
+    Flame
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { ApiResponse } from '@/types';
-import BottomNav from '@/components/shared/BottomNav';
-import NotificationBell from '@/components/shared/NotificationBell';
-import NoticeFeed from '@/components/shared/NoticeFeed';
+import DashboardLayout from '@/components/shared/DashboardLayout';
 import RecommendationSection from '@/components/resident/RecommendationSection';
 import CategoryFilter from '@/components/resident/CategoryFilter';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Market {
     id: number;
@@ -22,7 +33,12 @@ interface Market {
     image_url?: string;
 }
 
-import { Logo } from '@/components/shared/Logo';
+interface ActiveReservation {
+    id: number;
+    product_name: string;
+    status: string;
+    pickup_deadline: string;
+}
 
 export default function HomePage() {
     const { user } = useAuthStore();
@@ -35,76 +51,91 @@ export default function HomePage() {
         queryFn: () => api.get('/markets'),
     });
 
+    // Mock Active Reservation check
+    const { data: activeResData } = useQuery({
+        queryKey: ['active-reservation'],
+        queryFn: async () => {
+             // In real app: api.get('/reservations?status=paid,ready&limit=1')
+             return { data: null }; 
+        },
+        enabled: !!user
+    });
+
     const markets = marketData?.data || [];
+    const activeRes = activeResData?.data;
 
     return (
-        <div className="flex flex-col min-h-screen bg-surface-base w-full flex-1 lg:flex-row relative">
-            <div className="flex-1 w-full max-w-full lg:max-h-screen lg:overflow-y-auto no-scrollbar">
-            {/* Top Bar */}
-            <header className="p-4 flex items-center justify-between sticky top-0 bg-surface-base/80 backdrop-blur-md z-20 border-b border-border-default h-18">
-                <div onClick={() => router.push('/')} className="flex items-center gap-2 cursor-pointer active:scale-95 transition-all">
-                    <Logo variant="light" width={160} />
-                </div>
-                <div className="flex items-center gap-2">
-                    {!user ? (
-                        <div className="flex items-center gap-3 mr-1">
-                            <button onClick={() => router.push('/login')} className="text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors">
-                                {t('home.sign_in')}
-                            </button>
-                            <button onClick={() => router.push('/register')} className="h-9 px-4 bg-brand-600 text-white rounded-xl text-xs font-black shadow-brand-sm active:scale-95 transition-all">
-                                {t('home.sign_up')}
-                            </button>
+        <DashboardLayout title={t('home.greeting')}>
+            <div className="space-y-8 lg:space-y-12 pb-20">
+                
+                {/* 1. TOP: Active Reservation Banner (Conditional) */}
+                <AnimatePresence>
+                    {user && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-amber-50 border border-amber-100 rounded-[2rem] p-5 lg:p-6 flex items-center justify-between shadow-sm group cursor-pointer hover:bg-brand-50 hover:border-brand-100 transition-all"
+                            onClick={() => router.push('/reservations')}
+                        >
+                            <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 bg-[#F5A623] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200 shrink-0 group-hover:bg-brand-600 transition-colors">
+                                    <ShoppingBag size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest group-hover:text-brand-600 transition-colors">Order Ready for Pickup</p>
+                                    <h4 className="text-green-950 font-black text-sm lg:text-base tracking-tight">Sukuma Wiki (1 Bunch)</h4>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="hidden sm:inline-block text-[10px] font-black text-text-muted uppercase tracking-widest">
+                                    Expires in 2h
+                                </span>
+                                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-amber-600 group-hover:text-brand-600 shadow-sm border border-gray-100 group-hover:border-brand-200 transition-all">
+                                    <ArrowRight size={20} />
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* 2. HERO: Welcome & Search */}
+                <section className="relative overflow-hidden">
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="bg-brand-100 text-brand-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-brand-200">
+                                {user ? t('nav.discover') : 'Karibu Soko Mtaa'}
+                            </span>
+                            <span className="flex items-center gap-1 text-[10px] bg-amber-100 text-amber-700 font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-200">
+                                <Flame size={12} className="text-amber-600" /> Trending
+                            </span>
                         </div>
-                    ) : (
-                        <>
-                            {user.role === 'trader' && (
-                                <button 
-                                    onClick={() => router.push('/trader/dashboard')}
-                                    className="p-2 h-11 px-4 flex items-center gap-2 rounded-xl bg-brand-50 text-brand-700 font-bold text-xs border border-brand-100 active:scale-95 transition-all"
-                                >
-                                    <LayoutDashboard size={18} /> Dash
-                                </button>
-                            )}
-                            <NotificationBell />
-                        </>
-                    )}
-                </div>
-            </header>
+                        <h1 className="text-4xl lg:text-5xl font-black text-green-950 tracking-tight leading-[1.1] mb-6">
+                            {t('home.greeting')}, <br className="lg:hidden" />
+                            <span className="text-brand-600">{user?.name?.split(' ')[0] || t('home.guest')}!</span>
+                        </h1>
 
-            {/* Hero / Greeting */}
-            <section className="p-6 pt-10 animate-fade-up">
-                <div className="flex items-center gap-2 mb-2">
-                    <span className="bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
-                        {user ? user.role : t('common.register')}
-                    </span>
-                    {user?.role === 'trader' && (
-                        <span className="flex items-center gap-1 text-[10px] bg-brand-100 text-brand-700 font-black uppercase tracking-widest px-2 py-0.5 rounded-full animate-pulse-brand">
-                             <Sparkles size={10} /> Live
-                        </span>
-                    )}
-                </div>
-                <h1 className="text-4xl mb-1 text-green-950 tracking-tight font-black">{t('home.greeting')}, {user?.name || t('home.guest')}!</h1>
-                <p className="text-text-secondary text-base leading-snug">{t('home.subtitle')}</p>
-            </section>
+                        <div className="relative max-w-2xl group cursor-pointer" onClick={() => router.push('/search')}>
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted group-hover:text-brand-600 transition-colors" size={24} />
+                            <input 
+                                className="w-full h-20 pl-16 pr-6 bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 cursor-pointer pointer-events-none placeholder:text-text-muted text-green-950 font-medium text-lg focus:border-brand-300 transition-all outline-none" 
+                                placeholder={t('common.search_placeholder')} 
+                                readOnly
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 h-12 px-6 bg-brand-600 text-white rounded-2xl flex items-center justify-center font-black text-xs uppercase tracking-widest shadow-lg shadow-brand-900/10 active:scale-95 transition-all">
+                                Tafuta
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-            {/* Search Bar - Stickyish */}
-            <div className="px-6 mb-8 sticky top-16 z-10 py-2 bg-surface-base/80 backdrop-blur-sm">
-                <div className="relative group cursor-pointer" onClick={() => router.push('/search')}>
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-500 transition-colors" size={20} />
-                    <input 
-                        className="w-full h-[56px] pl-12 pr-4 bg-[#FFFFFF] rounded-2xl border border-[#E5E7EB] shadow-none cursor-pointer pointer-events-none placeholder:text-[#9CA3AF] text-[#1C1C1C]" 
-                        placeholder={t('common.search_placeholder')} 
-                        readOnly
-                    />
-                </div>
-            </div>
-
-            {/* Categories */}
-            <section className="mb-10">
-                <div className="flex items-center justify-between mb-5 px-6">
-                    <h2 className="text-xl text-green-900 font-black">{t('home.categories_title')}</h2>
-                </div>
-                <div className="pb-4">
+                {/* 3. CATEGORIES: Clean Grid/Row */}
+                <section>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl lg:text-2xl text-green-950 font-black tracking-tight">{t('home.categories_title')}</h2>
+                        <button onClick={() => router.push('/categories')} className="text-xs font-black text-brand-600 uppercase tracking-widest flex items-center gap-2 hover:gap-3 transition-all">
+                            View All <ChevronRight size={14} />
+                        </button>
+                    </div>
                     <CategoryFilter 
                         selectedCategoryId={null} 
                         onSelectCategory={(id) => {
@@ -112,51 +143,71 @@ export default function HomePage() {
                             else router.push('/search');
                         }} 
                     />
-                </div>
-            </section>
+                </section>
 
-            {/* AI Recommendations */}
-            <RecommendationSection />
-
-            {/* Community Notices */}
-            <NoticeFeed marketId={1} /> 
-
-            {/* Featured Markets */}
-            <section className="px-6 pb-28">
-                <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-xl text-green-900 font-black">{t('home.markets_title')}</h2>
-                </div>
-                <div className="space-y-4">
-                    {marketsLoading && Array(2).fill(0).map((_, i) => (
-                        <div key={i} className="h-28 bg-neutral-100 animate-pulse rounded-3xl" />
-                    ))}
-                    
-                    {markets.map((market) => (
-                        <div 
-                            key={market.id} 
-                            onClick={() => router.push(`/market/${market.id}`)}
-                            className="card p-4 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer hover:shadow-brand-md group"
-                        >
-                            <div className="w-20 h-20 grow-0 shrink-0 bg-brand-50 rounded-2xl flex items-center justify-center text-brand-600 shadow-inner group-hover:bg-brand-100 transition-colors">
-                                <MapPin size={32} />
-                            </div>
-                            <div className="overflow-hidden">
-                                <h3 className="text-lg font-black text-green-900 group-hover:text-brand-600 transition-colors truncate">{market.name}</h3>
-                                <p className="text-xs text-text-secondary flex items-center gap-1 font-bold">
-                                    <MapPin size={12} className="text-amber-500" />
-                                    {market.location}
-                                </p>
-                                <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full inline-block border border-brand-100">
-                                    {market.traders_count} {t('home.traders_online')}
-                                </div>
-                            </div>
+                {/* 4. RECOMMENDATIONS: Top Rated Row */}
+                <section className="bg-white rounded-[3rem] p-7 lg:p-10 shadow-sm border border-gray-50">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="text-xl lg:text-2xl text-green-950 font-black tracking-tight">Top Rated Near You</h3>
+                            <p className="text-text-secondary text-xs lg:text-sm font-medium mt-1">Traders with the best reviews this week.</p>
                         </div>
-                    ))}
-                </div>
-            </section>
-            
+                        <div className="flex items-center gap-1 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full border border-amber-100 shadow-sm">
+                            <Star size={14} fill="currentColor" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Premium</span>
+                        </div>
+                    </div>
+                    <RecommendationSection />
+                </section>
+
+                {/* 5. MARKETS: Discover Local Markets */}
+                <section>
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h2 className="text-xl lg:text-2xl text-green-950 font-black tracking-tight">{t('home.markets_title')}</h2>
+                            <p className="text-text-secondary text-xs lg:text-sm font-medium mt-1">Discover markets in your neighborhood.</p>
+                        </div>
+                        <button onClick={() => router.push('/market/map')} className="h-10 px-5 bg-brand-50 text-brand-700 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-brand-100 transition-all border border-brand-100">
+                            <MapIcon size={14} /> Open Map
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {marketsLoading && Array(3).fill(0).map((_, i) => (
+                            <div key={i} className="h-40 bg-gray-50 animate-pulse rounded-[2.5rem]" />
+                        ))}
+                        
+                        {markets.map((market, index) => (
+                            <motion.div 
+                                key={market.id} 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                onClick={() => router.push(`/market/${market.id}`)}
+                                className="group bg-white rounded-[2.5rem] p-6 shadow-sm border border-gray-50 hover:shadow-xl hover:shadow-gray-200/50 hover:-translate-y-1 transition-all cursor-pointer flex flex-col justify-between"
+                            >
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="w-14 h-14 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-all shadow-inner">
+                                        <MapPin size={24} />
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs font-black text-brand-600 bg-brand-50 px-2.5 py-1 rounded-lg uppercase whitespace-nowrap border border-brand-100">
+                                            {market.traders_count} Live
+                                        </p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-green-950 group-hover:text-brand-700 transition-colors">{market.name}</h3>
+                                    <p className="text-[10px] text-text-muted font-black uppercase tracking-widest mt-1 flex items-center gap-1.5">
+                                        <MapPin size={10} className="text-amber-500" />
+                                        {market.location}
+                                    </p>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </section>
             </div>
-            <BottomNav />
-        </div>
+        </DashboardLayout>
     );
 }

@@ -42,4 +42,20 @@ class MarketFee extends Model
     {
         return $this->belongsTo(Payment::class);
     }
+
+    /**
+     * Determine if the market fee is overdue.
+     */
+    public function getIsOverdueAttribute(): bool
+    {
+        return $this->status === 'unpaid' && $this->due_date < now();
+    }
+
+    /**
+     * Scope a query to only include overdue fees.
+     */
+    public function scopeOverdue($query)
+    {
+        return $query->where('status', 'unpaid')->where('due_date', '<', now());
+    }
 }
