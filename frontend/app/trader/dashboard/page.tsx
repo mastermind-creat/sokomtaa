@@ -27,7 +27,7 @@ import { ApiResponse, TraderDashboardStats, RevenueTrend } from '@/types';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { useTranslation } from '@/hooks/useTranslation';
 import DashboardLayout from '@/components/shared/DashboardLayout';
-import PriorityOrderList from '@/components/trader/PriorityOrderList';
+import PriorityOrderList from '../../../components/trader/PriorityOrderList';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function TraderDashboard() {

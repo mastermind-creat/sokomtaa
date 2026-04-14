@@ -6,15 +6,8 @@ import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { 
     Clock, 
-    CheckCircle, 
-    ChevronRight,
-    Search,
     ShoppingBag,
     User,
-    Phone,
-    MapPin,
-    AlertCircle,
-    Calendar,
     ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,16 +18,16 @@ interface Reservation {
     status: 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled';
     quantity: number;
     total_amount: number;
-    product: { name: string; image_url: string };
+    product: { name: string; image_url: string | null };
     resident: { name: string; phone: string };
     created_at: string;
 }
 
 export default function PriorityOrderList() {
-    const { data: reservations, isLoading } = useQuery({
+    const { data: resData, isLoading } = useQuery<ApiResponse<Reservation[]>>({
         queryKey: ['trader-priority-orders'],
         queryFn: async () => {
-            const res = await api.get<never, ApiResponse<Reservation[]>>('/trader/reservations?status=paid,ready');
+            const res = await api.get('/trader/reservations?status=paid,ready');
             return res.data;
         }
     });
@@ -52,7 +45,7 @@ export default function PriorityOrderList() {
         );
     }
 
-    const priorityOrders = reservations || [];
+    const priorityOrders = resData?.data || [];
 
     return (
         <div className="bg-white rounded-[2.5rem] p-8 lg:p-10 shadow-sm border border-gray-50 h-full flex flex-col">
@@ -98,7 +91,7 @@ export default function PriorityOrderList() {
 
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1">
-                                            <h4 className="text-sm font-black text-green-950 truncate group-hover:text-brand-700 transition-colors">
+                                            <h4 className="text-sm font-black text-green-950 truncate group-hover:text-brand-700 transition-colors uppercase">
                                                 {order.product.name}
                                             </h4>
                                             <span className="text-[10px] font-black text-brand-600 bg-brand-50 px-2.5 py-1 rounded-lg uppercase whitespace-nowrap">
