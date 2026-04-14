@@ -11,60 +11,66 @@ import {
     ChevronRight,
     Store,
     User,
-    Power
+    RefreshCw,
+    Briefcase,
+    MessageSquare
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
-import { motion } from 'framer-motion';
+
+interface SidebarLinkProps {
+    href: string;
+    icon: any;
+    label: string;
+    active: boolean;
+    count?: number | string;
+}
+
+const SidebarLink = ({ href, icon: Icon, label, active, count }: SidebarLinkProps) => {
+    const router = useRouter();
+    return (
+        <button
+            onClick={() => router.push(href)}
+            className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group active:scale-[0.98] ${
+                active 
+                    ? 'bg-brand-600 text-white shadow-xl shadow-brand-900/20' 
+                    : 'text-text-secondary hover:bg-gray-50'
+            }`}
+        >
+            <div className="flex items-center gap-4">
+                <Icon 
+                    size={20} 
+                    className={active ? 'text-brand-200' : 'text-gray-400 group-hover:text-brand-600 transition-colors'} 
+                    strokeWidth={active ? 2.5 : 2}
+                />
+                <span className={`text-sm font-bold tracking-tight ${active ? 'text-white' : ''}`}>
+                    {label}
+                </span>
+            </div>
+            {count && (
+                <div className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${
+                    active ? 'bg-white/20 text-white' : 'bg-brand-50 text-brand-700'
+                }`}>
+                    {count}
+                </div>
+            )}
+        </button>
+    );
+};
 
 export default function TraderSidebar() {
     const router = useRouter();
     const pathname = usePathname();
     const { user } = useAuthStore();
     const { t } = useTranslation();
-    const [isOpen, setIsOpen] = React.useState(true); // Mock state
-
-    const menuItems = [
-        { icon: LayoutDashboard, label: t('nav.dawati'), path: '/trader/dashboard', badge: null },
-        { icon: Package, label: t('trader.manage_products'), path: '/trader/products', badge: null },
-        { icon: Ticket, label: t('nav.reservations'), path: '/trader/reservations', badge: 3 }, // Mock badge
-        { icon: CreditCard, label: t('common.fees'), path: '/trader/payments', badge: 'Due' },
-        { icon: BarChart3, label: t('common.analytics'), path: '/trader/analytics', badge: null },
-    ];
-
-    return (
-        <aside className="hidden lg:flex flex-col w-[280px] h-screen bg-white border-r border-gray-100 sticky top-0 left-0 overflow-y-auto no-scrollbar">
-            {/* Logo & Profile Summary */}
-            <div className="p-8 pb-6">
-                <div 
-                    onClick={() => router.push('/trader/dashboard')} 
-                    className="cursor-pointer active:scale-95 transition-transform mb-10"
-                >
-                    <Logo variant="light" width={160} />
-                </div>
-
-                <div className="p-5 bg-gray-50 rounded-[2rem] border border-gray-100 relative overflow-hidden group">
-                    <div className="flex items-center gap-4 relative z-10">
-                        <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center font-black text-brand-700 overflow-hidden">
-                            {user?.avatar_url ? (
-                                <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <User size={24} />
-                            )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-xs font-black text-green-950 truncate">Baba Mboga Ltd</p>
-                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest flex items-center gap-1">
-                                <Store size={10} /> Stall A42
-                            </p>
     const [isOpen, setIsOpen] = React.useState(true);
 
     return (
-        <aside className="hidden lg:flex flex-col w-[280px] h-screen bg-white border-r border-gray-100 sticky top-0 left-0">
-            {/* Logo */}
+        <aside className="hidden lg:flex flex-col w-[280px] h-screen bg-white border-r border-gray-100 sticky top-0 left-0 overflow-y-auto no-scrollbar">
+            {/* Logo Area */}
             <div className="p-8 pb-2">
                 <div onClick={() => router.push('/trader/dashboard')} className="cursor-pointer">
                     <Logo variant="light" width={140} />
@@ -78,7 +84,7 @@ export default function TraderSidebar() {
                         <Store size={24} />
                     </div>
                     <div>
-                        <h2 className="text-xl font-black text-green-950 tracking-tight leading-tight">M-Pesa Store</h2>
+                        <h2 className="text-lg font-black text-green-950 tracking-tight leading-tight">M-Pesa Store</h2>
                         <div className="flex items-center gap-2 mt-1">
                             <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{t('sidebar.business_summary')}</span>
                         </div>
@@ -96,7 +102,7 @@ export default function TraderSidebar() {
                     </div>
                     <button 
                         onClick={() => setIsOpen(!isOpen)}
-                        className="w-full h-10 bg-white border border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-brand-300 transition-all flex items-center justify-center gap-2"
+                        className="w-full h-10 bg-white border border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-brand-300 transition-all flex items-center justify-center gap-2 shadow-sm"
                     >
                         <RefreshCw size={12} className={isOpen ? 'text-brand-600' : 'text-red-500'} />
                         {t('trader.update_status')}
@@ -105,46 +111,32 @@ export default function TraderSidebar() {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-4 space-y-1 mt-4">
-                <p className="px-4 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">Biashara Yako</p>
-                {menuItems.map((item) => {
-                    const isActive = pathname === item.path;
-                    return (
-                        <button
-                            key={item.path}
-                            onClick={() => router.push(item.path)}
-                            className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group active:scale-[0.98] ${
-                                isActive 
-                                    ? 'bg-brand-600 text-white shadow-xl shadow-brand-900/20' 
-                                    : 'text-text-secondary hover:bg-gray-50'
-                            }`}
-                        >
-                            <div className="flex items-center gap-4">
-                                <item.icon 
-                                    size={20} 
-                                    className={isActive ? 'text-brand-200' : 'text-gray-400 group-hover:text-brand-600 transition-colors'} 
-                                    strokeWidth={isActive ? 2.5 : 2}
-                                />
-                                <span className={`text-sm font-bold tracking-tight ${isActive ? 'text-white' : ''}`}>
-                                    {item.label}
-                                </span>
-                            </div>
-                            {item.badge && (
-                                <div className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${
-                                    isActive ? 'bg-white/20 text-white' : 'bg-brand-50 text-brand-700'
-                                }`}>
-                                    {item.badge}
-                                </div>
-                            )}
-                        </button>
-                    );
-                })}
-            </nav>
+            <div className="flex-1 space-y-8 py-6 px-3">
+                {/* Core Dash */}
+                <div>
+                    <p className="px-3 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">Takwimu na Uhifadhi</p>
+                    <div className="space-y-1">
+                        <SidebarLink href="/trader/dashboard" icon={LayoutDashboard} label={t('nav.dawati')} active={pathname === '/trader/dashboard'} />
+                        <SidebarLink href="/trader/products" icon={Package} label={t('sidebar.products_stock')} active={pathname.startsWith('/trader/products')} />
+                        <SidebarLink href="/trader/reservations" icon={Ticket} label={t('sidebar.order_history')} active={pathname === '/trader/reservations'} count={3} />
+                    </div>
+                </div>
+
+                {/* Finance & Management */}
+                <div>
+                    <p className="px-3 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">{t('sidebar.store_mgmt')}</p>
+                    <div className="space-y-1">
+                        <SidebarLink href="/trader/payments" icon={Briefcase} label={t('sidebar.fees_payments')} active={pathname === '/trader/payments'} />
+                        <SidebarLink href="/trader/analytics" icon={BarChart3} label={t('sidebar.store_analytics')} active={pathname === '/trader/analytics'} />
+                        <SidebarLink href="/trader/reviews" icon={MessageSquare} label={t('sidebar.reviews')} active={pathname === '/trader/reviews'} />
+                    </div>
+                </div>
+            </div>
 
             {/* Footer Area */}
-            <div className="p-6 mt-auto space-y-4">
+            <div className="p-6 space-y-4 border-t border-gray-100">
                 <button 
-                    onClick={() => router.push('/trader/settings')}
+                    onClick={() => router.push('/profile')}
                     className="w-full flex items-center gap-4 p-4 rounded-2xl text-text-secondary hover:bg-gray-50 transition-all font-bold text-sm"
                 >
                     <Settings size={20} className="text-gray-400" />

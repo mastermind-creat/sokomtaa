@@ -42,6 +42,36 @@ export default function ResidentSidebar() {
                 </div>
             </div>
 
+            {/* Navigation */}
+            <nav className="flex-1 px-4 space-y-1">
+                <p className="px-4 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">{t('sidebar.discovery')}</p>
+                {menuItems.map((item) => {
+                    const isActive = pathname === item.path;
+                    return (
+                        <button
+                            key={item.path}
+                            onClick={() => router.push(item.path)}
+                            className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group active:scale-[0.98] ${
+                                isActive 
+                                    ? 'bg-white text-green-950 shadow-xl shadow-gray-200/50 border border-gray-100' 
+                                    : 'text-text-secondary hover:bg-white/50'
+                            }`}
+                        >
+                            <div className="flex items-center gap-4">
+                                <item.icon 
+                                    size={20} 
+                                    className={isActive ? 'text-brand-600' : 'text-gray-400 group-hover:text-brand-600 transition-colors'} 
+                                    strokeWidth={isActive ? 2.5 : 2}
+                                />
+                                <span className={`text-sm font-bold tracking-tight ${isActive ? 'text-green-950 font-black' : ''}`}>
+                                    {item.label}
+                                </span>
+                            </div>
+                            {item.badge && (
+                                <div className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-brand-600 text-white">
+                                    {item.badge}
+                                </div>
+                            )}
                         </button>
                     );
                 })}
