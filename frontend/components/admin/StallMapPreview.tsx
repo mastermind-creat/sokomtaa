@@ -49,10 +49,11 @@ export default function StallMapPreview() {
     const { data: stalls } = useQuery({
         queryKey: ['admin-stalls'],
         queryFn: async () => {
-            const res = await api.get<never, ApiResponse<Stall[]>>('/admin/stalls');
+            const res = await api.get<any, ApiResponse<Stall[]>>('/admin/stalls');
             return res.data;
         }
     });
+
 
     return (
         <div className="h-[500px] w-full relative group">

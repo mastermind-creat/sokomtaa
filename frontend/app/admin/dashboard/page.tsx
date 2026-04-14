@@ -163,7 +163,10 @@ export default function AdminDashboard() {
                                 <h3 className="text-xl font-black text-green-950 tracking-tight">{t('admin.revenue_trends')}</h3>
                                 <p className="text-text-secondary text-sm font-medium">Monthly collection across all markets.</p>
                             </div>
-                            <select className="h-10 pl-4 pr-10 bg-gray-50 border-none rounded-xl text-xs font-bold text-text-secondary outline-none appearance-none cursor-pointer hover:bg-gray-100 transition-colors">
+                            <select 
+                                aria-label="Filter revenue trends by date range"
+                                className="h-10 pl-4 pr-10 bg-gray-50 border-none rounded-xl text-xs font-bold text-text-secondary outline-none appearance-none cursor-pointer hover:bg-gray-100 transition-colors"
+                            >
                                 <option>Last 6 Months</option>
                                 <option>Last Year</option>
                             </select>
