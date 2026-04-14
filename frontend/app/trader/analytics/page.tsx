@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { ApiResponse } from '@/types';
 import BottomNav from '@/components/shared/BottomNav';
 import { 
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
