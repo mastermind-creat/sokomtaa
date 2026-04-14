@@ -45,11 +45,6 @@ interface Stall {
 
 export default function StallMapPreview() {
     const [center, setCenter] = useState<[number, number]>([-1.286389, 36.817223]); // Default Nairobi
-    const [mapReady, setMapReady] = useState(false);
-
-    useEffect(() => {
-        setMapReady(true);
-    }, []);
 
     const { data: stalls } = useQuery({
         queryKey: ['admin-stalls'],
@@ -58,8 +53,6 @@ export default function StallMapPreview() {
             return res.data;
         }
     });
-
-    if (!mapReady) return null;
 
     return (
         <div className="h-[500px] w-full relative group">
