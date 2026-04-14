@@ -8,6 +8,7 @@ use App\Models\Reservation;
 use App\Models\MarketFee;
 use App\Services\MpesaService;
 use App\Services\NotificationService;
+use App\Services\WalletService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,8 +35,9 @@ class MpesaController extends Controller
     {
         $request->validate([
             'phone_number' => 'required|string|regex:/^2547[0-9]{8}$/',
-            'type' => 'required|in:reservation,market_fee',
-            'target_id' => 'required|integer',
+            'type' => 'required|in:reservation,market_fee,wallet_topup',
+            'target_id' => 'required_if:type,reservation,market_fee|integer',
+            'amount' => 'required_if:type,wallet_topup|numeric|min:1',
         ]);
 
         $user = Auth::user();
@@ -49,13 +51,17 @@ class MpesaController extends Controller
             }
             $amount = $reservation->total_amount;
             $ref = $reservation->reservation_code;
-        } else {
+        } elseif ($request->type === 'market_fee') {
             $fee = MarketFee::findOrFail($request->target_id);
             if ($fee->status === 'paid') {
                 return $this->error('Ada hii tayari imeshalipiwa. (Fee already paid.)', 'ALREADY_PAID', 422);
             }
             $amount = $fee->amount;
             $ref = 'FEE-' . $fee->id;
+        } else {
+            // Wallet Top-up
+            $amount = $request->amount;
+            $ref = 'TOPUP-' . $user->id;
         }
 
         $stkResponse = $this->mpesaService->stkPush(
@@ -127,25 +133,28 @@ class MpesaController extends Controller
                     $payment->reservation, 
                     'paid'
                 );
-            } elseif ($payment->type === 'market_fee') {
-                $fee = MarketFee::where('payment_id', null)->where('trader_id', $payment->user?->trader?->id)->latest()->first();
-                if ($fee) {
-                    $fee->update([
-                        'status' => 'paid',
-                        'payment_id' => $payment->id,
-                        'paid_at' => now(),
-                    ]);
+            } elseif ($payment->type === 'market_fee' || $payment->type === 'wallet_topup') {
+                $walletService = app(WalletService::class);
+                $wallet = $walletService->getOrCreateForTrader($payment->user->trader?->id);
+                
+                // Credit the wallet
+                $walletService->credit(
+                    $wallet, 
+                    $payment->amount, 
+                    "M-Pesa Top-up: {$transactionId}",
+                    'mpesa',
+                    $transactionId
+                );
 
-                    // Trigger Notification
-                    $this->notificationService->send(
-                        $payment->user,
-                        'Ada Imelipwa (Fee Paid)',
-                        "Ada yako ya soko ya KES {$fee->amount} ya kipindi {$fee->period} imerekodiwa kama imelipwa.",
-                        'payment',
-                        ['fee_id' => $fee->id],
-                        true
-                    );
-                }
+                // Notify Trader
+                $this->notificationService->send(
+                    $payment->user,
+                    'Salio Limeongezwa (Wallet Topped Up)',
+                    "Salio lako la KES {$payment->amount} limeongezwa kwenye wallet yako. Asante.",
+                    'payment',
+                    ['transaction_id' => $transactionId],
+                    true
+                );
             }
 
             Log::info('M-Pesa Payment Successful and Notifications Sent: ' . $transactionId);
@@ -159,5 +168,23 @@ class MpesaController extends Controller
         }
 
         return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Success']);
+    }
+
+    /**
+     * Check the status of a specific M-Pesa transaction.
+     * Used for polling from the frontend.
+     */
+    public function checkStatus(string $checkoutRequestId): JsonResponse
+    {
+        $payment = Payment::where('mpesa_checkout_request_id', $checkoutRequestId)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        return $this->success([
+            'status' => $payment->status,
+            'mpesa_transaction_id' => $payment->mpesa_transaction_id,
+            'amount' => $payment->amount,
+            'paid_at' => $payment->paid_at,
+        ]);
     }
 }

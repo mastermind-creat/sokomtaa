@@ -1,60 +1,42 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { useParams, useRouter } from 'next/navigation';
 import { 
     ChevronLeft,
-    ChevronRight,
     MapPin, 
-    Clock, 
     CheckCircle2, 
     ShoppingBag, 
     Plus, 
-    Minus,
     Loader2,
     Store,
-    AlertCircle,
     Star,
-    TrendingUp
+    Info,
+    Phone,
+    Share2,
+    Calendar,
+    Award
 } from 'lucide-react';
-import { ApiResponse } from '@/types';
+import { ApiResponse, Trader, Product, Review } from '@/types';
 import BottomNav from '@/components/shared/BottomNav';
+import ReservationFlow from '@/components/resident/ReservationFlow';
+import ReviewCard from '@/components/shared/ReviewCard';
+import { useAuthStore } from '@/store/authStore';
 
-interface Category {
-    id: number;
-    name: string;
-}
-
-interface Product {
-    id: number;
-    name: string;
-    price: string;
-    unit: string;
-    image_url?: string;
-    category?: Category;
-}
-
-interface Trader {
-    id: number;
-    business_name: string;
-    description: string;
-    avatar_url?: string;
-    banner_url?: string;
-    is_open: boolean;
-    market?: { name: string };
-    stall?: { stall_number: string };
-}
+type Tab = 'products' | 'about' | 'reviews';
 
 export default function TraderStorefrontPage() {
     const { id } = useParams();
     const router = useRouter();
-    const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
-    const [quantity, setQuantity] = React.useState(1);
+    const [selectedTab, setSelectedTab] = useState<Tab>('products');
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const { user } = useAuthStore();
 
-    const { data: storefrontData, isLoading } = useQuery<ApiResponse<{
+    // 1. Fetch Trader Details & Products
+    const { data: storefrontData, isLoading: isTraderLoading } = useQuery<ApiResponse<{
         trader: Trader;
         products: { data: Product[] };
     }>>({
@@ -62,266 +44,323 @@ export default function TraderStorefrontPage() {
         queryFn: () => api.get(`/traders/${id}`),
     });
 
-    const reservationMutation = useMutation({
-        mutationFn: (data: { product_id: number; quantity: number }) => api.post('/reservations', data),
-        onSuccess: () => {
-            setSelectedProduct(null);
-            router.push('/reservations');
-        }
+    // 2. Fetch Trader Reviews (specifically for the Reviews tab)
+    const { data: reviewsData, isLoading: isReviewsLoading } = useQuery<ApiResponse<Review[]>>({
+        queryKey: ['trader-reviews', id],
+        queryFn: () => api.get(`/traders/${id}/reviews`),
+        enabled: selectedTab === 'reviews'
     });
 
     const trader = storefrontData?.data?.trader;
     const products = storefrontData?.data?.products?.data || [];
+    const reviews = reviewsData?.data || [];
 
-    if (isLoading) {
+    const stats = useMemo(() => {
+        if (!trader) return { avg: "0.0", count: 0 };
+        return { 
+            avg: trader.average_rating || "4.8", // Default placeholder if missing
+            count: trader.total_reviews || 127 
+        };
+    }, [trader]);
+
+    if (isTraderLoading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen">
-                <Loader2 className="animate-spin text-brand-600" size={40} />
+            <div className="flex flex-col items-center justify-center min-h-screen bg-surface">
+                <div className="relative">
+                    <div className="w-16 h-16 border-4 border-brand-100 border-t-brand-600 rounded-full animate-spin" />
+                    <Store className="absolute inset-0 m-auto text-brand-600" size={24} />
+                </div>
+                <p className="mt-4 text-xs font-black text-brand-700 uppercase tracking-widest animate-pulse">Safisha Duka...</p>
             </div>
         );
     }
 
-    const handleReserve = () => {
-        if (!selectedProduct) return;
-        reservationMutation.mutate({
-            product_id: selectedProduct.id,
-            quantity: quantity,
-        });
-    };
+    if (!trader) return null;
 
     return (
-        <div className="flex flex-col min-h-screen bg-surface-base pb-32">
-            {/* Header / Banner */}
-            <div className="relative h-56 w-full bg-green-950 overflow-hidden">
-                {trader?.banner_url ? (
-                    <img src={trader.banner_url} alt="Banner" className="w-full h-full object-cover opacity-60" />
-                ) : (
-                    <div className="absolute inset-0 bg-gradient-to-b from-green-900 to-green-950" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-green-950/80 via-transparent to-transparent" />
-                
+        <div className="flex flex-col min-h-screen bg-surface pb-32">
+            {/* 1. Sticky Header Controls */}
+            <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-12 pointer-events-none">
                 <button 
                     onClick={() => router.back()}
-                    className="absolute top-12 left-6 w-11 h-11 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center justify-center text-white z-20 active:scale-90 transition-all shadow-2xl"
-                    aria-label="Rudi nyuma (Back)"
+                    className="w-12 h-12 bg-white/20 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center justify-center text-white shadow-2xl pointer-events-auto active:scale-90 transition-all"
                 >
                     <ChevronLeft size={24} />
                 </button>
-
-                <div className="absolute -bottom-6 left-6 w-24 h-24 bg-white rounded-[2rem] shadow-2xl flex items-center justify-center border-4 border-white text-green-600 z-10 overflow-hidden transition-transform hover:scale-105 duration-300">
-                    {trader?.avatar_url ? (
-                        <img src={trader.avatar_url} alt={trader?.business_name || 'Trader Profile'} className="w-full h-full object-cover" />
-                    ) : (
-                        <Store size={40} className="text-green-800" />
-                    )}
+                <div className="flex gap-2 pointer-events-auto">
+                    <button className="w-12 h-12 bg-white/20 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center justify-center text-white shadow-2xl active:scale-90 transition-all">
+                        <Share2 size={20} />
+                    </button>
                 </div>
             </div>
 
-            {/* Profile Info */}
-            <section className="px-6 pt-10 pb-6 relative">
+            {/* 2. Hero Section */}
+            <div className="relative h-64 w-full bg-green-950 overflow-hidden">
+                {trader.banner_url ? (
+                    <img src={trader.banner_url} alt="Banner" className="w-full h-full object-cover opacity-60" />
+                ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-green-800 via-brand-900 to-green-950" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent" />
+                
+                <div className="absolute -bottom-8 left-6 flex items-end gap-6 z-10 w-full px-6">
+                    <div className="w-28 h-28 bg-white rounded-[2.5rem] shadow-2xl flex items-center justify-center border-4 border-white overflow-hidden transition-transform hover:rotate-3 duration-500 shrink-0">
+                        {trader.avatar_url ? (
+                            <img src={trader.avatar_url} alt={trader.business_name} className="w-full h-full object-cover" />
+                        ) : (
+                            <Store size={48} className="text-brand-800" />
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* 3. Trader Identity */}
+            <section className="px-6 pt-12 pb-6 space-y-4">
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                            <h1 className="text-3xl font-black text-green-950 tracking-tight leading-none">{trader?.business_name}</h1>
+                            <h1 className="text-3xl font-black text-green-950 tracking-tight leading-none">{trader.business_name}</h1>
                             <CheckCircle2 size={24} className="text-brand-500 fill-brand-50 shrink-0" />
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <p className="text-[11px] text-text-muted font-bold flex items-center gap-1 uppercase tracking-wider">
-                                <MapPin size={12} className="text-amber-500" />
-                                {trader?.market?.name} • Stendi {trader?.stall?.stall_number}
-                            </p>
-                            <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                            <div className="flex items-center gap-1 text-[11px] text-brand-600 font-black uppercase tracking-widest">
-                                <Star size={12} className="fill-brand-500 text-brand-500" />
-                                4.8 (127)
-                            </div>
-                        </div>
+                        <p className="text-sm font-bold text-text-muted flex items-center gap-1.5 uppercase tracking-wider">
+                            <MapPin size={14} className="text-amber-500" />
+                            {trader.market?.name} • Row {trader.stall?.stall_number}
+                        </p>
                     </div>
-                    <div className={`px-4 py-2 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-sm flex items-center gap-2 ${trader?.is_open ? 'bg-green-100 text-green-700' : 'bg-neutral-100 text-neutral-500'}`}>
-                        <div className={`w-2 h-2 rounded-full ${trader?.is_open ? 'bg-green-500 animate-pulse' : 'bg-neutral-400'}`} />
-                        {trader?.is_open ? 'Wazi Now' : 'Tumefunga'}
+                    <div className={`px-4 py-2 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-sm flex items-center gap-2 border ${trader.is_open ? 'bg-green-50 text-green-700 border-green-100' : 'bg-neutral-50 text-neutral-500 border-neutral-100'}`}>
+                        <div className={`w-2 h-2 rounded-full ${trader.is_open ? 'bg-green-500 animate-pulse' : 'bg-neutral-400'}`} />
+                        {trader.is_open ? 'Open Now' : 'Closed'}
                     </div>
                 </div>
 
-                {/* Trust Badges */}
-                <div className="flex gap-2 mt-6 overflow-x-auto no-scrollbar pb-2">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-full shrink-0">
-                        <CheckCircle2 size={12} className="text-emerald-600" />
-                        <span className="text-[10px] font-black text-emerald-700 uppercase tracking-tight">Imethibitishwa</span>
+                        <Award size={12} className="text-emerald-600" />
+                        <span className="text-[10px] font-black text-emerald-700 uppercase">Verified Trader</span>
                     </div>
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full shrink-0">
-                        <Clock size={12} className="text-amber-600" />
-                        <span className="text-[10px] font-black text-amber-700 uppercase tracking-tight">Haraka (Fast)</span>
+                        <Star size={12} className="text-amber-600" />
+                        <span className="text-[10px] font-black text-amber-700 uppercase">High Rated</span>
                     </div>
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full shrink-0">
-                        <Star size={12} className="text-blue-600" />
-                        <span className="text-[10px] font-black text-blue-700 uppercase tracking-tight">Bora Leo</span>
+                        <Info size={12} className="text-blue-600" />
+                        <span className="text-[10px] font-black text-blue-700 uppercase">Reserves Accepted</span>
                     </div>
                 </div>
 
-                <p className="mt-4 text-[13px] text-text-secondary leading-relaxed font-medium">
-                    {trader?.description || "Karibu katika duka letu kwa bidhaa bora na bei nafuu nchini."}
+                <p className="text-[13px] text-text-secondary leading-relaxed font-medium line-clamp-2">
+                    {trader.description || "Karibu katika duka letu kwa bidhaa bora na bei nafuu kabisa mjini."}
                 </p>
-
-                <div className="flex gap-4 mt-6">
-                    <div className="flex items-center gap-2 text-xs text-text-muted font-bold bg-white px-4 py-2 rounded-xl shadow-brand-sm">
-                        <Clock size={16} className="text-brand-600" />
-                        <span>06:00 - 18:00</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-text-muted font-bold bg-white px-4 py-2 rounded-xl shadow-brand-sm">
-                        <ShoppingBag size={16} className="text-brand-600" />
-                        <span>{products.length} Bidhaa</span>
-                    </div>
-                </div>
             </section>
 
-            {/* Product Grid */}
-            <section className="px-6 pb-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-black text-green-950 tracking-tight">Bidhaa Zote</h2>
-                    <button className="text-[10px] font-black text-brand-600 uppercase tracking-widest bg-brand-50 px-3 py-1.5 rounded-lg active:scale-95 transition-all">
-                        Chuja (Filter)
-                    </button>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    {products.map((product: Product) => (
-                        <motion.div 
-                            key={product.id}
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => setSelectedProduct(product)}
-                            className="bg-white rounded-[2rem] border border-border-default shadow-brand-sm overflow-hidden group"
+            {/* 4. Tabbed Navigation */}
+            <div className="sticky top-0 bg-white/80 backdrop-blur-xl z-40 px-6 border-b border-gray-100 shadow-sm">
+                <div className="flex gap-8">
+                    {(['products', 'about', 'reviews'] as Tab[]).map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setSelectedTab(tab)}
+                            className={`py-5 text-xs font-black uppercase tracking-[0.2em] relative transition-colors ${
+                                selectedTab === tab ? 'text-brand-600' : 'text-text-muted hover:text-text-primary'
+                            }`}
                         >
-                            <div className="aspect-square bg-neutral-100 relative overflow-hidden">
-                                {product.image_url ? (
-                                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-text-muted"><ShoppingBag size={32} /></div>
-                                )}
-                                <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded-xl shadow-md border border-white">
-                                    <p className="text-[9px] font-black text-brand-600 uppercase tracking-wider">{product.category?.name || 'Bidhaa'}</p>
-                                </div>
-                            </div>
-                            <div className="p-4 space-y-1">
-                                <h4 className="font-bold text-green-950 text-xs truncate leading-tight">{product.name}</h4>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-[9px] font-bold text-text-muted">KES</span>
-                                    <span className="text-lg font-black text-green-950 font-mono tracking-tighter">{product.price}</span>
-                                    <span className="text-[8px] text-text-muted lowercase font-bold">/{product.unit}</span>
-                                </div>
-                                <div className="pt-2">
-                                    <button className="w-full h-10 bg-brand-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-brand-sm group-active:scale-95 transition-all">
-                                        <Plus size={14} />
-                                        Hifadhi
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
+                            {tab === 'products' ? 'Bidhaa' : tab === 'about' ? 'Kuhusu' : 'Maoni'}
+                            {selectedTab === tab && (
+                                <motion.div 
+                                    layoutId="activeTab" 
+                                    className="absolute bottom-0 left-0 right-0 h-1 bg-brand-600 rounded-full" 
+                                />
+                            )}
+                        </button>
                     ))}
                 </div>
-            </section>
+            </div>
 
-            {/* Reservation Drawer Placeholder (Bottom Sheet) */}
-            <AnimatePresence>
-                {selectedProduct && (
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 z-[60] flex flex-col justify-end"
-                        onClick={() => setSelectedProduct(null)}
-                    >
+            {/* 5. Tab Content */}
+            <div className="px-6 py-6">
+                <AnimatePresence mode="wait">
+                    {selectedTab === 'products' && (
                         <motion.div 
-                            initial={{ y: '100%' }}
-                            animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="bg-white rounded-t-[3rem] p-8 space-y-6 max-w-[480px] mx-auto w-full relative shadow-3xl"
-                            onClick={(e) => e.stopPropagation()}
+                            key="products"
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: -20, opacity: 0 }}
+                            className="grid grid-cols-2 gap-4"
                         >
-                            <div className="w-12 h-1.5 bg-neutral-200 rounded-full mx-auto mb-2" />
-
-                            <div className="flex gap-6 items-start">
-                                <div className="w-32 h-32 bg-neutral-100 rounded-[2.5rem] overflow-hidden shadow-brand-md border-4 border-white shrink-0">
-                                    {selectedProduct.image_url ? (
-                                        <img src={selectedProduct.image_url} alt={selectedProduct.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-text-muted bg-gray-50"><ShoppingBag size={40} /></div>
-                                    )}
-                                </div>
-                                <div className="space-y-2 py-2">
-                                    <div className="space-y-0.5">
-                                        <span className="text-[10px] font-black text-brand-600 uppercase tracking-[0.2em]">{selectedProduct.category?.name || 'MAELEZO'}</span>
-                                        <h3 className="text-2xl font-black text-green-950 tracking-tight leading-tight">{selectedProduct.name}</h3>
+                            {products.length > 0 ? products.map((product) => (
+                                <motion.div 
+                                    key={product.id}
+                                    whileTap={{ scale: 0.96 }}
+                                    onClick={() => setSelectedProduct(product)}
+                                    className="bg-white rounded-[2rem] border border-gray-100 shadow-brand-sm overflow-hidden group"
+                                >
+                                    <div className="aspect-square bg-neutral-50 relative overflow-hidden">
+                                        {product.image_url ? (
+                                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-text-muted"><ShoppingBag size={32} /></div>
+                                        )}
+                                        <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded-xl shadow-md border border-white">
+                                            <p className="text-[9px] font-black text-brand-600 uppercase tracking-wider">
+                                                {product.stock_status === 'available' ? 'Ipo' : 'Nyingi'}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-xs font-black text-text-muted">KES</span>
-                                        <span className="text-3xl font-black text-green-950 font-mono tracking-tighter">{selectedProduct.price}</span>
-                                        <span className="text-xs text-text-muted font-bold">/{selectedProduct.unit}</span>
+                                    <div className="p-4 space-y-1">
+                                        <h4 className="font-bold text-green-950 text-xs truncate leading-tight">{product.name}</h4>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-[9px] font-bold text-text-muted">KES</span>
+                                            <span className="text-lg font-black text-green-950 font-mono tracking-tighter">{product.price}</span>
+                                            <span className="text-[8px] text-text-muted lowercase font-bold">/{product.unit}</span>
+                                        </div>
+                                        <div className="pt-2">
+                                            <button className="w-full h-10 bg-neutral-50 text-green-950 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 group-hover:bg-brand-600 group-hover:text-white transition-all">
+                                                <Plus size={14} /> Hifadhi
+                                            </button>
+                                        </div>
                                     </div>
-                                    {/* Price Insight Badge */}
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-xl w-fit border border-green-100">
-                                        <TrendingUp size={14} className="text-green-600" />
-                                        <span className="text-[10px] font-black text-green-700 uppercase tracking-tight">BEI NZURI SOKONI!</span>
-                                    </div>
+                                </motion.div>
+                            )) : (
+                                <div className="col-span-2 py-12 text-center space-y-3">
+                                    <ShoppingBag size={48} className="mx-auto text-neutral-200" />
+                                    <p className="text-sm font-bold text-text-muted uppercase tracking-widest">Hakuna bidhaa kwa sasa</p>
                                 </div>
-                            </div>
+                            )}
+                        </motion.div>
+                    )}
 
-                            <div className="bg-surface-base p-6 rounded-[2rem] border border-border-default flex items-center justify-between shadow-inner">
-                                <div className="space-y-0.5">
-                                    <span className="text-xs font-black text-green-950">Chagua Kiasi</span>
-                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Quantity in {selectedProduct.unit}s</p>
-                                </div>
-                                <div className="flex items-center gap-4 bg-white p-1 rounded-2xl shadow-brand-sm border border-border-default">
-                                    <button 
-                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                        className="w-12 h-12 flex items-center justify-center rounded-xl hover:bg-neutral-50 active:scale-90 transition-all text-green-950"
-                                        aria-label="Punguza kiasi"
-                                        title="Punguza kiasi"
-                                    >
-                                        <Minus size={24} />
-                                    </button>
-                                    <span className="text-xl font-black w-8 text-center font-mono">{quantity}</span>
-                                    <button 
-                                        onClick={() => setQuantity(quantity + 1)}
-                                        className="w-12 h-12 flex items-center justify-center rounded-xl hover:bg-neutral-50 active:scale-90 transition-all text-green-950"
-                                        aria-label="Ongeza kiasi"
-                                        title="Ongeza kiasi"
-                                    >
-                                        <Plus size={24} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-4 items-center bg-amber-50/50 p-5 rounded-[2rem] border border-amber-100/50">
-                                <AlertCircle className="text-amber-500 shrink-0" size={24} />
-                                <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
-                                    Uhifadhi huu ni wa <strong>saa 24</strong> pekee. Lipia bidhaa ili kuthibitisha oda yako na kuzuia isichukuliwe na mwingine.
+                    {selectedTab === 'about' && (
+                        <motion.div 
+                            key="about"
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: -20, opacity: 0 }}
+                            className="space-y-8"
+                        >
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-black text-green-950 tracking-tight">Maelezo ya Biashara</h3>
+                                <p className="text-sm text-text-secondary leading-relaxed font-medium">
+                                    {trader.description || "Duka hili liko tayari kukuhudumia na bidhaa bora zaidi katika soko la " + trader.market?.name + "."}
                                 </p>
                             </div>
 
-                            <button 
-                                disabled={reservationMutation.isPending}
-                                onClick={handleReserve}
-                                className="btn btn-primary w-full h-[72px] text-lg flex items-center justify-between px-8 shadow-brand-lg mt-2 relative overflow-hidden"
-                            >
-                                {reservationMutation.isPending ? (
-                                    <div className="flex items-center gap-3 mx-auto">
-                                        <Loader2 className="animate-spin" />
-                                        <span className="font-black uppercase tracking-widest text-sm">Inatuma...</span>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <span className="font-black uppercase tracking-widest text-sm">Hifadhi Sasa</span>
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-1 h-1 bg-white/40 rounded-full" />
-                                            <span className="font-mono text-xl font-black">KES {parseFloat(selectedProduct.price) * quantity}</span>
-                                            <ChevronRight size={24} className="ml-1 opacity-50" />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-neutral-50 p-6 rounded-[2rem] border border-gray-100 flex flex-col items-center text-center">
+                                    <Calendar className="text-brand-600 mb-2" size={24} />
+                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Amefungua Tangu</p>
+                                    <h4 className="text-sm font-black text-green-950">Januari 2024</h4>
+                                </div>
+                                <div className="bg-neutral-50 p-6 rounded-[2rem] border border-gray-100 flex flex-col items-center text-center">
+                                    <Award className="text-brand-600 mb-2" size={24} />
+                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Mauzo (Total)</p>
+                                    <h4 className="text-sm font-black text-green-950">500+ Oda</h4>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-4">
+                                <h4 className="font-black text-green-950 text-sm tracking-tight uppercase">Mawasiliano & Huduma</h4>
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-brand-600">
+                                            <Phone size={18} />
                                         </div>
-                                    </>
-                                )}
-                            </button>
+                                        <div>
+                                            <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">Simu</p>
+                                            <p className="text-sm font-bold text-green-950">0712 345 678</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
+                                            <MapPin size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">Location</p>
+                                            <p className="text-sm font-bold text-green-950">{trader.market?.name}, Stall {trader.stall?.stall_number}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </motion.div>
-                    </motion.div>
+                    )}
+
+                    {selectedTab === 'reviews' && (
+                        <motion.div 
+                            key="reviews"
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: -20, opacity: 0 }}
+                            className="space-y-6"
+                        >
+                            {/* Review Overview */}
+                            <div className="bg-green-950 p-8 rounded-[3rem] text-white flex items-center justify-between shadow-2xl overflow-hidden relative">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
+                                <div>
+                                    <div className="flex items-baseline gap-2">
+                                        <h2 className="text-5xl font-black font-mono tracking-tighter">{stats.avg}</h2>
+                                        <span className="text-xs font-bold text-white/60">/ 5.0</span>
+                                    </div>
+                                    <p className="text-[11px] font-black uppercase tracking-widest text-brand-200 mt-1">{stats.count} Maoni ya wateja</p>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    {[5,4,3,2,1].map((star) => (
+                                        <div key={star} className="flex items-center gap-2">
+                                            <span className="text-[8px] font-black opacity-60 w-2">{star}</span>
+                                            <div className="w-20 h-1 bg-white/10 rounded-full overflow-hidden">
+                                                <div className="h-full bg-brand-500 rounded-full" style={{ width: star > 3 ? `${90 - (5-star)*20}%` : '10%' }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Review List */}
+                            <div className="space-y-4">
+                                {isReviewsLoading ? (
+                                    <div className="py-12 flex justify-center">
+                                        <Loader2 className="animate-spin text-brand-600" />
+                                    </div>
+                                ) : reviews.length > 0 ? (
+                                    reviews.map((review) => (
+                                        <ReviewCard key={review.id} review={review} />
+                                    ))
+                                ) : (
+                                    <div className="py-12 text-center space-y-2 opacity-40">
+                                        <Star size={40} className="mx-auto" />
+                                        <p className="text-xs font-black uppercase tracking-widest">Hakuna maoni bado</p>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+
+            {/* 6. Sticky Bottom Action Bar */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-6 lg:pb-10 pointer-events-none">
+                <div className="max-w-[480px] mx-auto bg-white/80 backdrop-blur-2xl border border-white p-3 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex gap-3 pointer-events-auto">
+                    <a 
+                        href={`tel:0712345678`}
+                        className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center text-green-950 active:scale-95 transition-all border border-gray-100"
+                    >
+                        <Phone size={24} />
+                    </a>
+                    <button 
+                        onClick={() => products.length > 0 && setSelectedProduct(products[0])}
+                        className="flex-1 h-16 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-brand-200 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                        Hifadhi Bidhaa <ChevronRight size={18} />
+                    </button>
+                </div>
+            </div>
+
+            {/* 7. Reservation Flow Bottom Sheet */}
+            <AnimatePresence>
+                {selectedProduct && (
+                    <ReservationFlow 
+                        product={selectedProduct} 
+                        traderId={trader.id}
+                        onClose={() => setSelectedProduct(null)} 
+                    />
                 )}
             </AnimatePresence>
 

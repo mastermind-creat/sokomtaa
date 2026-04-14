@@ -3,6 +3,7 @@
 import React from 'react';
 import { Search, Bell, LogOut, ChevronDown, User as UserIcon } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useUIStore } from '@/store/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { LanguageToggle } from './LanguageToggle';
 import NotificationBell from './NotificationBell';
@@ -14,10 +15,14 @@ interface TopBarProps {
     title?: string;
 }
 
-export default function TopBar({ title }: TopBarProps) {
+export default function TopBar({ title: propTitle }: TopBarProps) {
     const { user, logout } = useAuthStore();
+    const { pageTitle } = useUIStore();
     const { t } = useTranslation();
     const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+
+    // Header title priority: static title prop > store title > translation default
+    const displayTitle = propTitle || pageTitle || t('common.dashboard');
 
     return (
         <header className="sticky top-0 z-40 w-full h-20 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-6 lg:px-10 flex items-center justify-between transition-all duration-300">
@@ -29,7 +34,7 @@ export default function TopBar({ title }: TopBarProps) {
                 </div>
 
                 <h2 className="text-xl font-black text-green-950 tracking-tight hidden md:block">
-                    {title || t('common.dashboard')}
+                    {displayTitle}
                 </h2>
                 <div className="w-[1px] h-6 bg-gray-200 hidden md:block" />
                 <div className="relative group max-w-md w-64 lg:w-96">

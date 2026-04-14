@@ -4,6 +4,18 @@
 > for all three user roles: Admin, Trader, and Resident.
 > Read alongside AGENTS.md and STYLING.md before building any dashboard page.
 > Mobile-first always. Desktop sidebar appears at ≥1024px only.
+>
+> **DEFAULT LANGUAGE: English.** All UI labels, headings, buttons, and placeholder
+> text are written in English by default. Swahili is available as a toggle via
+> the language switcher in the top bar avatar dropdown and settings page.
+> All Swahili strings are loaded from `messages/sw.json` via next-intl.
+> Do not hardcode Swahili strings as default in any component.
+>
+> **TRADER REVENUE PRIVACY RULE:** Admin must NEVER see individual trader revenue,
+> earnings, or income figures. Admin sees only: order counts, product names,
+> quantities, reservation statuses, and market fee payments. Revenue data belongs
+> exclusively to the trader. Any component, chart, table, or API response visible
+> to admin must strip all revenue/earnings fields before rendering.
 
 ---
 
@@ -92,7 +104,9 @@ RIGHT:  [🔔 Notifications badge] [Avatar + name dropdown]
 │  FINANCIALS                         │
 │  ▸ 💳  Market Fees          /fees   │
 │  ▸ 💰  Payments         /payments   │
-│  ▸ 📊  Revenue Reports  /reports    │
+│  ▸ 📊  Fee Reports      /reports    │
+│         (county levy income only —  │
+│          no trader revenue data)    │
 │                                     │
 │  COMMUNITY                          │
 │  ▸ 📢  Notices           /notices   │
@@ -128,7 +142,7 @@ RIGHT:  [🔔 Notifications badge] [Avatar + name dropdown]
 ```
 PAGE LAYOUT:
 ┌──────────────────────────────────────────────────────┐
-│ HEADER: "Habari za Asubuhi, [Admin Name] 👋"         │
+│ HEADER: "Good morning, [Admin Name] 👋"              │
 │ SUBTEXT: "Kolenyo Market · Tuesday, 14 Jan 2025"     │
 ├──────────────────────────────────────────────────────┤
 │ ALERT STRIP (if any pending items):                  │
@@ -142,25 +156,40 @@ PAGE LAYOUT:
 │  │ ↑2 this week  │ │ 23/30 stalls │                  │
 │  └──────────────┘ └──────────────┘                  │
 │  ┌──────────────┐ ┌──────────────┐                  │
-│  │ Today's Orders│ │ Fees Today   │                  │
+│  │ Today's Orders│ │ Fees Collected Today            │
 │  │     127       │ │ KES 14,500   │                  │
 │  │ ↑18% vs yest. │ │ 9 payments   │                  │
 │  └──────────────┘ └──────────────┘                  │
+│                                                      │
+│ ⚠️ NOTE: "Fees Collected Today" shows only market    │
+│   levy payments made TO the county — NOT trader      │
+│   sales revenue. These are two completely different  │
+│   figures. Never conflate them.                      │
 ├──────────────────────────────────────────────────────┤
 │ SECOND ROW STAT CARDS (3 cards)                      │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐             │
-│  │ Open     │ │ Pending  │ │ Avg      │             │
-│  │Complaints│ │  Verif.  │ │ Rating   │             │
-│  │    5     │ │    3     │ │  4.6 ⭐  │             │
+│  │ Open     │ │ Pending  │ │ Market   │             │
+│  │Complaints│ │  Verif.  │ │ Avg ⭐   │             │
+│  │    5     │ │    3     │ │  4.6     │             │
 │  └──────────┘ └──────────┘ └──────────┘             │
+│  (Avg rating = average of all verified traders'      │
+│   public ratings — not revenue-related)              │
 ├──────────────────────────────────────────────────────┤
 │ TWO-COLUMN ROW (desktop) / stacked (mobile):         │
 │                                                      │
 │ LEFT: STALL MAP (Leaflet — live occupancy heatmap)   │
-│   - Color-coded: green=open, yellow=closed,          │
-│     gray=empty, red=maintenance                      │
-│   - Tap a stall → mini popup with trader info        │
-│   - Refresh every 60s                                │
+│   Physical building layout rendered as schematic:    │
+│   - 3-column layout: Zone A (left) · Zone B (centre) │
+│     · Zone C (right), with centre aisle running N–S  │
+│   - Entrances marked in red at top and bottom edges  │
+│   - Color coded per stall status:                    │
+│     Green=open, Amber=closed, Blue=vacant, Gray=maint│
+│   - Each stall shows category icon + stall number    │
+│   - Tap a stall → mini popup with trader name,       │
+│     open status, rating — NO revenue figures shown   │
+│   - Refresh every 60s automatically                  │
+│   - Block tabs if market has multiple buildings      │
+│   - Occupancy % bar shown per block                  │
 │                                                      │
 │ RIGHT: RECENT ACTIVITY FEED                          │
 │   - Live-ish feed of events (poll every 30s)         │
@@ -169,21 +198,30 @@ PAGE LAYOUT:
 │   - [💳] Fee paid: Mwangi Electronics KES 1,500      │
 │   - [⚠️] Complaint opened: stall B4 cleanliness      │
 │   - [⭐] New review: 5★ for Mama Atieno              │
+│   - Activity feed shows fee amounts (county income)  │
+│     but NEVER shows reservation transaction totals   │
+│     as those represent trader sales revenue          │
 ├──────────────────────────────────────────────────────┤
 │ THREE-COLUMN ROW (desktop) / stacked (mobile):       │
 │                                                      │
-│ LEFT: TOP TRADERS THIS WEEK                          │
-│   Rank list — avatar, name, orders, revenue, rating  │
-│   #1 Mama Wanjiru    43 orders  KES 18,200  ⭐4.9    │
-│   #2 Ochieng Fish    38 orders  KES 22,000  ⭐4.7    │
-│   #3 Kamau Cereals   31 orders  KES 9,400   ⭐4.8    │
+│ LEFT: MOST ACTIVE TRADERS THIS WEEK                  │
+│   ⚠️ PRIVACY: Ranked by order COUNT only.            │
+│   Revenue column is REMOVED entirely for admin.      │
+│   Rank list: avatar, name, orders, rating only.      │
+│   #1 Mama Wanjiru    43 orders   ⭐4.9               │
+│   #2 Ochieng Fish    38 orders   ⭐4.7               │
+│   #3 Kamau Cereals   31 orders   ⭐4.8               │
+│   (No KES figures shown — those belong to trader)   │
 │                                                      │
 │ CENTER: TOP SELLING CATEGORIES (donut chart)         │
+│   Measured by number of reservations, not revenue.  │
 │   Vegetables 34% · Grains 22% · Fish 18%            │
 │   Fruits 12% · Other 14%                            │
+│   Chart tooltip shows: "X reservations" — not KES   │
 │                                                      │
 │ RIGHT: PEAK TRADING HOURS (bar chart)                │
-│   Hours 6am–8pm, bars showing order volume           │
+│   Y-axis: number of reservations (not KES amount)   │
+│   X-axis: hours 6am–8pm                              │
 │   Highlight: peak at 8am and 5pm                     │
 ├──────────────────────────────────────────────────────┤
 │ PENDING ACTIONS (full width):                        │
@@ -197,15 +235,27 @@ PAGE LAYOUT:
 
 ### 1C. Admin — Analytics Page `/admin/analytics`
 
+> ⚠️ PRIVACY RULE: All charts and metrics on this page reflect market operations
+> and county fee collection ONLY. No trader sales revenue appears anywhere here.
+> The word "Revenue" in this context means county levy income — not trader earnings.
+
 **Sections:**
 - Date range picker (Today / This Week / This Month / Custom)
-- Revenue chart — line graph, daily fee collections
-- Reservation volume — bar chart, daily count
-- Trader growth — cumulative trader signups over time
-- Stall occupancy history — area chart
-- Category demand breakdown — horizontal bar chart
-- Geographic heat (if multi-market): which market is busiest
+- **Market Levy Collection** — line graph of daily fee payments received by the county (this is county income, not trader revenue)
+- **Reservation Volume** — bar chart of daily reservation count (counts only, no KES totals)
+- **Trader Growth** — cumulative trader signups over time
+- **Stall Occupancy History** — area chart showing occupancy % over time
+- **Category Demand Breakdown** — horizontal bar chart ranked by number of reservations (not value)
+- **Peak Trading Hours** — heatmap of busiest hours by reservation count
+- **Complaint Resolution Rate** — open vs closed complaints over time
+- **Geographic Activity** (if multi-market) — which market has the most reservations
 - Export buttons: [Download CSV] [Download PDF Report]
+
+**What admin analytics does NOT show:**
+- Individual trader sales totals
+- Trader income or earnings
+- Reservation amounts aggregated per trader
+- Any per-trader KES figures beyond their market fee payments
 
 ---
 
@@ -214,31 +264,252 @@ PAGE LAYOUT:
 **Table columns:** Name · Location · Estate · Total Stalls · Occupied · Active Traders · Status · Actions
 **Actions per row:** View Map · Edit · Deactivate
 **Top actions:** [+ Add New Market]
-**Empty state:** "Hakuna masoko. Ongeza soko la kwanza."
+**Empty state:** "No markets yet. Add the first market to get started."
 
 ---
 
 ### 1E. Admin — Stall Map Page `/admin/map`
 
-**Full-screen Leaflet map** of the market floor plan.
-- Legend: Open (green) / Closed (yellow) / Available (gray) / Maintenance (red) / Reserved (blue)
-- Filter bar: All / Open Now / Available / Maintenance
-- Click stall → side panel slides in with:
-  - Stall number, zone, size
-  - Current trader (if occupied): name, photo, verification status, fee status
-  - Quick actions: [Edit Stall] [Revoke Allocation] [Mark Maintenance]
-  - If available: [Allocate to Trader]
-- [+ Add Stall] button for new stall setup
+> This map reflects the real physical layout of a government-built market building.
+> Each building has three columns: left wall stalls (Zone A), centre double-row
+> with a walking aisle between them (Zone B), and right wall stalls (Zone C).
+> Entrances sit at the top and bottom edges of the building — two per side.
+> A single market centre like Kolenyo can contain multiple buildings (Block A, B, C…).
+
+#### Physical Layout Structure
+
+```
+SINGLE BUILDING — top-down schematic view:
+
+  [Entrance N]          [Entrance N2]
+  ┌────────────────────────────────────────┐
+  │  ZONE A   │   ZONE B (centre)  │ZONE C │
+  │  (left    │  ┌───────┬────────┐│(right │
+  │   wall)   │  │  B1   │  B2   ││ wall) │
+  │  [A1]     │  ├───────┼────────┤│ [C1]  │
+  │  [A2]     │  │  B3   │  B4   ││ [C2]  │
+  │  [A3]     │  ├───────┼────────┤│ [C3]  │
+  │  [A4]     │  │  B5   │  B6   ││ [C4]  │
+  │  [A5]     │  ├───────┼────────┤│ [C5]  │
+  │  [A6]     │  │  B7   │  B8   ││ [C6]  │
+  │  [A7]     │  ├───────┼────────┤│ [C7]  │
+  │  [A8]     │  │  B9   │  B10  ││ [C8]  │
+  │           │  ├───────┼────────┤│       │
+  │           │  │  B11  │  B12  ││       │
+  │           │  ├───────┼────────┤│       │
+  │           │  │  B13  │  B14  ││       │
+  │           │  └───────┴────────┘│       │
+  │           │   ← Centre Aisle →  │       │
+  └────────────────────────────────────────┘
+  [Entrance S]          [Entrance S2]
+```
+
+#### Stall Status — Color Coding
+
+| Status | Stall Color | Border | Icon | Meaning |
+|---|---|---|---|---|
+| Occupied & Open | Green tint `#D4EDDA` | `#3B7D4E` solid | House icon | Trader active right now |
+| Occupied & Closed | Amber tint `#FEF3C7` | `#B07D2A` solid | House icon | Trader assigned, not open today |
+| Vacant | Blue tint `#D6E4F7` | `#2A6099` dashed | Dashed rect | No trader assigned — available |
+| Maintenance | Warm amber `#F5E6C8` | `#B07D2A` solid | Wrench icon | Stall temporarily unavailable |
+| Entrance / Exit | Red `#E8736A` | `#C0392B` solid | Arrow icon | Entry/exit point — not a stall |
+
+#### Stall Icon System
+
+Each occupied stall displays an SVG icon indicating the trader's primary category:
+
+```
+House icon (shopfront)   → General goods, clothing, household
+Bag icon (shopping)      → Groceries, vegetables, fruits
+Fish outline             → Fish / seafood traders
+Wheat / leaf             → Cereals, grains, flour
+Coffee cup               → Beverages, street food
+Zap / bolt               → Electronics, mobile phones
+Wrench                   → Maintenance (not a category — status only)
+Dashed rectangle         → Vacant stall (no icon, just outline)
+```
+
+Category icon is derived from `traders.primary_category` and rendered
+as an inline SVG path inside each stall cell. Size: 20×20px always.
+Stroke color matches the stall status (dark green for occupied, etc.)
+
+#### Page Layout — Admin View
+
+```
+HEADER BAR (sticky):
+  [← Markets]  Block A — Kolenyo Market    [Filter ▼] [+ Add Stall]
+
+BUILDING SELECTOR TABS (if multiple blocks):
+  [Block A] [Block B] [Block C]   ← switches active building rendered
+
+MAP CANVAS (main area, fills viewport):
+  ┌─────────────────────────────────────────────────────┐
+  │  [Entrance N]           [Entrance N2]               │
+  │  ┌───────┬──────────────────────────┬───────┐       │
+  │  │  A1   │  B1  │  B2  │  B3  │... │  C1   │       │
+  │  │  A2   │  B4  │  B5  │  B6  │... │  C2   │       │
+  │  │  ...  │  ... │  ... │  ... │... │  ...  │       │
+  │  └───────┴──────────────────────────┴───────┘       │
+  │  [Entrance S]           [Entrance S2]               │
+  └─────────────────────────────────────────────────────┘
+
+OCCUPANCY SUMMARY BAR (below map):
+  Occupied: 22  ·  Vacant: 6  ·  Maintenance: 1  ·  73% occupancy
+
+LEGEND STRIP (bottom right of map):
+  🟢 Occupied & Open  🟡 Occupied & Closed  🔵 Vacant  🔴 Maintenance  🚪 Entrance
+```
+
+#### Stall Click — Admin Side Panel
+
+Clicking any stall slides in a right-side detail panel (desktop) or
+bottom sheet (mobile) showing:
+
+```
+IF OCCUPIED:
+  [Stall icon — large]  Stall A1 · Zone A · 9 sqm
+  ──────────────────────────────────────────────
+  [Avatar]  Mama Wanjiru's Mboga
+  Status:   ✅ Verified  ·  🟢 Open Now
+  Category: Vegetables · Fruits
+  Rating:   ⭐ 4.8 · 127 reviews
+  Fee:      ✅ Paid — January 2025
+  Since:    Allocated Jan 2024
+  ──────────────────────────────────────────────
+  [View Trader Profile]
+  [Edit Stall Details]
+  [Revoke Allocation]   ← requires confirmation + reason
+  [Mark as Maintenance]
+
+IF VACANT:
+  [Dashed stall icon]  Stall B7 · Zone B · 9 sqm
+  Status: Available for allocation
+  Zone: B — Monthly fee: KES 1,200
+  ──────────────────────────────────────────────
+  [Allocate to Trader]  ← opens trader search
+  [Edit Stall Details]
+  [Mark as Maintenance]
+
+IF MAINTENANCE:
+  [Wrench icon]  Stall B8 · Zone B · 9 sqm
+  Status: Under Maintenance
+  Notes: "Roof leak — awaiting repair" (editable)
+  ──────────────────────────────────────────────
+  [Mark as Available]
+  [Edit Notes]
+
+ENTRANCE MARKERS (click):
+  No side panel — entrances are structural, not actionable
+```
+
+#### Multi-Building Overview
+
+When admin is on the Markets page or the top-level map, they see a
+bird's-eye grid thumbnail for each block:
+
+```
+KOLENYO MARKET CENTRE
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│   Block A    │ │   Block B    │ │   Block C    │
+│  [mini grid] │ │  [mini grid] │ │  [mini grid] │
+│ 73% occupied │ │ 67% occupied │ │ 83% occupied │
+│ [View Map →] │ │ [View Map →] │ │ [View Map →] │
+└──────────────┘ └──────────────┘ └──────────────┘
+Overall: 90 stalls · 74% occupied · 5 vacant
+```
+
+Mini grid color rules: each cell is a 20×20px square.
+Green = occupied, blue = vacant, red = entrance, gray dashed = aisle.
+
+#### Leaflet.js Implementation Notes
+
+The market map is NOT a geographic map — it is a schematic floor plan overlay.
+
+```typescript
+// components/map/MarketMap.tsx
+
+// The map uses a custom CRS (coordinate reference system)
+// so stall map_x / map_y values from the DB map directly to pixels.
+const map = L.map('market-map', {
+  crs: L.CRS.Simple,          // Flat coordinate system — no geo projection
+  minZoom: -1,
+  maxZoom: 2,
+  zoomControl: true,
+});
+
+// Each stall is rendered as a custom L.divIcon
+stalls.forEach((stall) => {
+  const icon = L.divIcon({
+    className: `stall-marker stall-${stall.status} stall-${stall.is_open ? 'open' : 'closed'}`,
+    html: `
+      <div class="stall-cell">
+        <div class="stall-icon">${getCategoryIcon(stall.trader?.primary_category)}</div>
+        <span class="stall-num">${stall.stall_number}</span>
+        <span class="stall-name">${stall.trader?.business_name ?? 'Available'}</span>
+      </div>
+    `,
+    iconSize: [72, 64],
+    iconAnchor: [36, 32],
+  });
+
+  L.marker([stall.map_y, stall.map_x], { icon })
+    .on('click', () => openStallPanel(stall))
+    .addTo(map);
+});
+
+// Entrances rendered as fixed markers — not clickable
+entrances.forEach((entrance) => {
+  L.divIcon({ className: 'entrance-marker', html: entranceIcon })
+    .addTo(map);
+});
+
+// Refresh every 60 seconds
+setInterval(() => refreshStallStatuses(), 60_000);
+```
+
+#### Database Fields Required for Map Rendering
+
+The following fields in the `stalls` table power the map:
+
+```
+map_x         → horizontal position in the building schematic
+map_y         → vertical position in the building schematic
+zone          → 'A' (left wall), 'B' (centre), 'C' (right wall)
+stall_number  → displayed label (A1, B3, C7 etc.)
+status        → 'occupied' | 'vacant' | 'maintenance'
+```
+
+The `traders` table join provides:
+```
+business_name        → shown in stall label
+is_open              → determines open/closed color variant
+primary_category     → determines which icon to render
+average_rating       → shown in click-panel
+verification_status  → shown in click-panel
+```
+
+Entrance positions are hardcoded per building in a `building_config` JSON
+field on the `markets` table — they do not change and do not need DB rows.
 
 ---
 
 ### 1F. Admin — Stalls Page `/admin/stalls`
 
-**Table columns:** Stall No. · Zone · Size · Status · Trader Assigned · Monthly Fee · Fee Status · Actions
-**Filters:** All / Available / Occupied / Maintenance
-**Actions per row:** View · Edit · Allocate / Revoke · Mark Maintenance
+> Stalls are organised into three zones per building, matching the physical layout:
+> Zone A = left wall, Zone B = centre double-row, Zone C = right wall.
+> Each building (Block A, B, C…) has its own set of zones.
+
+**Table columns:** Stall No. · Block · Zone · Size (sqm) · Status · Trader Assigned · Monthly Fee · Fee Status · Actions
+**Filters:** All / Available / Occupied / Maintenance | Block: [All ▼] | Zone: [All ▼]
+**Actions per row:** View on Map · Edit · Allocate / Revoke · Mark Maintenance
 **Bulk actions:** Select multiple → Change Status / Generate Fee Invoices
 **Top actions:** [+ Add Stall] [Export CSV]
+
+**Stall number convention:**
+- Zone A stalls: `A1` through `A8` (left wall, top to bottom)
+- Zone B stalls: `B1` through `B14` (centre, pairs top to bottom)
+- Zone C stalls: `C1` through `C8` (right wall, top to bottom)
+- Multiple blocks prefix the block letter: `BLK-A-A1`, or use separate block filter
 
 ---
 
@@ -273,7 +544,10 @@ PAGE LAYOUT:
 
 ### 1I. Admin — Traders Page `/admin/traders`
 
-**Table columns:** Photo · Name · Business · Stall · Market · Status · Rating · Fee Status · Joined · Actions
+> ⚠️ PRIVACY RULE: This table must never include a revenue, income, earnings,
+> or sales column. Traders' financial performance is private to the trader only.
+
+**Table columns:** Photo · Name · Business · Stall · Market · Status · Rating · Orders (count) · Fee Status · Joined · Actions
 **Filters:** All / Pending / Verified / Rejected / Suspended
 **Search:** by name, phone, business name
 **Actions per row:** View Profile · Verify · Reject · Suspend · Edit
@@ -285,17 +559,30 @@ LEFT PANEL:
   - Avatar, business name, verification badge
   - Phone, email, national ID (admin only)
   - Permit image (zoomable)
-  - Stall assignment
-  - Verification status + history
+  - Stall assignment + zone
+  - Verification status + history log
   - [Verify] [Reject] [Suspend] buttons
 
 RIGHT PANEL — TABS:
-  Products    → list of their products with stock status
-  Reservations→ their recent order history
-  Payments    → fee payment history
-  Reviews     → reviews received
-  Complaints  → complaints about this trader
-  Activity Log→ timestamped log of all actions on their account
+  Products     → list of their products with names, prices, stock status
+                 ⚠️ Prices shown here are PUBLIC listing prices (visible to
+                 all residents too) — not private earnings data. This is fine.
+  Reservations → order history: code, product, quantity, status, date
+                 ⚠️ Admin sees reservation STATUS and COUNT only.
+                 The KES amount column is HIDDEN from admin view.
+                 Admin can see: #SM-K7B, Nyanya × 2kg, Status: Completed
+                 Admin cannot see: KES 100 (that is trader revenue)
+  Fee Payments → market levy payment history only (county income records)
+                 Admin CAN see fee amounts — these are county transactions.
+  Reviews      → reviews received from residents (public data)
+  Complaints   → complaints filed about this trader
+  Activity Log → timestamped log of account actions (verify, suspend, etc.)
+
+WHAT ADMIN NEVER SEES IN TRADER DETAIL:
+  ✗ Total sales / total revenue / total earnings
+  ✗ Income summaries or charts
+  ✗ Reservation amounts aggregated as income
+  ✗ Any "KES earned" figure
 ```
 
 ---
@@ -318,12 +605,29 @@ RIGHT PANEL — TABS:
 
 ### 1K. Admin — Payments Page `/admin/payments`
 
-**All M-Pesa transactions across the platform.**
+> ⚠️ PRIVACY RULE: This page shows ONLY market fee payments and reservation
+> payment records for operational/dispute purposes. It does NOT present trader
+> revenue summaries, trader income totals, or any aggregated earnings view.
+> The "Amount" column on reservation rows exists for dispute resolution only
+> (e.g. admin needs to process a refund). It is a transactional record, not an
+> income report. Never add a "Trader Total" or "Earnings" column here.
 
-**Table columns:** Ref # · User · Type · Amount · Phone · Status · M-Pesa ID · Date · Actions
-**Filters:** All / Completed / Pending / Failed / Refunded
-**Types:** Reservation / Market Fee
-**Actions:** View Details · Issue Refund (opens confirmation modal with reason)
+**All M-Pesa transactions across the platform — two types only:**
+
+**Type 1: Market Fee Payments** (trader paying county levy)
+Table columns: Ref # · Trader · Stall · Period · Amount · Phone · Status · M-Pesa ID · Date · Receipt
+
+**Type 2: Reservation Payments** (resident paying for reserved item)
+Table columns: Ref # · Reservation Code · Resident · Trader · Product · Amount · Status · M-Pesa ID · Date
+These are shown for dispute/refund resolution ONLY. Admin cannot filter or sort
+these by trader to build income reports. No "subtotal per trader" grouping allowed.
+
+**Filters:** All / Market Fees / Reservations / Completed / Pending / Failed / Refunded
+**Actions:** View Details · Issue Refund (opens confirmation modal with reason — fee payments only)
+
+**EXPORT RESTRICTION:** The CSV export of reservation payments must exclude
+any aggregation columns. Exporting raw rows is permitted; pre-aggregated
+"total per trader" is not.
 
 ---
 
@@ -385,9 +689,19 @@ ACTIVITY TIMELINE:
 
 ### 1O. Admin — Reservations Page `/admin/reservations`
 
-**Table columns:** Code · Resident · Trader · Product · Qty · Amount · Status · Pickup By · Created · Actions
+> ⚠️ PRIVACY RULE: The Amount column exists here for platform-level dispute
+> management only (e.g. confirming a payment before issuing a refund). Admin
+> cannot use this page to assess trader income. There is no "subtotal per trader"
+> grouping, no export that aggregates KES by trader, and no revenue summary card.
+
+**Table columns:** Code · Resident · Trader · Product · Qty · Status · Pickup Deadline · Created · Actions
 **Filters:** All / Pending / Paid / Ready / Completed / Cancelled / Expired
-**Actions:** View Details · Cancel (with reason)
+**Actions:** View Details · Cancel (with reason) · Issue Refund (if paid, for dispute resolution)
+
+**Reservation Detail (admin view):**
+- Shows: code, resident, trader, product, quantity, status timeline, pickup deadline
+- Shows: payment status and M-Pesa ref (for dispute resolution)
+- Does NOT show: a "Trader Earnings" summary or running total
 
 ---
 
@@ -813,25 +1127,59 @@ ACCOUNT
 *Shown only if trader has no stall assigned.*
 
 ```
-HEADER: "Omba Stendi / Apply for a Stall"
+HEADER: "Apply for a Stall"
 
-Current status: No stall assigned
-Market: Kolenyo Market
+INTRO CARD:
+  You don't have a stall assigned yet.
+  Apply for one at Kolenyo Market below.
+  Admin will review your application within 24 hours.
 
-APPLICATION FORM:
-  Preferred Stall (optional — map picker or number input)
-  Preferred Zone: [Zone A ▼]
-  Why do you need this stall? (textarea, required)
+STEP 1 — CHOOSE YOUR PREFERRED ZONE:
+  [Zone A — Left wall]  [Zone B — Centre]  [Zone C — Right wall]
+  Monthly fee: Zone A: KES 1,500 · Zone B: KES 1,200 · Zone C: KES 1,000
+
+STEP 2 — PICK A STALL (optional — interactive map):
+  The building map renders below showing vacant stalls in blue.
+  Trader can tap any blue (vacant) stall to select it.
+
+  ┌──────────────────────────────────────┐
+  │ [Entrance N]        [Entrance N2]    │
+  │  [A1●] [A2●]  [B1●][B2●][B3○][B4○] [C1●][C2●] │
+  │  [A3○] [A4●]  [B5●][B6○][B7○][B8●] [C3○][C4●] │
+  │  ...                                 │
+  │ ● = Occupied  ○ = Vacant (selectable)│
+  │ [Entrance S]        [Entrance S2]    │
+  └──────────────────────────────────────┘
+
+  Selected: Stall B7 · Zone B · KES 1,200/month  ✅
+  [Clear selection — let admin decide]
+
+STEP 3 — MOTIVATION:
+  Why do you need this stall? *
+  [                                      ]
+  [                                      ]
+  (minimum 50 characters)
+
   [Submit Application]
 
-If application pending:
+─── IF APPLICATION ALREADY PENDING ───
   ┌───────────────────────────────────────┐
-  │ 🕐 Ombi lako linapitiwa              │
-  │ Uliwasilisha: Jan 12, 2025           │
-  │ Hali: Inasubiri · Kipaumbele namba 2 │
-  │ Utaarifiwa ukipata matokeo.          │
+  │ ⏳ Your application is under review   │
+  │ Submitted: Jan 12, 2025              │
+  │ Preferred stall: B7 · Zone B         │
+  │ Status: Pending · Queue position: 2  │
+  │ You'll be notified by SMS & in-app.  │
   └───────────────────────────────────────┘
+
+  [Withdraw Application]  ← with confirmation modal
 ```
+
+**Map interaction rules for the application picker:**
+- Only blue (vacant) stalls are tappable — occupied and maintenance stalls are dimmed and non-interactive
+- Tapping a vacant stall highlights it with an amber selection ring
+- Selecting a stall is optional — trader can submit without a preference
+- Entrance markers are never selectable
+- The same Leaflet component is reused from the main map — just with a `selectionMode={true}` prop that disables the detail panel and enables the selection callback instead
 
 ---
 
@@ -978,26 +1326,95 @@ RESULTS PAGE (after submit):
 
 ### 3D. Resident — Market Map Page `/map`
 
+> The resident map shows the same physical building layout as the admin map
+> but with reduced information — no admin actions, no fee status, no personal
+> trader details beyond what is publicly visible.
+
+#### Page Layout
+
 ```
-HEADER: "Ramani ya Soko / Market Map"
+HEADER: "Market Map"
+BUILDING TABS (if multiple blocks): [Block A] [Block B] [Block C]
 
-FULL-SCREEN LEAFLET MAP:
-  - Stall markers color coded (same as admin map)
-  - Green = open trader, Yellow = closed, Gray = empty
+MAP CANVAS (full width, fills screen below header):
 
-BOTTOM PANEL (slides up on stall tap):
-  ┌─────────────────────────────────────────┐
-  │ Stendi A1 · Zone A                      │
-  │ [Avatar] Mama Wanjiru's Mboga           │
-  │ 🟢 Wazi Sasa · ⭐ 4.8 · 127 reviews    │
-  │ Mboga · Matunda · Nafaka                │
-  │                                         │
-  │ [Tazama Wasifu →]  [Piga Simu 📞]      │
-  └─────────────────────────────────────────┘
+  [Entrance N]             [Entrance N2]
+  ┌──────────────────────────────────────┐
+  │  [A1]    │  [B1] [B2] [B3] [B4]  │ [C1]  │
+  │  [A2]    │  [B5] [B6] [B7] [B8]  │ [C2]  │
+  │  [A3]    │  ...centre stalls...   │ [C3]  │
+  │  ...     │                        │ ...   │
+  └──────────────────────────────────────┘
+  [Entrance S]             [Entrance S2]
 
-LEGEND CHIP (bottom left):
-  🟢 Wazi · 🟡 Imefungwa · ⬜ Inapatikana · 🔴 Ukarabati
+LEGEND (bottom of map, compact pill row):
+  🟢 Open Now   🟡 Closed   🔵 Vacant   🚪 Entrance
 ```
+
+#### Stall Status — Resident-Visible Colors
+
+| Status | Color | What Resident Sees |
+|---|---|---|
+| Occupied & Open | Green `#D4EDDA` + solid border | Trader name + category icon |
+| Occupied & Closed | Amber `#FEF3C7` + solid border | Trader name + "Closed" |
+| Vacant | Blue `#D6E4F7` + dashed border | "Available" — no trader |
+| Maintenance | Gray `#E5E7EB` + dashed border | "Unavailable" — no detail |
+| Entrance | Red `#E8736A` + solid border | "Entrance / Exit" label |
+
+> Residents do NOT see: fee status, verification status, allocation dates,
+> permit details, or any admin-only fields.
+
+#### Stall Tap — Resident Bottom Sheet
+
+Tapping any occupied stall slides up a bottom sheet:
+
+```
+IF OPEN TRADER:
+┌──────────────────────────────────────────┐
+│ ████ [handle]                            │
+│ [Avatar]  Mama Wanjiru's Mboga  🟢 Open  │
+│ ⭐ 4.8 · 127 reviews · Stall A1          │
+│ Vegetables · Fruits · Cereals            │
+│                                          │
+│ Closes at 6:00 PM today                 │
+│                                          │
+│ [View Profile & Products →]             │
+│ [📞 Call Trader]                         │
+└──────────────────────────────────────────┘
+
+IF CLOSED TRADER:
+┌──────────────────────────────────────────┐
+│ [Avatar]  Ochieng Fish Stall  🟡 Closed  │
+│ ⭐ 4.6 · 89 reviews · Stall C2           │
+│ Fish · Seafood                           │
+│ Opens tomorrow at 6:00 AM               │
+│                                          │
+│ [View Profile →]                         │
+└──────────────────────────────────────────┘
+
+IF VACANT STALL:
+┌──────────────────────────────────────────┐
+│ 🔵  Stall B7 · Zone B                   │
+│ This stall is currently available.       │
+│ No trader has been assigned here yet.   │
+└──────────────────────────────────────────┘
+
+IF ENTRANCE MARKER:
+  No bottom sheet — entrances are informational only.
+  A small tooltip appears: "Market Entrance — North"
+```
+
+#### Multi-Building Switcher (Resident)
+
+If the market has multiple blocks, a horizontal tab row appears
+at the top of the map:
+
+```
+[Block A — 73% full] [Block B — 67% full] [Block C — 83% full]
+```
+
+Occupancy percentage shows as a subtle progress bar under each tab.
+Helps residents know which block has more open traders today.
 
 ---
 
@@ -1582,6 +1999,282 @@ const pageTitles: Record<string, string> = {
 
 ---
 
+## 9. TRADER REVENUE PRIVACY — COMPLETE ENFORCEMENT RULES
+
+> This section is the definitive authority on the privacy boundary between
+> admin visibility and trader financial data. Every developer and AI agent
+> must implement these rules exactly. No exceptions.
+
+### 9A. What Admin CAN See
+
+| Data Point | Visible to Admin | Notes |
+|---|---|---|
+| Trader name, phone, email | ✅ Yes | Operational necessity |
+| National ID, permit number | ✅ Yes | Verification purposes |
+| Stall assignment | ✅ Yes | Market management |
+| Verification status | ✅ Yes | Admin action required |
+| Products listed + prices | ✅ Yes | Public listing data — residents also see this |
+| Product stock status | ✅ Yes | Market health indicator |
+| Reservation count (total) | ✅ Yes | Order volume — not income |
+| Reservation status | ✅ Yes | Operational — completed, cancelled, etc. |
+| Public rating + reviews | ✅ Yes | Public data |
+| Market fee amounts | ✅ Yes | County income records |
+| Fee payment history | ✅ Yes | County compliance tracking |
+| Complaint history | ✅ Yes | Resolution authority |
+| Account activity log | ✅ Yes | Admin actions only |
+
+### 9B. What Admin CANNOT See
+
+| Data Point | Hidden from Admin | Why |
+|---|---|---|
+| Individual reservation KES amounts | ❌ Never | Trader sales revenue |
+| Total sales / total revenue | ❌ Never | Private business income |
+| Revenue charts or income trends | ❌ Never | Private business data |
+| Aggregated earnings per trader | ❌ Never | Private business data |
+| "Top traders by revenue" ranking | ❌ Never | Replace with order count ranking |
+| Revenue comparison between traders | ❌ Never | Commercially sensitive |
+| Trader's total income this month | ❌ Never | Private business income |
+| Revenue per product | ❌ Never | Private business data |
+
+### 9C. Backend API Enforcement
+
+**Create a dedicated API resource transformer for admin views:**
+
+```php
+// app/Http/Resources/Admin/TraderAdminResource.php
+class TraderAdminResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id'                  => $this->id,
+            'user'                => [
+                'name'   => $this->user->name,
+                'phone'  => $this->user->phone,
+                'email'  => $this->user->email,
+            ],
+            'business_name'       => $this->business_name,
+            'stall'               => $this->stall ? [
+                'stall_number' => $this->stall->stall_number,
+                'zone'         => $this->stall->zone,
+            ] : null,
+            'verification_status' => $this->verification_status,
+            'is_open'             => $this->is_open,
+            'average_rating'      => $this->average_rating,
+            'total_reviews'       => $this->total_reviews,
+            'total_reservations'  => $this->reservations()->count(),
+            // ✅ ALLOWED: reservation count — operational metric
+            // ❌ NEVER ADD: total_revenue, total_earnings, income_this_month
+        ];
+    }
+}
+
+// app/Http/Resources/Admin/ReservationAdminResource.php
+class ReservationAdminResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id'               => $this->id,
+            'reservation_code' => $this->reservation_code,
+            'resident'         => ['name' => $this->resident->name],
+            'trader'           => ['business_name' => $this->trader->business_name],
+            'product'          => ['name' => $this->product->name],
+            'quantity'         => $this->quantity,
+            'status'           => $this->status,
+            'pickup_deadline'  => $this->pickup_deadline,
+            'created_at'       => $this->created_at,
+            // ❌ OMITTED for admin: unit_price, total_amount
+            // These fields are present in ReservationTraderResource (trader's own view)
+            // but must NOT appear in admin-facing API responses
+        ];
+    }
+}
+```
+
+**In AdminDashboardController, never aggregate trader revenue:**
+
+```php
+// ✅ CORRECT — aggregate by count
+$topTraders = Trader::withCount('reservations')
+    ->where('verification_status', 'verified')
+    ->orderByDesc('reservations_count')
+    ->limit(5)
+    ->get()
+    ->map(fn($t) => [
+        'name'               => $t->business_name,
+        'reservations_count' => $t->reservations_count,
+        'average_rating'     => $t->average_rating,
+    ]);
+
+// ❌ WRONG — never do this for admin
+$topTraders = Trader::withSum('reservations', 'total_amount') // FORBIDDEN
+    ->orderByDesc('reservations_sum_total_amount')
+    ->get();
+```
+
+**Analytics endpoint — county levy only, never trader revenue:**
+
+```php
+// AdminAnalyticsController.php
+public function index(): JsonResponse
+{
+    return $this->success([
+        // ✅ County levy income — admin owns this data
+        'fee_collection' => MarketFee::where('status', 'paid')
+            ->selectRaw('DATE(paid_at) as date, SUM(amount) as total')
+            ->groupBy('date')
+            ->get(),
+
+        // ✅ Reservation volume by count — operational metric
+        'reservation_volume' => Reservation::selectRaw(
+            'DATE(created_at) as date, COUNT(*) as count'
+        )->groupBy('date')->get(),
+
+        // ❌ NEVER: SUM(total_amount) from reservations — that is trader revenue
+    ]);
+}
+```
+
+### 9D. Frontend Enforcement
+
+**Never pass revenue props to admin-facing components:**
+
+```typescript
+// ✅ CORRECT — TraderCard shown to admin
+<TraderCard
+  name={trader.business_name}
+  stall={trader.stall?.stall_number}
+  rating={trader.average_rating}
+  orderCount={trader.total_reservations}
+  status={trader.verification_status}
+  // ❌ revenue={trader.total_revenue}  — NEVER pass this to admin components
+/>
+
+// ✅ CORRECT — Top Traders widget (admin)
+// Ranks by order count, not revenue
+const topTraders = traders.sort((a, b) =>
+  b.total_reservations - a.total_reservations
+);
+
+// ❌ WRONG — never sort admin view by revenue
+const topTraders = traders.sort((a, b) =>
+  b.total_revenue - a.total_revenue  // FORBIDDEN in admin context
+);
+```
+
+**Chart axis labels must never imply revenue for admin:**
+
+```typescript
+// ✅ CORRECT — admin analytics chart
+const chartConfig = {
+  yAxisLabel: 'Number of Reservations',  // count
+  tooltipFormat: (value) => `${value} orders`,
+};
+
+// ❌ WRONG
+const chartConfig = {
+  yAxisLabel: 'Revenue (KES)',           // FORBIDDEN for admin charts
+  tooltipFormat: (value) => `KES ${value}`,
+};
+```
+
+### 9E. Export Restriction
+
+Admin CSV/PDF exports must NEVER include:
+- A column named: Revenue, Earnings, Income, Sales Total, KES Earned
+- Any computed field that sums reservation `total_amount` per trader
+- A "Top Earners" or "Revenue Report" export type
+
+Admin exports MAY include:
+- Fee Collection Report (county levy only)
+- Trader Activity Report (order counts, ratings, verification status)
+- Reservation Status Report (codes, statuses, products, quantities)
+- Market Occupancy Report (stall numbers, traders assigned, dates)
+
+---
+
+## 10. DEFAULT LANGUAGE ENFORCEMENT
+
+> English is the default language for all three dashboards.
+> This replaces any Swahili-first defaults previously noted in this file.
+
+### Implementation Rules
+
+```typescript
+// next-intl configuration — app/i18n.ts
+export const defaultLocale = 'en';       // ← English default
+export const locales = ['en', 'sw'];     // English first, Swahili second
+
+// User preference stored after they choose
+// localStorage key: 'soko_language'
+// Default value if not set: 'en'
+```
+
+### Language Toggle Location
+
+Available in TWO places:
+1. **Top bar avatar dropdown** — "Switch to Swahili / Switch to English"
+2. **Settings page** — Language preference with save button
+
+Language preference is:
+- Saved to `users.preferred_language` in the database on change
+- Loaded on login and applied immediately
+- Falls back to `localStorage` value when offline
+- Falls back to `'en'` if neither is set
+
+### What This Means for UI Text
+
+All static labels in components use English as the default translation key value:
+
+```json
+// messages/en.json (default — loaded first)
+{
+  "nav.home": "Home",
+  "nav.search": "Search",
+  "nav.reservations": "My Reservations",
+  "actions.reserve": "Reserve Item",
+  "actions.pay": "Pay Now",
+  "status.available": "Available",
+  "status.out_of_stock": "Out of Stock",
+  "status.low_stock": "Running Low",
+  "dashboard.greeting": "Good morning, {name}!",
+  "dashboard.market": "{market} · {date}"
+}
+
+// messages/sw.json (Swahili toggle)
+{
+  "nav.home": "Nyumbani",
+  "nav.search": "Tafuta",
+  "nav.reservations": "Mahitaji Yangu",
+  "actions.reserve": "Hifadhi Bidhaa",
+  "actions.pay": "Lipa Sasa",
+  "status.available": "Inapatikana",
+  "status.out_of_stock": "Imeisha",
+  "status.low_stock": "Inakaribia Kuisha",
+  "dashboard.greeting": "Habari, {name}!",
+  "dashboard.market": "{market} · {date}"
+}
+```
+
+### Bilingual Data Fields
+
+Some data in the database has both English and Swahili versions
+(product names, category names, notice titles). Display rules:
+
+- If user language = `en` → show `name` field (English)
+- If user language = `sw` → show `name_sw` field if set, else fall back to `name`
+- Never show both versions simultaneously in the same label
+- Product prices, stall numbers, dates: always in English/universal format
+
+---
+
 > **Last updated:** 2025 | **Project:** Soko Mtaa | **File:** DASHBOARDS.md
-> This file pairs with AGENTS.md and STYLING.md. All three must be read together.
-> Total pages: 50 | Roles: Admin (20), Trader (13), Resident (12), Shared (6) — with overlap on shared routes.
+> Pairs with AGENTS.md and STYLING.md. All three must be read together.
+> Total pages: 50 | Roles: Admin (20), Trader (13), Resident (12), Shared (6)
+>
+> KEY RULES SUMMARY:
+> 1. Default language: English (Swahili available as toggle)
+> 2. Admin NEVER sees trader revenue, earnings, or income
+> 3. Admin sees: order counts, fee collections, ratings, statuses — nothing more
+> 4. Privacy enforced at API resource level, controller level, and component level

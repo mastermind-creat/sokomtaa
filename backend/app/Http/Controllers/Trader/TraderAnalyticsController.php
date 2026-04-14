@@ -38,6 +38,8 @@ class TraderAnalyticsController extends Controller
             'low_stock_items' => Product::where('trader_id', $traderId)->where('stock_status', 'low')->count(),
             
             'out_of_stock_items' => Product::where('trader_id', $traderId)->where('stock_status', 'out_of_stock')->count(),
+
+            'profile_views' => $user->trader->profile_views,
         ];
 
         return $this->success($stats);

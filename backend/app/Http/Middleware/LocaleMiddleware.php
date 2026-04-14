@@ -10,8 +10,8 @@ class LocaleMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Priority: user preference from DB → Accept-Language header → default (sw)
-        $locale = 'sw';
+        // Priority: user preference from DB → Accept-Language header → default (en)
+        $locale = 'en';
 
         if ($request->user() && $request->user()->preferred_language) {
             $locale = $request->user()->preferred_language;

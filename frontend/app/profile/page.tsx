@@ -1,153 +1,243 @@
 'use client';
 
-import React from 'react';
-import { useAuthStore } from '@/store/authStore';
-import { useRouter } from 'next/navigation';
-import { useTranslation } from '@/hooks/useTranslation';
-import DashboardLayout from '@/components/shared/DashboardLayout';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { 
-    User as UserIcon, 
+    User, 
+    Mail, 
     Phone, 
-    ShieldCheck, 
-    Languages, 
+    Globe, 
+    Lock, 
     LogOut, 
-    ChevronRight, 
-    BadgeCheck,
-    CreditCard,
-    HelpCircle,
-    Settings,
+    Camera, 
+    CheckCircle2, 
+    ChevronRight,
+    Loader2,
+    Shield,
+    Languages,
     Bell,
-    LucideIcon
+    CreditCard
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { LanguageToggle } from '@/components/shared/LanguageToggle';
+import { useRouter } from 'next/navigation';
+import DashboardLayout from '@/components/shared/DashboardLayout';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ApiResponse } from '@/types';
+import { useAuthStore } from '@/store/authStore';
 
-export default function ProfilePage() {
-    const { user, logout } = useAuthStore();
-    const { t } = useTranslation();
+interface UserProfile {
+    id: number;
+    name: string;
+    phone: string;
+    email: string | null;
+    role: string;
+    preferred_language: 'en' | 'sw';
+    avatar_url: string | null;
+}
+
+export default function ResidentProfilePage() {
     const router = useRouter();
+    const queryClient = useQueryClient();
+    const { logout } = useAuthStore();
+    
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [language, setLanguage] = useState<'en' | 'sw'>('sw');
+
+    const { data: profileData, isLoading } = useQuery<ApiResponse<UserProfile>>({
+        queryKey: ['profile'],
+        queryFn: () => api.get('/profile'),
+    });
+
+    useEffect(() => {
+        if (profileData?.data) {
+            setName(profileData.data.name);
+            setEmail(profileData.data.email || '');
+            setLanguage(profileData.data.preferred_language);
+        }
+    }, [profileData]);
+
+    const updateProfileMutation = useMutation({
+        mutationFn: (data: Partial<UserProfile>) => api.patch('/profile', data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['profile'] });
+        }
+    });
 
     const handleLogout = async () => {
-        await logout();
-        router.push('/login');
+        try {
+            await api.post('/auth/logout');
+            logout();
+            router.push('/login');
+        } catch (error) {
+            logout();
+            router.push('/login');
+        }
     };
 
-    interface ProfileItem {
-        icon: LucideIcon;
-        label: string;
-        value?: string;
-        color: string;
-        path?: string;
-        component?: React.ReactNode;
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-surface flex flex-col items-center justify-center">
+                <Loader2 className="animate-spin text-brand-600 mb-4" size={48} />
+                <p className="text-sm font-black text-brand-700 uppercase tracking-widest animate-pulse">Safisha Wasifu...</p>
+            </div>
+        );
     }
 
-    interface ProfileSection {
-        title: string;
-        items: ProfileItem[];
-    }
-
-    const sections: ProfileSection[] = [
-        {
-            title: 'Account Settings',
-            items: [
-                { icon: ShieldCheck, label: 'Security & Verification', value: user?.phone_verified ? 'Verified' : 'Pending', color: 'text-green-600', path: '/verify' },
-                { icon: CreditCard, label: 'Payment Methods', value: 'M-Pesa Only', color: 'text-brand-600', path: '/profile' },
-                { icon: Bell, label: 'Notifications', value: 'On', color: 'text-amber-500', path: '/notifications' },
-            ]
-        },
-        {
-            title: 'Preferences',
-            items: [
-                { icon: Languages, label: 'App Language', component: <LanguageToggle />, color: 'text-indigo-600' },
-                { icon: Settings, label: 'Display Settings', value: 'Light Mode', color: 'text-gray-600', path: '/profile' },
-            ]
-        },
-        {
-            title: 'Support',
-            items: [
-                { icon: HelpCircle, label: 'Help Center & FAQ', color: 'text-blue-500', path: '/help' },
-                { icon: BadgeCheck, label: 'Market Permits', color: 'text-brand-600', path: '/profile' },
-            ]
-        }
-    ];
-
-    if (!user) return null;
+    const user = profileData?.data;
 
     return (
-        <DashboardLayout title={t('common.profile')}>
-            <div className="max-w-2xl mx-auto pb-12 animate-fade-up">
+        <DashboardLayout title="Wasifu Wangu (My Profile)">
+            <div className="space-y-6 pb-20">
                 
-                {/* Profile Header */}
-                <div className="relative mb-8 pt-6">
-                    <div className="flex flex-col items-center">
-                        <div className="relative mb-4 group">
-                            <div className="w-32 h-32 bg-brand-50 rounded-[2.5rem] border-4 border-white shadow-brand-md flex items-center justify-center text-brand-600 transition-transform group-hover:scale-105">
-                                {user.avatar_url ? (
-                                    <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover rounded-[2.5rem]" />
-                                ) : (
-                                    <UserIcon size={56} />
-                                )}
+                {/* 1. Profile Header (Card Style) */}
+                <div className="bg-green-950 p-8 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24" />
+                    <div className="flex flex-col items-center text-center space-y-4">
+                        <div className="relative group">
+                            <div className="w-28 h-28 bg-brand-500 rounded-[2.5rem] flex items-center justify-center text-4xl font-black shadow-xl border-4 border-white/20">
+                                {user?.avatar_url ? <img src={user.avatar_url} className="w-full h-full object-cover rounded-[2.5rem]" /> : user?.name.charAt(0)}
                             </div>
-                            {user.phone_verified && (
-                                <div className="absolute -right-2 -bottom-2 w-10 h-10 bg-green-500 text-white rounded-2xl flex items-center justify-center border-4 border-white shadow-lg">
-                                    <BadgeCheck size={20} />
-                                </div>
-                            )}
+                            <button className="absolute bottom-1 right-1 w-10 h-10 bg-white text-green-950 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all">
+                                <Camera size={18} />
+                            </button>
                         </div>
-                        <h2 className="text-2xl font-black text-green-950 px-2">{user.name}</h2>
-                        <div className="flex items-center gap-2 text-text-secondary mt-1 font-bold italic">
-                            <span className="bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
-                                {user.role}
-                            </span>
-                            <span className="flex items-center gap-1 text-sm bg-gray-100 px-3 py-1 rounded-full text-gray-600 font-mono tracking-tighter">
-                                <Phone size={14} /> {user.phone}
-                            </span>
+                        <div>
+                            <h2 className="text-2xl font-black tracking-tight">{user?.name}</h2>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-300">Resident • Verified</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Account Sections */}
-                <div className="space-y-6 px-4">
-                    {sections.map((section, idx) => (
-                        <div key={idx} className="space-y-3">
-                            <h3 className="text-xs font-black text-text-muted uppercase tracking-[0.2em] ml-4">{section.title}</h3>
-                            <div className="bg-white border border-border-default rounded-[2rem] overflow-hidden shadow-brand-sm">
-                                {section.items.map((item, iIndex) => (
-                                    <div 
-                                        key={iIndex}
-                                        onClick={() => item.path && router.push(item.path)}
-                                        className={`flex items-center justify-between p-5 hover:bg-neutral-50 transition-colors cursor-pointer ${iIndex !== section.items.length - 1 ? 'border-b border-gray-50' : ''}`}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`${item.color} w-10 h-10 rounded-xl bg-opacity-10 flex items-center justify-center`}>
-                                                <item.icon size={20} />
-                                            </div>
-                                            <span className="font-bold text-green-950 text-sm">{item.label}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            {item.value && <span className="text-xs font-black text-brand-600 uppercase tracking-widest">{item.value}</span>}
-                                            {item.component}
-                                            {item.path && <ChevronRight size={18} className="text-text-muted" />}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                {/* 2. Account Details */}
+                <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-brand-sm space-y-6">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-green-950 px-2 flex items-center gap-2">
+                        <Shield size={16} className="text-brand-600" />
+                        Account Details
+                    </h3>
+                    
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                             <label className="text-[10px] font-black text-text-muted uppercase tracking-widest pl-2">Full Name</label>
+                             <div className="relative">
+                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+                                <input 
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-none focus:ring-2 focus:ring-brand-500 transition-all font-bold text-sm"
+                                    placeholder="Your Name"
+                                />
+                             </div>
                         </div>
-                    ))}
 
-                    {/* Dangerous Territory */}
-                    <div className="pt-6">
-                        <button 
-                            onClick={handleLogout}
-                            className="w-full flex items-center justify-center gap-3 p-5 rounded-[2rem] bg-red-50 text-red-600 font-black text-lg hover:bg-red-100 active:scale-[0.98] transition-all shadow-sm border border-red-100"
-                        >
-                            <LogOut size={22} />
-                            Sign Out Account
-                        </button>
-                        <p className="text-center text-[10px] text-text-muted font-bold uppercase tracking-widest mt-6">
-                            Soko Mtaa v1.0.4 • Kenya Pride
-                        </p>
+                        <div className="space-y-2">
+                             <label className="text-[10px] font-black text-text-muted uppercase tracking-widest pl-2">Email Address</label>
+                             <div className="relative">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+                                <input 
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-none focus:ring-2 focus:ring-brand-500 transition-all font-bold text-sm"
+                                    placeholder="Your Email"
+                                />
+                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                             <label className="text-[10px] font-black text-text-muted uppercase tracking-widest pl-2">Phone Number</label>
+                             <div className="relative opacity-60">
+                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+                                <input 
+                                    value={user?.phone || ''}
+                                    disabled
+                                    className="w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-none font-bold text-sm"
+                                />
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-green-100 text-green-600 p-1 rounded-lg">
+                                    <CheckCircle2 size={16} />
+                                </div>
+                             </div>
+                        </div>
                     </div>
+
+                    <button 
+                        onClick={() => updateProfileMutation.mutate({ name, email })}
+                        disabled={updateProfileMutation.isPending}
+                        className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 active:scale-95 transition-all"
+                    >
+                        {updateProfileMutation.isPending ? <Loader2 className="animate-spin" /> : 'Sasisha Habari (Save)'}
+                    </button>
+                </div>
+
+                {/* 3. Preferences */}
+                <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-brand-sm space-y-6">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-green-950 px-2 flex items-center gap-2">
+                        <Languages size={16} className="text-brand-600" />
+                        Preferences
+                    </h3>
+
+                    <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-2xl">
+                        <div className="flex items-center gap-3">
+                            <Globe size={20} className="text-text-muted" />
+                            <span className="text-sm font-black text-green-950">Lugha (Language)</span>
+                        </div>
+                        <div className="flex bg-white p-1 rounded-xl shadow-sm border border-gray-100">
+                            {(['en', 'sw'] as const).map((lang) => (
+                                <button
+                                    key={lang}
+                                    onClick={() => {
+                                        setLanguage(lang);
+                                        updateProfileMutation.mutate({ preferred_language: lang });
+                                    }}
+                                    className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${
+                                        language === lang ? 'bg-brand-600 text-white shadow-md' : 'text-text-muted'
+                                    }`}
+                                >
+                                    {lang === 'en' ? 'ENG' : 'SW'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4. Quick Actions */}
+                <div className="grid grid-cols-2 gap-4">
+                    <button 
+                        onClick={() => router.push('/payments')}
+                        className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3 active:scale-95 transition-all"
+                    >
+                        <CreditCard size={24} className="text-amber-500" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-green-950">Payment History</span>
+                    </button>
+                    <button 
+                        onClick={() => router.push('/complaints')}
+                        className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3 active:scale-95 transition-all"
+                    >
+                        <Bell size={24} className="text-blue-500" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-green-950">My Alerts</span>
+                    </button>
+                </div>
+
+                {/* 5. Security & Logout */}
+                <div className="space-y-4 pt-4">
+                    <button className="w-full h-16 bg-white border-2 border-gray-100 rounded-2xl flex items-center justify-between px-6 active:scale-95 transition-all">
+                        <div className="flex items-center gap-3">
+                            <Lock size={20} className="text-text-muted" />
+                            <span className="text-sm font-black text-green-950">Badilisha Nenosiri</span>
+                        </div>
+                        <ChevronRight size={20} className="text-text-muted" />
+                    </button>
+                    
+                    <button 
+                        onClick={handleLogout}
+                        className="w-full h-20 bg-red-50 text-red-600 rounded-[2.5rem] flex items-center justify-center gap-3 text-sm font-black uppercase tracking-[0.2em] active:scale-95 transition-all"
+                    >
+                        <LogOut size={24} />
+                        Ondoka (Sign Out)
+                    </button>
+                </div>
+
+                <div className="text-center pb-8">
+                    <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">Soko Mtaa v1.2.0 • Phase 2</p>
                 </div>
             </div>
         </DashboardLayout>

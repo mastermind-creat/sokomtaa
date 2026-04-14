@@ -29,6 +29,8 @@ class Trader extends Model
         'is_open',
         'opening_time',
         'closing_time',
+        'fee_payment_frequency',
+        'last_fee_deduction_at',
         'average_rating',
         'total_reviews',
         'profile_views',
@@ -37,6 +39,7 @@ class Trader extends Model
     protected $casts = [
         'is_open' => 'boolean',
         'average_rating' => 'decimal:2',
+        'last_fee_deduction_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -72,5 +75,10 @@ class Trader extends Model
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function wallet(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Wallet::class);
     }
 }

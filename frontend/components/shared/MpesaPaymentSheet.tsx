@@ -9,13 +9,16 @@ import { ApiResponse } from '@/types';
 interface MpesaPaymentSheetProps {
     isOpen: boolean;
     onClose: () => void;
-    type: 'reservation' | 'market_fee';
-    targetId: number;
-    amount: number;
+    type: 'reservation' | 'market_fee' | 'wallet_topup';
+    targetId?: number;
+    amount?: number;
     onSuccess?: () => void;
+    title?: string;
+    description?: string;
 }
-export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amount, onSuccess }: MpesaPaymentSheetProps) {
+export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amount, onSuccess, title, description }: MpesaPaymentSheetProps) {
     const [phone, setPhone] = React.useState('2547');
+    const [inputAmount, setInputAmount] = React.useState(amount?.toString() || '');
     const [status, setStatus] = React.useState<'idle' | 'pending' | 'success' | 'error'>('idle');
     const [message, setMessage] = React.useState('');
     const [isProcessing, setIsProcessing] = React.useState(false);
@@ -40,7 +43,8 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
             await api.post<ApiResponse<MpesaStkResponse>>('/payments/mpesa/stkpush', {
                 phone_number: phone,
                 type,
-                target_id: targetId
+                target_id: targetId || 0,
+                amount: type === 'wallet_topup' ? parseFloat(inputAmount) : amount
             });
             
             setStatus('success');
@@ -83,8 +87,8 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                         className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] p-8 z-[70] shadow-2xl safe-bottom"
                     >
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold text-green-950">Lipa na M-Pesa</h2>
+                        <div className="flex justify-between items-center mb-1">
+                            <h2 className="text-2xl font-bold text-green-950">{title || 'Lipa na M-Pesa'}</h2>
                             <button 
                                 onClick={onClose} 
                                 className="p-2 bg-slate-100 rounded-full active:scale-90 transition-all"
@@ -94,29 +98,53 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
                                 <X size={20} />
                             </button>
                         </div>
+                        {description && (
+                            <p className="text-xs text-text-secondary font-medium mb-6">
+                                {description}
+                            </p>
+                        )}
 
-                        <div className="mb-8 p-6 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-4">
-                            <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white shrink-0">
-                                <span className="font-bold">KES</span>
+                        {type !== 'wallet_topup' ? (
+                            <div className="mb-8 p-6 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-4">
+                                <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                                    <span className="font-bold">KES</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-green-800">Kiasi cha Kulipa (Amount to Pay)</p>
+                                    <p className="text-3xl font-bold text-green-900">{amount?.toLocaleString()}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-sm text-green-800">Kiasi cha Kulipa (Amount to Pay)</p>
-                                <p className="text-3xl font-bold text-green-900">{amount.toLocaleString()}</p>
+                        ) : (
+                            <div className="mb-8 space-y-2">
+                                <label className="input-label mb-2 block tracking-tight font-black text-green-950 uppercase text-[10px]">Kiasi unachoongeza (Top-up Amount)</label>
+                                <div className="flex items-center gap-3">
+                                    <div className="h-16 px-5 bg-brand-50 border border-brand-100 rounded-xl flex shrink-0 items-center justify-center font-black text-brand-600">KES</div>
+                                    <input
+                                        value={inputAmount}
+                                        onChange={(e) => setInputAmount(e.target.value)}
+                                        disabled={isProcessing}
+                                        placeholder="Min 10"
+                                        className="input flex-1 h-16 text-2xl font-black tracking-tighter"
+                                        type="number"
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {status === 'idle' || status === 'pending' || status === 'error' ? (
                             <div className="space-y-6">
                                 <div>
                                     <label className="input-label mb-2 block">Namba ya Simu (M-Pesa Number)</label>
-                                    <div className="relative">
-                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-14 w-14 bg-gray-50 border border-gray-100 rounded-xl flex shrink-0 items-center justify-center text-text-muted">
+                                            <Phone size={20} />
+                                        </div>
                                         <input
                                             value={phone}
                                             onChange={(e) => setPhone(e.target.value)}
                                             disabled={isProcessing}
                                             placeholder="2547XXXXXXXX"
-                                            className="input pl-12 h-14"
+                                            className="input flex-1 h-14"
                                             type="tel"
                                         />
                                     </div>

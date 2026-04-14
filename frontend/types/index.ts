@@ -35,6 +35,7 @@ export interface TraderDashboardStats {
     completed_reservations: number;
     low_stock_items: number;
     out_of_stock_items: number;
+    profile_views: number;
 }
 
 export interface RevenueTrend {
