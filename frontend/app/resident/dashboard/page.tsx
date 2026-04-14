@@ -3,7 +3,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import DashboardLayout from '@/components/shared/DashboardLayout';
+
 import { 
     Ticket, 
     Bell, 
@@ -59,7 +59,7 @@ export default function ResidentDashboard() {
     const loyaltyPoints = 1420;
 
     return (
-        <DashboardLayout title={t('nav.dawati')}>
+        <>
             <div className="space-y-10 pb-20">
                 
                 {/* 1. HERO: Greeting & Loyalty Status */}
@@ -251,6 +251,6 @@ export default function ResidentDashboard() {
                     </div>
                 </section>
             </div>
-        </DashboardLayout>
+        </>
     );
 }

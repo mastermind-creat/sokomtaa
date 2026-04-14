@@ -4,21 +4,21 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { StatCard } from '@/components/admin/StatCard';
-import { 
-    Users, 
-    Home, 
-    AlertCircle, 
-    TrendingUp, 
-    ArrowRight, 
-    CheckCircle2, 
-    Clock, 
+import {
+    Users,
+    Home,
+    AlertCircle,
+    TrendingUp,
+    ArrowRight,
+    CheckCircle2,
+    Clock,
     ShieldAlert,
     BarChart3,
     Activity,
     Map as MapIcon,
     Filter
 } from 'lucide-react';
-import { 
+import {
     ResponsiveContainer,
     AreaChart,
     Area,
@@ -30,12 +30,12 @@ import {
 import { motion } from 'framer-motion';
 import { ApiResponse } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
-import DashboardLayout from '@/components/shared/DashboardLayout';
+import { useUIStore } from '@/store/uiStore';
 import RecentActivityFeed from '@/components/admin/RecentActivityFeed';
 import dynamic from 'next/dynamic';
 
 // Dynamic import for Leaflet map to avoid SSR issues
-const StallMapPreview = dynamic(() => import('@/components/admin/StallMapPreview'), { 
+const StallMapPreview = dynamic(() => import('../../../components/admin/StallMapPreview'), {
     ssr: false,
     loading: () => <div className="h-[400px] w-full bg-gray-50 animate-pulse rounded-3xl flex items-center justify-center font-black uppercase text-text-muted tracking-widest text-xs">Loading Market Map...</div>
 });
@@ -68,6 +68,11 @@ interface RevenueTrend {
 
 export default function AdminDashboard() {
     const { t } = useTranslation();
+    const { setPageTitle } = useUIStore();
+
+    React.useEffect(() => {
+        setPageTitle(t('admin.dashboard_title') || 'Admin Overview');
+    }, [setPageTitle, t]);
 
     // Fetch stats
     const { data: stats, isLoading: statsLoading } = useQuery({
@@ -99,12 +104,10 @@ export default function AdminDashboard() {
     }
 
     return (
-        <DashboardLayout title={t('admin.dashboard_title')}>
-            <div className="space-y-8 lg:space-y-12">
+        <div className="space-y-8 lg:space-y-12 pb-10 px-4 pt-6">
                 {/* Header Actions */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl lg:text-3xl font-black text-green-950 tracking-tight">{t('admin.live_analytics')}</h1>
                         <p className="text-text-secondary text-sm font-medium">{t('admin.subtitle')}</p>
                     </div>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -121,7 +124,7 @@ export default function AdminDashboard() {
 
                 {/* 1. TOP: 4-Stat Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
-                    <StatCard 
+                    <StatCard
                         title={`Market Fees (County Levy)`}
                         value={`KES ${stats?.revenue.total.toLocaleString()}`}
                         icon={TrendingUp}
@@ -129,7 +132,7 @@ export default function AdminDashboard() {
                         trend={{ value: stats?.revenue.percentage || 0, isPositive: true, label: "VS Target" }}
                         description={t('admin.revenue_subtitle')}
                     />
-                    <StatCard 
+                    <StatCard
                         title={t('common.traders')}
                         value={stats?.traders.total || '0'}
                         icon={Users}
@@ -137,16 +140,16 @@ export default function AdminDashboard() {
                         trend={{ value: stats?.traders.growth || 0, isPositive: true, label: 'New this month' }}
                         description="Verified & Active"
                     />
-                    <StatCard 
+                    <StatCard
                         title="Stall Occupancy"
                         value={`${stats?.stalls.occupancy_rate || 0}%`}
                         icon={Home}
                         color="bg-blue-600"
                         description={`${stats?.stalls.occupied} / ${stats?.stalls.total} units filled`}
                     />
-                    <StatCard 
+                    <StatCard
                         title="Pending Orders"
-                        value="142" // Mock today's orders
+                        value="142"
                         icon={Activity}
                         color="bg-brand-950"
                         trend={{ value: 8, isPositive: true, label: 'Today' }}
@@ -163,60 +166,51 @@ export default function AdminDashboard() {
                                 <h3 className="text-xl font-black text-green-950 tracking-tight">{t('admin.revenue_trends')}</h3>
                                 <p className="text-text-secondary text-sm font-medium">Monthly collection across all markets.</p>
                             </div>
-                            <div>
-                                <label htmlFor="revenueRange" className="sr-only">Date Range for Revenue Trends</label>
-                                <select 
-                                    id="revenueRange"
-                                    name="revenueRange"
-                                    aria-label="Filter revenue trends by date range"
-                                    title="Filter revenue trends by date range"
-                                    className="h-10 pl-4 pr-10 bg-gray-50 border-none rounded-xl text-xs font-bold text-text-secondary outline-none appearance-none cursor-pointer hover:bg-gray-100 transition-colors"
-                                >
-                                    <option>Last 6 Months</option>
-                                    <option>Last Year</option>
-                                </select>
-                            </div>
+                            <select className="h-10 pl-4 pr-10 bg-gray-50 border-none rounded-xl text-xs font-bold text-text-secondary outline-none appearance-none cursor-pointer hover:bg-gray-100 transition-colors">
+                                <option>Last 6 Months</option>
+                                <option>Last Year</option>
+                            </select>
                         </div>
-                        
+
                         <div className="h-[300px] lg:h-[400px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={trends}>
                                     <defs>
                                         <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#1B6B3A" stopOpacity={0.1}/>
-                                            <stop offset="95%" stopColor="#1B6B3A" stopOpacity={0}/>
+                                            <stop offset="5%" stopColor="#1B6B3A" stopOpacity={0.1} />
+                                            <stop offset="95%" stopColor="#1B6B3A" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FAFAFA" />
-                                    <XAxis 
-                                        dataKey="month" 
-                                        axisLine={false} 
-                                        tickLine={false} 
+                                    <XAxis
+                                        dataKey="month"
+                                        axisLine={false}
+                                        tickLine={false}
                                         tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }}
                                         dy={15}
                                     />
-                                    <YAxis 
-                                        axisLine={false} 
-                                        tickLine={false} 
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
                                         tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }}
                                         tickFormatter={(val) => `KES ${val / 1000}k`}
                                     />
-                                    <Tooltip 
-                                        contentStyle={{ 
-                                            borderRadius: '24px', 
-                                            border: 'none', 
+                                    <Tooltip
+                                        contentStyle={{
+                                            borderRadius: '24px',
+                                            border: 'none',
                                             boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
-                                            padding: '16px' 
+                                            padding: '16px'
                                         }}
                                         labelStyle={{ fontWeight: '900', color: '#1B6B3A', marginBottom: '8px' }}
                                     />
-                                    <Area 
-                                        type="monotone" 
-                                        dataKey="total" 
-                                        stroke="#1B6B3A" 
+                                    <Area
+                                        type="monotone"
+                                        dataKey="total"
+                                        stroke="#1B6B3A"
                                         strokeWidth={4}
-                                        fillOpacity={1} 
-                                        fill="url(#colorRevenue)" 
+                                        fillOpacity={1}
+                                        fill="url(#colorRevenue)"
                                         animationDuration={1500}
                                     />
                                 </AreaChart>
@@ -255,6 +249,5 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             </div>
-        </DashboardLayout>
     );
 }

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
-    
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -23,60 +23,111 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-Route::get('/categories', function () {
-    return response()->json([
-        'success' => true, 
-        'data' => \App\Models\Category::all()
-    ]);
-});
+use App\Http\Controllers\CategoryController;
 
-// Market Discovery (Resident Focused)
+// ... other imports
+
+Route::get('/categories', [CategoryController::class, 'index']);
+Route::post('/categories', [CategoryController::class, 'store'])->middleware('auth:sanctum');
+
+// Market Discovery (Public)
 Route::prefix('markets')->group(function () {
     Route::get('/', [\App\Http\Controllers\Resident\MarketController::class, 'index']);
     Route::get('/{market}', [\App\Http\Controllers\Resident\MarketController::class, 'show']);
 });
 
-// Global Search & Recommendations (Resident Focused)
+// Global Search & Recommendations (Public)
 Route::get('/search', [\App\Http\Controllers\SearchController::class, 'index']);
 Route::get('/recommendations', [\App\Http\Controllers\SearchController::class, 'recommendations']);
 
-// Trader Discovery (Resident Focused)
+// Trader Discovery (Public)
 Route::prefix('traders')->group(function () {
     Route::get('/search', [\App\Http\Controllers\Resident\TraderController::class, 'search']);
     Route::get('/{trader}', [\App\Http\Controllers\Resident\TraderController::class, 'show']);
+    Route::get('/{trader}/products', [\App\Http\Controllers\Resident\TraderController::class, 'products']);
+    Route::get('/{trader}/reviews', [\App\Http\Controllers\Resident\TraderController::class, 'reviews']);
 });
 
 // M-Pesa Public Callback
 Route::post('/payments/mpesa/callback', [\App\Http\Controllers\Payment\MpesaController::class, 'callback']);
 
+// ── AUTHENTICATED ROUTES ──────────────────────────────────────────────────────
 Route::middleware(['auth:sanctum'])->group(function () {
-    // Trader Profile (Accessible by any role to allow "Setup" or "Me")
+
+    // ── Trader Profile (any authenticated user during setup) ─────────────────
     Route::prefix('trader')->group(function () {
         Route::post('/setup', [TraderProfileController::class, 'setup']);
         Route::get('/me', [TraderProfileController::class, 'me']);
         Route::put('/update', [TraderProfileController::class, 'update']);
+        Route::post('/avatar', [TraderProfileController::class, 'uploadAvatar']);
     });
 
-    // Reservations (Resident/Trader)
+    // ── Reservations (Resident creates, Trader/Resident views) ───────────────
     Route::prefix('reservations')->group(function () {
         Route::get('/', [\App\Http\Controllers\Resident\ReservationController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Resident\ReservationController::class, 'store']);
         Route::get('/{reservation}', [\App\Http\Controllers\Resident\ReservationController::class, 'show']);
         Route::patch('/{id}/status', [\App\Http\Controllers\Resident\ReservationController::class, 'updateStatus']);
+        Route::get('/{reservation}/pickup-code', [\App\Http\Controllers\Resident\ReservationController::class, 'pickupCode']);
+        Route::post('/{reservation}/cancel', [\App\Http\Controllers\Resident\ReservationController::class, 'cancel']);
     });
 
-    // M-Pesa Payment Initiation
+    // ── Watchlist (Resident) ─────────────────────────────────────────────────
+    Route::prefix('watchlist')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Resident\WatchlistController::class, 'index']);
+        Route::post('/{product}', [\App\Http\Controllers\Resident\WatchlistController::class, 'store']);
+        Route::delete('/{product}', [\App\Http\Controllers\Resident\WatchlistController::class, 'destroy']);
+        Route::patch('/{product}/notify', [\App\Http\Controllers\Resident\WatchlistController::class, 'toggleNotify']);
+    });
+
+    // ── Resident Reviews (create/list my reviews) ────────────────────────────
+    Route::prefix('resident/reviews')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Resident\ReviewController::class, 'index']);
+        Route::get('/pending', [\App\Http\Controllers\Resident\ReviewController::class, 'pending']);
+        Route::post('/', [\App\Http\Controllers\Resident\ReviewController::class, 'store']);
+        Route::put('/{review}', [\App\Http\Controllers\Resident\ReviewController::class, 'update']);
+    });
+
+    // ── Resident Payments History ────────────────────────────────────────────
+    Route::prefix('resident/payments')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Resident\PaymentHistoryController::class, 'index']);
+        Route::get('/summary', [\App\Http\Controllers\Resident\PaymentHistoryController::class, 'summary']);
+    });
+
+    // ── Resident Complaints ──────────────────────────────────────────────────
+    Route::prefix('resident/complaints')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Resident\ResidentComplaintController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Resident\ResidentComplaintController::class, 'store']);
+    });
+
+    // ── Resident Profile & Security ──────────────────────────────────────────
+    Route::prefix('profile')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Resident\ProfileController::class, 'show']);
+        Route::patch('/', [\App\Http\Controllers\Resident\ProfileController::class, 'update']);
+        Route::post('/password', [\App\Http\Controllers\Resident\ProfileController::class, 'changePassword']);
+    });
+
+    // ── M-Pesa Payment Initiation ────────────────────────────────────────────
     Route::prefix('payments/mpesa')->group(function () {
         Route::post('/stkpush', [\App\Http\Controllers\Payment\MpesaController::class, 'initiateSTK']);
+        Route::get('/status/{checkoutRequestId}', [\App\Http\Controllers\Payment\MpesaController::class, 'checkStatus']);
     });
 
-    // Market Fees (Traders Only)
-    Route::middleware(['role:trader'])->prefix('fees')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Payment\FeeController::class, 'index']);
-        Route::get('/summary', [\App\Http\Controllers\Payment\FeeController::class, 'summary']);
+    // ── Market Fees & Wallet (Traders Only) ──────────────────────────────────
+    Route::middleware(['role:trader'])->group(function () {
+        Route::prefix('trader/wallet')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Trader\WalletController::class, 'index']);
+            Route::get('/transactions', [\App\Http\Controllers\Trader\WalletController::class, 'transactions']);
+            Route::post('/frequency', [\App\Http\Controllers\Trader\WalletController::class, 'updateFrequency']);
+        });
+
+        Route::prefix('fees')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Payment\FeeController::class, 'index']);
+            Route::get('/summary', [\App\Http\Controllers\Payment\FeeController::class, 'summary']);
+        });
     });
 
-    // Trader Analytics (Backend)
+    // ── Trader Analytics ─────────────────────────────────────────────────────
     Route::middleware(['role:trader'])->prefix('analytics')->group(function () {
         Route::get('/stats', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'dashboardStats']);
         Route::get('/revenue', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'revenueTrends']);
@@ -84,16 +135,56 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/price-insights', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'priceInsights']);
     });
 
-    // Products (Strictly for Traders)
-    Route::middleware(['role:trader'])->prefix('products')->group(function () {
-        Route::get('/', [ProductController::class, 'index']);
-        Route::post('/', [ProductController::class, 'store']);
-        Route::put('/{product}', [ProductController::class, 'update']);
-        Route::delete('/{product}', [ProductController::class, 'destroy']);
-        Route::patch('/{product}/status', [ProductController::class, 'toggleStatus']);
-    });
+    // ── TRADER-ONLY ROUTES (Phase 1) ─────────────────────────────────────────
+    Route::middleware(['role:trader'])->group(function () {
 
-    // Notifications
+        // Trader Reservation Management
+        Route::prefix('trader/reservations')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Trader\TraderReservationController::class, 'index']);
+            Route::get('/stats', [\App\Http\Controllers\Trader\TraderReservationController::class, 'stats']);
+        });
+
+        // Trader Reviews Received
+        Route::prefix('trader/reviews')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Trader\TraderReviewController::class, 'index']);
+            Route::get('/summary', [\App\Http\Controllers\Trader\TraderReviewController::class, 'summary']);
+        });
+
+        // Trader Complaints (against + filed by)
+        Route::prefix('trader/complaints')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Trader\TraderComplaintController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Trader\TraderComplaintController::class, 'store']);
+        });
+
+        // Trader Settings (notifications, privacy, language)
+        Route::prefix('trader/settings')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Trader\TraderSettingsController::class, 'show']);
+            Route::put('/', [\App\Http\Controllers\Trader\TraderSettingsController::class, 'update']);
+        });
+
+        // Stall Application
+        Route::prefix('trader/stall-application')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Trader\TraderStallApplicationController::class, 'show']);
+            Route::post('/', [\App\Http\Controllers\Trader\TraderStallApplicationController::class, 'store']);
+            Route::delete('/', [\App\Http\Controllers\Trader\TraderStallApplicationController::class, 'destroy']);
+        });
+
+        // Available Stalls (zone picker in apply-stall wizard)
+        Route::get('/trader/stalls/available', [\App\Http\Controllers\Trader\TraderStallApplicationController::class, 'availableStalls']);
+
+        // Products CRUD (with single show for edit page)
+        Route::prefix('products')->group(function () {
+            Route::get('/', [ProductController::class, 'index']);
+            Route::get('/{product}', [ProductController::class, 'show']);
+            Route::post('/', [ProductController::class, 'store']);
+            Route::put('/{product}', [ProductController::class, 'update']);
+            Route::delete('/{product}', [ProductController::class, 'destroy']);
+            Route::patch('/{product}/status', [ProductController::class, 'toggleStatus']);
+        });
+    });
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── Notifications (all roles) ────────────────────────────────────────────
     Route::prefix('notifications')->group(function () {
         Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index']);
         Route::get('/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount']);
@@ -101,27 +192,47 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
     });
 
-    // Complaints
+    // ── Complaints (general — shared endpoint) ───────────────────────────────
     Route::prefix('complaints')->group(function () {
         Route::get('/', [\App\Http\Controllers\ComplaintController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\ComplaintController::class, 'store']);
-        Route::patch('/{id}/resolve', [\App\Http\Controllers\ComplaintController::class, 'resolve']); // Admin can resolve
+        Route::patch('/{id}/resolve', [\App\Http\Controllers\ComplaintController::class, 'resolve']);
     });
 
-    // Notice Board
+    // ── Notice Board ─────────────────────────────────────────────────────────
     Route::prefix('notices')->group(function () {
         Route::get('/', [\App\Http\Controllers\NoticeController::class, 'index']);
-        Route::post('/', [\App\Http\Controllers\NoticeController::class, 'store']); // Admin can post
-        Route::delete('/{id}', [\App\Http\Controllers\NoticeController::class, 'destroy']); // Admin can delete
+        Route::post('/', [\App\Http\Controllers\NoticeController::class, 'store']);
+        Route::delete('/{id}', [\App\Http\Controllers\NoticeController::class, 'destroy']);
     });
 
-    // Admin Specific Dashboard
+    // ── ADMIN ROUTES ─────────────────────────────────────────────────────────
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
+        // Dashboard
         Route::get('/stats', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'stats']);
         Route::get('/trends', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'revenueTrends']);
         Route::get('/activity', [\App\Http\Controllers\Admin\AdminActivityController::class, 'index']);
+
+        // Stalls Management
         Route::get('/stalls', [\App\Http\Controllers\Admin\StallController::class, 'index']);
         Route::get('/stalls/summary', [\App\Http\Controllers\Admin\StallController::class, 'summary']);
+        Route::post('/stalls', [\App\Http\Controllers\Admin\StallController::class, 'store']);
+        Route::patch('/stalls/{stall}', [\App\Http\Controllers\Admin\StallController::class, 'update']);
+        Route::delete('/stalls/{stall}', [\App\Http\Controllers\Admin\StallController::class, 'destroy']);
+        Route::post('/stalls/bulk', [\App\Http\Controllers\Admin\StallController::class, 'bulkGenerate']);
+
+        // Stall Application Review
+        Route::get('/applications', [\App\Http\Controllers\Admin\ApplicationReviewController::class, 'index']);
+        Route::get('/applications/stats', [\App\Http\Controllers\Admin\ApplicationReviewController::class, 'stats']);
+        Route::post('/applications/{application}/action', [\App\Http\Controllers\Admin\ApplicationReviewController::class, 'action']);
+
+        // Fee & Revenue Management
+        Route::prefix('fees')->group(function () {
+            Route::get('/stats', [\App\Http\Controllers\Admin\FeeManagementController::class, 'stats']);
+            Route::get('/transactions', [\App\Http\Controllers\Admin\FeeManagementController::class, 'transactions']);
+            Route::get('/delinquents', [\App\Http\Controllers\Admin\FeeManagementController::class, 'delinquents']);
+            Route::post('/update-rate', [\App\Http\Controllers\Admin\FeeManagementController::class, 'updateFee']);
+        });
     });
 });
 

@@ -28,12 +28,11 @@ export default function AdminSidebar() {
         { icon: LayoutDashboard, label: t('admin.dashboard_title'), path: '/admin/dashboard', badge: null },
         { icon: MapPin, label: t('common.markets'), path: '/admin/markets', badge: null },
         { icon: Store, label: t('common.stalls'), path: '/admin/stalls', badge: null },
-        { icon: Users, label: t('common.traders'), path: '/admin/traders', badge: 12 }, // Mock badge
-        { icon: MapPin, label: t('common.allocations'), path: '/admin/allocations', badge: null },
-        { icon: Ticket, label: t('common.fees'), path: '/admin/fees', badge: '!' },
+        { icon: FileText, label: 'Applications', path: '/admin/applications', badge: 'New' },
+        { icon: Users, label: t('common.traders'), path: '/admin/traders', badge: null },
+        { icon: Ticket, label: t('common.fees'), path: '/admin/fees', badge: 'Paid' },
         { icon: MessageSquare, label: t('common.complaints'), path: '/admin/complaints', badge: 5 },
         { icon: Bell, label: t('common.notifications'), path: '/admin/notices', badge: null },
-        { icon: FileText, label: t('common.reports'), path: '/admin/reports', badge: null },
     ];
 
     return (

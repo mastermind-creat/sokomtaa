@@ -148,4 +148,53 @@ class ReservationController extends Controller
 
         return $this->success($reservation);
     }
+
+    /**
+     * Return the pickup code for a reservation (resident-facing QR page).
+     */
+    public function pickupCode(Reservation $reservation): JsonResponse
+    {
+        $user = Auth::user();
+
+        if ($reservation->resident_id !== $user->id) {
+            return $this->error('Unauthorized.', 'UNAUTHORIZED', 403);
+        }
+
+        return $this->success([
+            'reservation_code' => $reservation->reservation_code,
+            'status'           => $reservation->status,
+            'product'          => $reservation->product?->name,
+            'trader'           => $reservation->trader?->business_name,
+            'stall'            => $reservation->trader?->stall?->stall_number,
+            'pickup_deadline'  => $reservation->pickup_deadline,
+        ]);
+    }
+
+    /**
+     * Resident cancels their own pending/paid reservation.
+     */
+    public function cancel(Reservation $reservation): JsonResponse
+    {
+        $user = Auth::user();
+
+        if ($reservation->resident_id !== $user->id) {
+            return $this->error('Unauthorized.', 'UNAUTHORIZED', 403);
+        }
+
+        if (!in_array($reservation->status, ['pending', 'paid'])) {
+            return $this->error('Only pending or paid reservations can be cancelled.', 'CANNOT_CANCEL', 422);
+        }
+
+        $reservation->update(['status' => 'cancelled']);
+
+        // Restore stock if quantity was tracked
+        if ($reservation->product && $reservation->product->stock_quantity !== null) {
+            $reservation->product->increment('stock_quantity', $reservation->quantity);
+            if ($reservation->product->stock_status === 'out_of_stock') {
+                $reservation->product->update(['stock_status' => 'low']);
+            }
+        }
+
+        return $this->success($reservation, 'Reservation cancelled successfully.');
+    }
 }

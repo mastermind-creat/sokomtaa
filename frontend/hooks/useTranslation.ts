@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useLocaleStore } from '@/store/localeStore';
 import en from '@/locales/en.json';
 import sw from '@/locales/sw.json';
@@ -14,7 +15,7 @@ export function useTranslation() {
   /**
    * Translate a key string (e.g., "common.search")
    */
-  const t = (key: string): string => {
+  const t = useCallback((key: string): string => {
     const keys = key.split('.');
     let result: any = translations;
 
@@ -36,7 +37,7 @@ export function useTranslation() {
     }
 
     return result as string;
-  };
+  }, [translations]);
 
   return { t, locale, toggleLocale, setLocale };
 }

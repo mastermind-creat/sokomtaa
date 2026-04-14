@@ -9,15 +9,35 @@ use Illuminate\Support\Facades\Log;
 class CloudinaryService
 {
     protected $cloudinary;
+    protected $useLocalFallback = false;
 
     public function __construct()
     {
-        // Initializes using CLOUDINARY_URL from .env
-        $this->cloudinary = new Cloudinary();
+        try {
+            // Check if individual config values are present
+            $config = config('cloudinary');
+            
+            if ($config['cloud_name'] && $config['api_key'] && $config['api_secret']) {
+                $this->cloudinary = new Cloudinary([
+                    'cloud' => [
+                        'cloud_name' => $config['cloud_name'],
+                        'api_key'    => $config['api_key'],
+                        'api_secret' => $config['api_secret'],
+                    ],
+                ]);
+            } else {
+                // Fallback to local if config is missing
+                $this->useLocalFallback = true;
+                Log::warning('Cloudinary credentials missing. Falling back to local public storage.');
+            }
+        } catch (\Exception $e) {
+            $this->useLocalFallback = true;
+            Log::error('Cloudinary Initialization Error: ' . $e->getMessage() . '. Falling back to local storage.');
+        }
     }
 
     /**
-     * Upload an image to Cloudinary with Soko Mtaa optimizations.
+     * Upload an image to Cloudinary (or local fallback).
      *
      * @param UploadedFile $file
      * @param string $folder
@@ -25,6 +45,18 @@ class CloudinaryService
      */
     public function uploadImage(UploadedFile $file, string $folder = 'products'): ?string
     {
+        if ($this->useLocalFallback) {
+            try {
+                // Store in public/uploads/{folder}
+                $path = $file->store('uploads/' . $folder, 'public');
+                // Return URL relative to base (e.g. /storage/uploads/products/xyz.jpg)
+                return '/storage/' . $path;
+            } catch (\Exception $e) {
+                Log::error('Local Storage Fallback Error: ' . $e->getMessage());
+                return null;
+            }
+        }
+
         try {
             $uploadedFile = $this->cloudinary->uploadApi()->upload($file->getRealPath(), [
                 'folder' => 'sokomtaa/' . $folder,
@@ -39,6 +71,21 @@ class CloudinaryService
             return $uploadedFile['secure_url'];
         } catch (\Exception $e) {
             Log::error('Cloudinary Upload Error: ' . $e->getMessage());
+            // Attempt local fallback if Cloudinary fails during runtime
+            return $this->uploadImageLocalFallback($file, $folder);
+        }
+    }
+
+    /**
+     * Internal helper for local fallback.
+     */
+    protected function uploadImageLocalFallback(UploadedFile $file, string $folder): ?string
+    {
+        try {
+            $path = $file->store('uploads/' . $folder, 'public');
+            return '/storage/' . $path;
+        } catch (\Exception $e) {
+            Log::error('Secondary Local Fallback Error: ' . $e->getMessage());
             return null;
         }
     }

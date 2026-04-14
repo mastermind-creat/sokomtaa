@@ -97,4 +97,36 @@ class TraderProfileController extends Controller
 
         return $this->success($trader, 'Wasifu umesasishwa. (Profile updated successfully.)');
     }
+    /**
+     * Upload an avatar for the trader profile.
+     */
+    public function uploadAvatar(\Illuminate\Http\Request $request, \App\Services\CloudinaryService $cloudinary): JsonResponse
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        $trader = $request->user()->trader;
+
+        if (!$trader) {
+            return $this->error('Wasifu haupatikani. (Profile not found.)', 'NOT_FOUND', 404);
+        }
+
+        if ($request->hasFile('avatar')) {
+            $url = $cloudinary->uploadImage($request->file('avatar'), 'traders');
+            
+            if ($url) {
+                // If the trader already has an avatar that isn't null, we could optionally delete it here
+                if ($trader->avatar_url) {
+                    $cloudinary->deleteImage($trader->avatar_url);
+                }
+                
+                $trader->update(['avatar_url' => $url]);
+                return $this->success(['avatar_url' => $url], 'Picha imepakiwa kikamilifu. (Avatar uploaded successfully.)');
+            }
+            return $this->error('Imeshindwa kupakia picha. (Failed to upload image.)', 'UPLOAD_ERROR', 500);
+        }
+
+        return $this->error('Hakuna picha iliyopatikana. (No image provided.)', 'BAD_REQUEST', 400);
+    }
 }

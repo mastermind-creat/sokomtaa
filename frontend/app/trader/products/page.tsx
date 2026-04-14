@@ -13,8 +13,8 @@ import {
     Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import BottomNav from '@/components/shared/BottomNav';
 import { ApiResponse } from '@/types';
+import { useUIStore } from '@/store/uiStore';
 
 interface Product {
     id: number;
@@ -29,6 +29,11 @@ interface Product {
 export default function ProductListPage() {
     const router = useRouter();
     const queryClient = useQueryClient();
+    const { setPageTitle } = useUIStore();
+
+    React.useEffect(() => {
+        setPageTitle('Bidhaa Zangu (My Products)');
+    }, [setPageTitle]);
 
     const { data, isLoading } = useQuery<ApiResponse<{ data: Product[] }>>({
         queryKey: ['my-products'],
@@ -54,12 +59,8 @@ export default function ProductListPage() {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-surface-base pb-32">
-            <header className="p-6 pt-12 flex justify-between items-center sticky top-0 bg-surface-base/80 backdrop-blur-md z-10 border-b border-border-default">
-                <div>
-                    <h1 className="text-2xl font-black text-green-950">Bidhaa Zangu</h1>
-                    <p className="text-xs text-text-muted font-bold uppercase tracking-wider">My Products ({products.length})</p>
-                </div>
+        <div className="flex flex-col min-h-screen bg-surface-base pb-32 max-w-7xl mx-auto w-full px-4 pt-6">
+            <div className="p-6 flex justify-end items-center">
                 <button 
                     onClick={() => router.push('/trader/products/add')}
                     className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center text-white shadow-brand-md active:scale-95 transition-all"
@@ -68,9 +69,9 @@ export default function ProductListPage() {
                 >
                     <Plus size={24} />
                 </button>
-            </header>
+            </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                 {products.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
                         <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center text-text-muted">
@@ -142,8 +143,6 @@ export default function ProductListPage() {
                     ))
                 )}
             </div>
-
-            <BottomNav />
         </div>
     );
 }

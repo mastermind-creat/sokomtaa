@@ -48,6 +48,10 @@ class ProductController extends Controller
     {
         $trader = $request->user()->trader;
 
+        if (!$trader) {
+            return $this->error('Tafadhali kamilisha wasifu wako kwanza. (Please complete your trader profile setup first.)', 'PROFILE_NOT_FOUND', 404);
+        }
+
         $data = $request->validated();
         $data['trader_id'] = $trader->id;
         $data['stock_status'] = 'available';
@@ -71,7 +75,11 @@ class ProductController extends Controller
      */
     public function update(ProductRequest $request, Product $product): JsonResponse
     {
-        $this->authorizeProduct($product);
+        $trader = $request->user()->trader;
+        
+        if (!$trader || $product->trader_id !== $trader->id) {
+            return $this->error('Huruhusiwi kubadilisha bidhaa hii. (Unauthorized to modify this product.)', 'UNAUTHORIZED', 403);
+        }
 
         $data = $request->validated();
 

@@ -62,7 +62,7 @@ export default function MarketMapPage() {
             <div className="flex-1 w-full bg-neutral-200">
                 <StallMap 
                     center={center} 
-                    stalls={[]} // Will fetch traders for specific market later
+                    stalls={[]}
                     zoom={15} 
                 />
             </div>

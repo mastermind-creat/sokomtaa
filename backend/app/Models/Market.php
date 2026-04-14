@@ -19,12 +19,14 @@ class Market extends Model
         'latitude',
         'longitude',
         'is_active',
+        'building_config',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
+        'building_config' => 'json',
     ];
 
     public function stalls(): HasMany

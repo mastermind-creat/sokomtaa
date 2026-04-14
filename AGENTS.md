@@ -12,13 +12,11 @@
 local residents, and county administrators within pilot urban/peri-urban markets in Kenya.
 
 **Three user roles:**
-
 - `TRADER` — registers stall, manages products, receives reservations, pays market fees
 - `RESIDENT` — discovers traders, reserves items, pays via M-Pesa, leaves reviews
 - `ADMIN` — county official managing stalls, traders, reports, complaints, allocations
 
 **Core Modules:**
-
 1. Authentication & Role Management
 2. Trader Profiles & Stall Management
 3. Product Listings & Stock Management
@@ -40,7 +38,6 @@ local residents, and county administrators within pilot urban/peri-urban markets
 ## 1. TECH STACK
 
 ### Backend
-
 - **Framework:** Laravel 11 (PHP 8.2+)
 - **Architecture:** RESTful API (JSON responses only — no Blade views except for emails)
 - **Database:** MySQL 8.0+
@@ -54,7 +51,6 @@ local residents, and county administrators within pilot urban/peri-urban markets
 - **Real-time:** Pusher (free tier) for notifications
 
 ### Frontend
-
 - **Framework:** Next.js 14 (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS + shadcn/ui components
@@ -67,7 +63,6 @@ local residents, and county administrators within pilot urban/peri-urban markets
 - **Icons:** Lucide React
 
 ### Infrastructure
-
 - **Backend Hosting:** Truehost Shared Hosting (pilot) → VPS (scale)
 - **Frontend Hosting:** Vercel (free tier)
 - **Media Storage:** Cloudinary
@@ -81,7 +76,6 @@ local residents, and county administrators within pilot urban/peri-urban markets
 > stalls. Every UI decision must reflect this reality.
 
 ### Color Palette (CSS Variables)
-
 ```css
 :root {
   --color-primary: #1B6B3A;        /* Deep market green */
@@ -102,13 +96,11 @@ local residents, and county administrators within pilot urban/peri-urban markets
 ```
 
 ### Typography
-
 - **Display/Headings:** `Plus Jakarta Sans` (Google Fonts) — bold, modern, African tech feel
 - **Body:** `Inter` — clean, highly legible on small screens
 - **Monospace (prices, codes):** `JetBrains Mono`
 
 ### Mobile-First Rules (ENFORCE STRICTLY)
-
 1. **Minimum tap target: 48x48px** — every button, link, icon must meet this
 2. **Font sizes:** minimum 16px for body text (prevents iOS zoom on input focus)
 3. **No hover-only interactions** — all hover states must have equivalent touch states
@@ -125,7 +117,6 @@ local residents, and county administrators within pilot urban/peri-urban markets
 14. **No infinite scroll** — use paginated "Load More" buttons (better for slow connections)
 
 ### Component Rules
-
 - All cards have `min-height: 0` and must not overflow on small screens
 - All modals are bottom sheets on mobile (`position: fixed; bottom: 0`)
 - Tables are never used for mobile views — use card lists instead
@@ -136,7 +127,6 @@ local residents, and county administrators within pilot urban/peri-urban markets
 ## 3. FOLDER STRUCTURE
 
 ### Laravel Backend (`/backend`)
-
 ```
 backend/
 ├── app/
@@ -223,7 +213,6 @@ backend/
 ```
 
 ### Next.js Frontend (`/frontend`)
-
 ```
 frontend/
 ├── app/
@@ -312,7 +301,6 @@ frontend/
 > Create migrations in this exact order to respect foreign key dependencies.
 
 ### Migration 1: `create_markets_table`
-
 ```php
 Schema::create('markets', function (Blueprint $table) {
     $table->id();
@@ -329,7 +317,6 @@ Schema::create('markets', function (Blueprint $table) {
 ```
 
 ### Migration 2: `create_users_table`
-
 ```php
 Schema::create('users', function (Blueprint $table) {
     $table->id();
@@ -339,7 +326,7 @@ Schema::create('users', function (Blueprint $table) {
     $table->string('password');
     $table->enum('role', ['trader', 'resident', 'admin'])->default('resident');
     $table->string('national_id')->nullable();
-    $table->string('preferred_language', 5)->default('sw'); // sw = Swahili
+    $table->string('preferred_language', 5)->default('en'); // en = English (default)
     $table->boolean('phone_verified')->default(false);
     $table->timestamp('phone_verified_at')->nullable();
     $table->string('avatar_url')->nullable();
@@ -351,7 +338,6 @@ Schema::create('users', function (Blueprint $table) {
 ```
 
 ### Migration 3: `create_categories_table`
-
 ```php
 Schema::create('categories', function (Blueprint $table) {
     $table->id();
@@ -364,26 +350,41 @@ Schema::create('categories', function (Blueprint $table) {
 ```
 
 ### Migration 4: `create_stalls_table`
-
 ```php
 Schema::create('stalls', function (Blueprint $table) {
     $table->id();
     $table->foreignId('market_id')->constrained()->cascadeOnDelete();
-    $table->string('stall_number')->unique();
-    $table->string('zone')->nullable();   // e.g. "A", "B", "Vegetable Section"
+    $table->string('stall_number');           // e.g. "A1", "B7", "C3"
+    $table->string('block')->default('A');    // Building block: "A", "B", "C"
+    $table->enum('zone', ['A', 'B', 'C']);    // A=left wall, B=centre, C=right wall
     $table->decimal('size_sqm', 5, 2)->nullable();
-    $table->decimal('map_x', 8, 4)->nullable(); // Position on market map
-    $table->decimal('map_y', 8, 4)->nullable();
-    $table->enum('status', ['available', 'occupied', 'reserved', 'maintenance'])
+    $table->decimal('map_x', 8, 4)->nullable(); // Pixel x-position in building schematic
+    $table->decimal('map_y', 8, 4)->nullable(); // Pixel y-position in building schematic
+    $table->enum('status', ['available', 'occupied', 'maintenance'])
           ->default('available');
     $table->decimal('monthly_fee', 10, 2)->default(0);
-    $table->text('notes')->nullable();
+    $table->text('notes')->nullable();        // Used for maintenance reason
     $table->timestamps();
+    $table->unique(['market_id', 'block', 'stall_number']); // Unique per block
 });
+
+/*
+ ZONE MEANING (matches physical government market building layout):
+   Zone A = Left wall stalls  — face the centre aisle, back to outer left wall
+   Zone B = Centre stalls     — double row, back-to-back, centre aisle between them
+   Zone C = Right wall stalls — face the centre aisle, back to outer right wall
+   Entrances = top and bottom of building (2 per side) — stored as building_config JSON
+
+ MAP COORDINATES:
+   map_x and map_y are pixel offsets in the schematic canvas (Leaflet CRS.Simple).
+   Zone A: map_x ≈ 0–80
+   Zone B: map_x ≈ 90–380 (two sub-columns of stalls)
+   Zone C: map_x ≈ 390–460
+   Rows increase map_y top to bottom.
+*/
 ```
 
 ### Migration 5: `create_traders_table`
-
 ```php
 Schema::create('traders', function (Blueprint $table) {
     $table->id();
@@ -413,7 +414,6 @@ Schema::create('traders', function (Blueprint $table) {
 ```
 
 ### Migration 6: `create_products_table`
-
 ```php
 Schema::create('products', function (Blueprint $table) {
     $table->id();
@@ -435,7 +435,6 @@ Schema::create('products', function (Blueprint $table) {
 ```
 
 ### Migration 7: `create_reservations_table`
-
 ```php
 Schema::create('reservations', function (Blueprint $table) {
     $table->id();
@@ -462,7 +461,6 @@ Schema::create('reservations', function (Blueprint $table) {
 ```
 
 ### Migration 8: `create_payments_table`
-
 ```php
 Schema::create('payments', function (Blueprint $table) {
     $table->id();
@@ -482,7 +480,6 @@ Schema::create('payments', function (Blueprint $table) {
 ```
 
 ### Migration 9: `create_market_fees_table`
-
 ```php
 Schema::create('market_fees', function (Blueprint $table) {
     $table->id();
@@ -500,7 +497,6 @@ Schema::create('market_fees', function (Blueprint $table) {
 ```
 
 ### Migration 10: `create_reviews_table`
-
 ```php
 Schema::create('reviews', function (Blueprint $table) {
     $table->id();
@@ -516,7 +512,6 @@ Schema::create('reviews', function (Blueprint $table) {
 ```
 
 ### Migration 11: `create_complaints_table`
-
 ```php
 Schema::create('complaints', function (Blueprint $table) {
     $table->id();
@@ -547,7 +542,6 @@ Schema::create('complaints', function (Blueprint $table) {
 ```
 
 ### Migration 12: `create_allocations_table`
-
 ```php
 Schema::create('allocations', function (Blueprint $table) {
     $table->id();
@@ -564,7 +558,6 @@ Schema::create('allocations', function (Blueprint $table) {
 ```
 
 ### Migration 13: `create_stall_applications_table`
-
 ```php
 Schema::create('stall_applications', function (Blueprint $table) {
     $table->id();
@@ -583,7 +576,6 @@ Schema::create('stall_applications', function (Blueprint $table) {
 ```
 
 ### Migration 14: `create_notices_table`
-
 ```php
 Schema::create('notices', function (Blueprint $table) {
     $table->id();
@@ -602,7 +594,6 @@ Schema::create('notices', function (Blueprint $table) {
 ```
 
 ### Migration 15: `create_notifications_table`
-
 ```php
 Schema::create('notifications', function (Blueprint $table) {
     $table->id();
@@ -618,7 +609,6 @@ Schema::create('notifications', function (Blueprint $table) {
 ```
 
 ### Migration 16: `create_product_watchlist_table`
-
 ```php
 Schema::create('product_watchlist', function (Blueprint $table) {
     $table->id();
@@ -635,7 +625,6 @@ Schema::create('product_watchlist', function (Blueprint $table) {
 ## 5. LARAVEL SETUP INSTRUCTIONS
 
 ### Step 1: Create Laravel Project
-
 ```bash
 composer create-project laravel/laravel backend
 cd backend
@@ -647,7 +636,6 @@ php artisan vendor:publish --provider="CloudinaryLabs\CloudinaryLaravel\Cloudina
 ```
 
 ### Step 2: Environment Variables (`.env`)
-
 ```env
 APP_NAME="Soko Mtaa"
 APP_ENV=production
@@ -690,7 +678,6 @@ PUSHER_APP_CLUSTER=ap2
 ```
 
 ### Step 3: Configure CORS (`config/cors.php`)
-
 ```php
 'allowed_origins' => [
     'https://sokomtaa.vercel.app',
@@ -702,7 +689,6 @@ PUSHER_APP_CLUSTER=ap2
 ```
 
 ### Step 4: Create `config/mpesa.php`
-
 ```php
 return [
     'consumer_key'    => env('MPESA_CONSUMER_KEY'),
@@ -819,7 +805,6 @@ Route::middleware('auth:sanctum')->group(function () {
 ## 7. KEY SERVICE IMPLEMENTATIONS
 
 ### MpesaService.php
-
 ```php
 class MpesaService
 {
@@ -863,7 +848,6 @@ class MpesaService
 ```
 
 ### ReservationService.php
-
 ```php
 class ReservationService
 {
@@ -896,7 +880,6 @@ class ReservationService
 ## 8. NEXT.JS SETUP INSTRUCTIONS
 
 ### Step 1: Create Project
-
 ```bash
 npx create-next-app@latest frontend \
   --typescript \
@@ -914,7 +897,6 @@ npx shadcn@latest init
 ```
 
 ### Step 2: API Client (`lib/api.ts`)
-
 ```typescript
 import axios from 'axios';
 
@@ -947,7 +929,6 @@ export default api;
 ```
 
 ### Step 3: PWA Config (`next.config.js`)
-
 ```javascript
 const withPWA = require('next-pwa')({
   dest: 'public',
@@ -972,7 +953,6 @@ module.exports = withPWA({ reactStrictMode: true });
 ```
 
 ### Step 4: Zustand Auth Store (`store/authStore.ts`)
-
 ```typescript
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -1017,14 +997,12 @@ Never use a hamburger sidebar as the primary navigation on mobile.
 ### Role-Based Bottom Nav
 
 **Resident Bottom Nav:**
-
 - 🏠 Home (Discovery)
 - 🔍 Search
 - 📋 Reservations
 - 👤 Profile
 
 **Trader Bottom Nav:**
-
 - 📊 Dashboard
 - 📦 Products
 - 🛒 Orders
@@ -1032,7 +1010,6 @@ Never use a hamburger sidebar as the primary navigation on mobile.
 - 👤 Profile
 
 **Admin Bottom Nav:**
-
 - 📊 Dashboard
 - 🏪 Stalls
 - 👥 Traders
@@ -1098,14 +1075,12 @@ npm install next-intl
 ```
 
 Create translation files:
-
 - `messages/sw.json` — Swahili (default)
 - `messages/en.json` — English
 
 All UI strings must have both translations. Never hardcode English strings in components.
 
 Key translation conventions:
-
 ```json
 {
   "nav.home": "Nyumbani",
@@ -1124,14 +1099,12 @@ Key translation conventions:
 ## 14. SEARCH & AI RECOMMENDATIONS
 
 ### Basic Search (Phase 1 — Build First)
-
 - Full-text search on `products.name`, `products.name_sw`, `traders.business_name`
 - Filter by: category, market, stock status, price range
 - Sort by: rating, distance, newest
 - Implement using MySQL `FULLTEXT` index
 
 ### AI Recommendations (Phase 2 — After MVP)
-
 - Use product view counts and reservation data to rank results
 - "Popular today" — products with most reservations in last 24 hours
 - "Near you" — when geolocation is available, prioritize nearby markets
@@ -1176,7 +1149,6 @@ Each trader sees their own data:
 ## 17. DEPLOYMENT CHECKLIST
 
 ### Laravel on Truehost Shared Hosting
-
 - [ ] Upload Laravel project **outside** `public_html`
 - [ ] Move contents of `/public` to `public_html` and update paths in `index.php`
 - [ ] Set file permissions: `storage/` and `bootstrap/cache/` to `755`
@@ -1188,7 +1160,6 @@ Each trader sees their own data:
 - [ ] Configure SSL certificate in cPanel (Let's Encrypt)
 
 ### Next.js on Vercel
-
 - [ ] Connect GitHub repository to Vercel
 - [ ] Set environment variables in Vercel dashboard
 - [ ] Set `NEXT_PUBLIC_API_URL=https://api.sokomtaa.co.ke`
@@ -1218,7 +1189,6 @@ Each trader sees their own data:
 Build in this sequence — each phase must be working before starting the next:
 
 ### Phase 1 — Foundation
-
 1. Laravel project setup + database migrations
 2. Authentication (register, login, OTP verification, logout)
 3. Role middleware
@@ -1227,51 +1197,45 @@ Build in this sequence — each phase must be working before starting the next:
 6. Login/Register pages (mobile-first)
 
 ### Phase 2 — Core Trader Features
-
-1. Trader profile setup & management API
-2. Product CRUD API + Cloudinary image upload
-3. Trader-facing pages: dashboard, products, profile
-4. Admin trader verification flow
+7. Trader profile setup & management API
+8. Product CRUD API + Cloudinary image upload
+9. Trader-facing pages: dashboard, products, profile
+10. Admin trader verification flow
 
 ### Phase 3 — Core Resident Features
-
-1. Market map with Leaflet (stall directory)
-2. Trader discovery & search
-3. Product listing pages
-4. Reservation creation flow
+11. Market map with Leaflet (stall directory)
+12. Trader discovery & search
+13. Product listing pages
+14. Reservation creation flow
 
 ### Phase 4 — Payments
-
-1. M-Pesa STK Push integration (sandbox)
-2. Payment callback handler
-3. Reservation payment flow end-to-end
-4. Market fee payment for traders
+15. M-Pesa STK Push integration (sandbox)
+16. Payment callback handler
+17. Reservation payment flow end-to-end
+18. Market fee payment for traders
 
 ### Phase 5 — Administration
-
-1. County admin dashboard with all metrics
-2. Stall management & allocation workflow
-3. Stall application & waitlist
-4. Complaint management
+19. County admin dashboard with all metrics
+20. Stall management & allocation workflow
+21. Stall application & waitlist
+22. Complaint management
 
 ### Phase 6 — Communication & Community
-
-1. In-app notifications
-2. SMS notifications via Africa's Talking
-3. Review & rating system
-4. Community notice board
-5. Dispute resolution flow
+23. In-app notifications
+24. SMS notifications via Africa's Talking
+25. Review & rating system
+26. Community notice board
+27. Dispute resolution flow
 
 ### Phase 7 — Intelligence & Polish
-
-1. Trader analytics dashboard
-2. AI-powered search ranking
-3. Price insights for traders
-4. PWA configuration + offline support
-5. Swahili localization (all strings)
-6. Performance optimization (lazy loading, caching)
-7. Security audit & hardening
-8. M-Pesa switch to production
+28. Trader analytics dashboard
+29. AI-powered search ranking
+30. Price insights for traders
+31. PWA configuration + offline support
+32. Swahili localization (all strings)
+33. Performance optimization (lazy loading, caching)
+34. Security audit & hardening
+35. M-Pesa switch to production
 
 ---
 
@@ -1300,7 +1264,6 @@ Build in this sequence — each phase must be working before starting the next:
 > No exceptions. Consistency here is what makes the frontend predictable and maintainable.
 
 ### Success Response
-
 ```json
 {
   "success": true,
@@ -1311,7 +1274,6 @@ Build in this sequence — each phase must be working before starting the next:
 ```
 
 ### Success Response with Pagination
-
 ```json
 {
   "success": true,
@@ -1329,7 +1291,6 @@ Build in this sequence — each phase must be working before starting the next:
 ```
 
 ### Error Response
-
 ```json
 {
   "success": false,
@@ -1343,7 +1304,6 @@ Build in this sequence — each phase must be working before starting the next:
 ```
 
 ### Error Codes Reference
-
 Always include one of these exact `code` strings in every error response:
 
 | Code | HTTP Status | When to Use |
@@ -1425,7 +1385,6 @@ trait ApiResponse
 ```
 
 Use this trait in every controller:
-
 ```php
 class TraderProfileController extends Controller
 {
@@ -1475,7 +1434,6 @@ const { data, meta } = response.data as ApiResponse<Trader[]>;
 ### Backend Error Handling
 
 #### Global Exception Handler (`app/Exceptions/Handler.php`)
-
 Override the `register()` method to catch all exceptions and return consistent JSON:
 
 ```php
@@ -1548,7 +1506,6 @@ public function register(): void
 ```
 
 #### Service Layer Error Handling
-
 All custom exceptions must be stored in `app/Exceptions/`:
 
 ```
@@ -1561,7 +1518,6 @@ app/Exceptions/
 ```
 
 Each custom exception example:
-
 ```php
 <?php
 namespace App\Exceptions;
@@ -1576,9 +1532,7 @@ class OutOfStockException extends \Exception
 ```
 
 #### M-Pesa Specific Error Handling
-
 M-Pesa failures must never crash the system. Always wrap in try/catch:
-
 ```php
 try {
     $result = $this->mpesaService->stkPush($phone, $amount, $ref, $desc);
@@ -1589,7 +1543,6 @@ try {
 ```
 
 Create a dedicated `mpesa` log channel in `config/logging.php`:
-
 ```php
 'mpesa' => [
     'driver' => 'daily',
@@ -1601,7 +1554,6 @@ Create a dedicated `mpesa` log channel in `config/logging.php`:
 ### Frontend Error Handling
 
 #### TanStack Query Global Error Handler (`app/providers.tsx`)
-
 ```typescript
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1632,7 +1584,6 @@ const queryClient = new QueryClient({
 ```
 
 #### Every Page Must Handle These Four States
-
 No page may be considered complete without all four states implemented:
 
 ```typescript
@@ -1661,9 +1612,7 @@ return <TraderList traders={data} />;
 ```
 
 #### Offline Error Handling
-
 Detect network loss and show a persistent non-blocking banner:
-
 ```typescript
 // hooks/useOffline.ts
 export function useOffline() {
@@ -1706,7 +1655,6 @@ export function useOffline() {
 > Seeders must be idempotent — running them twice must not create duplicates.
 
 ### Seeder Run Order (`DatabaseSeeder.php`)
-
 ```php
 public function run(): void
 {
@@ -1722,7 +1670,6 @@ public function run(): void
 ```
 
 ### CategorySeeder — 12 Default Categories
-
 ```php
 $categories = [
     ['name' => 'Vegetables',     'name_sw' => 'Mboga',          'icon' => 'Leaf',        'color' => '#16A34A'],
@@ -1741,7 +1688,6 @@ $categories = [
 ```
 
 ### MarketSeeder — Pilot Market
-
 ```php
 Market::firstOrCreate(
     ['name' => 'Kolenyo Market'],
@@ -1757,35 +1703,72 @@ Market::firstOrCreate(
 );
 ```
 
-### StallSeeder — 30 Pilot Stalls
-
-Generate stalls programmatically across 3 zones (A, B, C), 10 stalls each:
-
+### StallSeeder — 30 Pilot Stalls (Block A, matching physical layout)
 ```php
 $market = Market::where('name', 'Kolenyo Market')->first();
-$zones  = ['A', 'B', 'C'];
-$fees   = ['A' => 1500, 'B' => 1200, 'C' => 1000]; // Monthly fee in KES
 
-foreach ($zones as $zone) {
-    for ($i = 1; $i <= 10; $i++) {
-        Stall::firstOrCreate(
-            ['stall_number' => "{$zone}{$i}"],
-            [
-                'market_id'   => $market->id,
-                'zone'        => "Zone {$zone}",
-                'size_sqm'    => 9.0,
-                'map_x'       => ($i - 1) * 12,
-                'map_y'       => (ord($zone) - ord('A')) * 15,
-                'status'      => 'available',
-                'monthly_fee' => $fees[$zone],
-            ]
-        );
-    }
+/*
+ Building layout: 3 zones per block
+   Zone A — 8 stalls, left wall (A1–A8), map_x: 10, map_y: 10 to 370
+   Zone B — 14 stalls, centre double-row (B1–B14), map_x: 95 or 175, map_y: 10 to 370
+   Zone C — 8 stalls, right wall (C1–C8), map_x: 270, map_y: 10 to 370
+ Total: 30 stalls per block (matching government building standard)
+*/
+
+$stallData = [
+    // Zone A — Left wall (8 stalls)
+    ['stall_number'=>'A1','block'=>'A','zone'=>'A','map_x'=>10,'map_y'=>10, 'monthly_fee'=>1500],
+    ['stall_number'=>'A2','block'=>'A','zone'=>'A','map_x'=>10,'map_y'=>60, 'monthly_fee'=>1500],
+    ['stall_number'=>'A3','block'=>'A','zone'=>'A','map_x'=>10,'map_y'=>110,'monthly_fee'=>1500],
+    ['stall_number'=>'A4','block'=>'A','zone'=>'A','map_x'=>10,'map_y'=>160,'monthly_fee'=>1500],
+    ['stall_number'=>'A5','block'=>'A','zone'=>'A','map_x'=>10,'map_y'=>210,'monthly_fee'=>1500],
+    ['stall_number'=>'A6','block'=>'A','zone'=>'A','map_x'=>10,'map_y'=>260,'monthly_fee'=>1500],
+    ['stall_number'=>'A7','block'=>'A','zone'=>'A','map_x'=>10,'map_y'=>310,'monthly_fee'=>1500],
+    ['stall_number'=>'A8','block'=>'A','zone'=>'A','map_x'=>10,'map_y'=>360,'monthly_fee'=>1500],
+
+    // Zone B — Centre double-row (14 stalls, 2 columns back-to-back)
+    // Left sub-column of centre
+    ['stall_number'=>'B1', 'block'=>'A','zone'=>'B','map_x'=>95,'map_y'=>10, 'monthly_fee'=>1200],
+    ['stall_number'=>'B3', 'block'=>'A','zone'=>'B','map_x'=>95,'map_y'=>60, 'monthly_fee'=>1200],
+    ['stall_number'=>'B5', 'block'=>'A','zone'=>'B','map_x'=>95,'map_y'=>110,'monthly_fee'=>1200],
+    ['stall_number'=>'B7', 'block'=>'A','zone'=>'B','map_x'=>95,'map_y'=>160,'monthly_fee'=>1200],
+    ['stall_number'=>'B9', 'block'=>'A','zone'=>'B','map_x'=>95,'map_y'=>210,'monthly_fee'=>1200],
+    ['stall_number'=>'B11','block'=>'A','zone'=>'B','map_x'=>95,'map_y'=>260,'monthly_fee'=>1200],
+    ['stall_number'=>'B13','block'=>'A','zone'=>'B','map_x'=>95,'map_y'=>310,'monthly_fee'=>1200],
+    // Right sub-column of centre
+    ['stall_number'=>'B2', 'block'=>'A','zone'=>'B','map_x'=>175,'map_y'=>10, 'monthly_fee'=>1200],
+    ['stall_number'=>'B4', 'block'=>'A','zone'=>'B','map_x'=>175,'map_y'=>60, 'monthly_fee'=>1200],
+    ['stall_number'=>'B6', 'block'=>'A','zone'=>'B','map_x'=>175,'map_y'=>110,'monthly_fee'=>1200],
+    ['stall_number'=>'B8', 'block'=>'A','zone'=>'B','map_x'=>175,'map_y'=>160,'monthly_fee'=>1200],
+    ['stall_number'=>'B10','block'=>'A','zone'=>'B','map_x'=>175,'map_y'=>210,'monthly_fee'=>1200],
+    ['stall_number'=>'B12','block'=>'A','zone'=>'B','map_x'=>175,'map_y'=>260,'monthly_fee'=>1200],
+    ['stall_number'=>'B14','block'=>'A','zone'=>'B','map_x'=>175,'map_y'=>310,'monthly_fee'=>1200],
+
+    // Zone C — Right wall (8 stalls)
+    ['stall_number'=>'C1','block'=>'A','zone'=>'C','map_x'=>270,'map_y'=>10, 'monthly_fee'=>1000],
+    ['stall_number'=>'C2','block'=>'A','zone'=>'C','map_x'=>270,'map_y'=>60, 'monthly_fee'=>1000],
+    ['stall_number'=>'C3','block'=>'A','zone'=>'C','map_x'=>270,'map_y'=>110,'monthly_fee'=>1000],
+    ['stall_number'=>'C4','block'=>'A','zone'=>'C','map_x'=>270,'map_y'=>160,'monthly_fee'=>1000],
+    ['stall_number'=>'C5','block'=>'A','zone'=>'C','map_x'=>270,'map_y'=>210,'monthly_fee'=>1000],
+    ['stall_number'=>'C6','block'=>'A','zone'=>'C','map_x'=>270,'map_y'=>260,'monthly_fee'=>1000],
+    ['stall_number'=>'C7','block'=>'A','zone'=>'C','map_x'=>270,'map_y'=>310,'monthly_fee'=>1000],
+    ['stall_number'=>'C8','block'=>'A','zone'=>'C','map_x'=>270,'map_y'=>360,'monthly_fee'=>1000],
+];
+
+foreach ($stallData as $data) {
+    Stall::firstOrCreate(
+        ['market_id' => $market->id, 'block' => $data['block'], 'stall_number' => $data['stall_number']],
+        array_merge($data, ['market_id' => $market->id, 'size_sqm' => 9.0, 'status' => 'available'])
+    );
 }
+
+// Fee structure by zone (KES/month):
+// Zone A (wall): KES 1,500 — premium wall-facing position
+// Zone B (centre): KES 1,200 — centre aisle — highest foot traffic
+// Zone C (wall): KES 1,000 — right wall — slightly lower demand
 ```
 
 ### AdminUserSeeder — Default Admin Account
-
 ```php
 // IMPORTANT: Change these credentials immediately after first login
 $admin = User::firstOrCreate(
@@ -1803,7 +1786,6 @@ $admin = User::firstOrCreate(
 ```
 
 ### DemoTraderSeeder — One Verified Demo Trader
-
 ```php
 $user = User::firstOrCreate(
     ['phone' => '0700000002'],
@@ -1856,7 +1838,6 @@ foreach ($products as $product) {
 ```
 
 ### DemoResidentSeeder — One Demo Resident
-
 ```php
 User::firstOrCreate(
     ['phone' => '0700000003'],
@@ -1991,7 +1972,6 @@ User::firstOrCreate(
 ### Laravel Policy Implementation
 
 Create a policy for each major resource. Example for `ReservationPolicy.php`:
-
 ```php
 public function cancel(User $user, Reservation $reservation): bool
 {
@@ -2136,7 +2116,6 @@ STEP 6 — WELCOME COMPLETE
 ```
 
 **UX Rules for Resident Onboarding:**
-
 - Steps 1–6 must complete in under 90 seconds on a slow connection
 - OTP boxes must auto-advance on each digit entry
 - OTP must auto-submit when 6th digit is entered
@@ -2285,7 +2264,6 @@ SUBMISSION CONFIRMATION
 ```
 
 **UX Rules for Trader Onboarding:**
-
 - Progress bar must persist across sessions — trader can exit and resume
 - Permit photo upload must support camera capture directly on mobile
 - If trader selects "No stall", redirect to stall application form after profile completion
@@ -2388,7 +2366,6 @@ Every major page must have a defined empty state. Never show a blank list.
 ### Full Template Reference
 
 Each template is defined in this format:
-
 - **[SW]** = Swahili version (default)
 - **[EN]** = English version (fallback)
 - **{variable}** = dynamic placeholder
@@ -2398,7 +2375,6 @@ Each template is defined in this format:
 ---
 
 #### T01 — OTP Verification
-
 ```
 [SMS-SW] Nambari yako ya uthibitisho ni: {otp}. Halali kwa dakika 10. Usishiriki na mtu yeyote. - Soko Mtaa
 [SMS-EN] Your Soko Mtaa verification code is: {otp}. Valid for 10 minutes. Do not share this code.
@@ -2407,7 +2383,6 @@ Each template is defined in this format:
 ---
 
 #### T02 — Registration Success
-
 ```
 [IN-APP TITLE-SW] Karibu Soko Mtaa! 🎉
 [IN-APP BODY-SW]  Akaunti yako imefunguliwa. Anza kuchunguza soko sasa hivi.
@@ -2422,7 +2397,6 @@ Each template is defined in this format:
 ---
 
 #### T03 — Trader Profile Submitted (to Admin)
-
 ```
 [IN-APP TITLE] Mchuuzi Mpya Anasubiri Idhini
 [IN-APP BODY]  {trader_name} ({business_name}) amewasilisha ombi la kujiunga. Pitia sasa.
@@ -2430,13 +2404,11 @@ Each template is defined in this format:
 [IN-APP TITLE-EN] New Trader Awaiting Verification
 [IN-APP BODY-EN]  {trader_name} ({business_name}) has submitted a registration request. Review now.
 ```
-
 > Note: No SMS to admin — admin uses the dashboard.
 
 ---
 
 #### T04 — Trader Profile Submitted (to Trader)
-
 ```
 [IN-APP TITLE-SW] Ombi Lako Limepokelewa ✅
 [IN-APP BODY-SW]  Wasifu wako umewasilishwa kwa ukaguzi. Utaarifiwa ndani ya masaa 24.
@@ -2451,7 +2423,6 @@ Each template is defined in this format:
 ---
 
 #### T05 — Trader Approved
-
 ```
 [IN-APP TITLE-SW] 🎉 Umeidhinishwa! Duka lako liko hai!
 [IN-APP BODY-SW]  Hongera {name}! Wasifu wako umeidhinishwa. Wateja sasa wanaweza kukupata. Ongeza bidhaa zaidi ili upate mauzo mengi!
@@ -2466,7 +2437,6 @@ Each template is defined in this format:
 ---
 
 #### T06 — Trader Rejected
-
 ```
 [IN-APP TITLE-SW] ⚠️ Ombi Halikubaliwa
 [IN-APP BODY-SW]  Samahani {name}, ombi lako halikubaliwa. Sababu: {rejection_reason}. Unaweza kurekebisha na kuwasilisha tena.
@@ -2481,7 +2451,6 @@ Each template is defined in this format:
 ---
 
 #### T07 — New Reservation (to Trader)
-
 ```
 [IN-APP TITLE-SW] 🛒 Order Mpya! #{reservation_code}
 [IN-APP BODY-SW]  {resident_name} amehifadhi {quantity}x {product_name} kwa KES {amount}. Andaa bidhaa hii. Muda wa kukusanya: masaa 24.
@@ -2496,7 +2465,6 @@ Each template is defined in this format:
 ---
 
 #### T08 — Reservation Confirmed / Payment Success (to Resident)
-
 ```
 [IN-APP TITLE-SW] ✅ Malipo Yamefanikiwa! #{reservation_code}
 [IN-APP BODY-SW]  Umelipa KES {amount} kwa {product_name} kutoka {business_name}. Nenda kukusanya bidhaa yako kwenye stendi {stall_number} kabla ya {pickup_deadline}.
@@ -2511,7 +2479,6 @@ Each template is defined in this format:
 ---
 
 #### T09 — Item Ready for Pickup (to Resident)
-
 ```
 [IN-APP TITLE-SW] 📦 Bidhaa Yako Iko Tayari!
 [IN-APP BODY-SW]  {product_name} yako iko tayari kukusanywa kwenye stendi {stall_number} - {business_name}. Kumbuka kukusanya kabla ya {pickup_deadline}.
@@ -2526,7 +2493,6 @@ Each template is defined in this format:
 ---
 
 #### T10 — Pickup Reminder (2 hours before deadline)
-
 ```
 [IN-APP TITLE-SW] ⏰ Ukumbusho: Chukua Bidhaa Yako
 [IN-APP BODY-SW]  Una masaa 2 tu kukusanya {product_name} kutoka stendi {stall_number}. Usikose!
@@ -2541,7 +2507,6 @@ Each template is defined in this format:
 ---
 
 #### T11 — Reservation Cancelled
-
 ```
 [IN-APP TITLE-SW] ❌ Hifadhi Imefutwa #{reservation_code}
 [IN-APP BODY-SW-RESIDENT]  Hifadhi yako ya {product_name} imefutwa. {cancellation_reason}
@@ -2558,7 +2523,6 @@ Each template is defined in this format:
 ---
 
 #### T12 — Market Fee Due (3 days before)
-
 ```
 [IN-APP TITLE-SW] 💳 Kumbuka Kulipa Ada ya Soko
 [IN-APP BODY-SW]  Ada yako ya soko ya {period} ni KES {amount} na inahitiajika kulipwa ifikapo {due_date}. Lipa sasa ili kuepuka vikwazo.
@@ -2573,7 +2537,6 @@ Each template is defined in this format:
 ---
 
 #### T13 — Market Fee Overdue
-
 ```
 [IN-APP TITLE-SW] 🚨 Ada ya Soko Imepita Muda!
 [IN-APP BODY-SW]  Ada yako ya KES {amount} ({period}) imepita muda. Wasifu wako unaweza kusimamishwa. Lipa sasa hivi.
@@ -2588,7 +2551,6 @@ Each template is defined in this format:
 ---
 
 #### T14 — Market Fee Paid
-
 ```
 [IN-APP TITLE-SW] ✅ Ada ya Soko Imelipwa
 [IN-APP BODY-SW]  Asante! Ada yako ya KES {amount} kwa {period} imelipwa. Nambari ya mpango: {transaction_id}.
@@ -2603,7 +2565,6 @@ Each template is defined in this format:
 ---
 
 #### T15 — Complaint Status Updated
-
 ```
 [IN-APP TITLE-SW] 📋 Hali ya Malalamiko Imebadilika
 [IN-APP BODY-SW]  Malalamiko yako #{complaint_id} ({subject}): {new_status}. {admin_response}
@@ -2618,7 +2579,6 @@ Each template is defined in this format:
 ---
 
 #### T16 — Stall Application Approved
-
 ```
 [IN-APP TITLE-SW] 🏪 Ombi la Standi Limeidhinishwa!
 [IN-APP BODY-SW]  Hongera! Umepewa standi {stall_number} - Eneo {zone} katika {market_name}. Anza kutumia standi yako sasa.
@@ -2633,7 +2593,6 @@ Each template is defined in this format:
 ---
 
 #### T17 — Product Back In Stock (Watchlist Alert)
-
 ```
 [IN-APP TITLE-SW] 🔔 Bidhaa Unayoipenda Ipo Tena!
 [IN-APP BODY-SW]  {product_name} kutoka {business_name} inapatikana tena. Hifadhi kabla haijaisha!
@@ -2641,13 +2600,11 @@ Each template is defined in this format:
 [IN-APP TITLE-EN] 🔔 A Product You Wanted Is Back!
 [IN-APP BODY-EN]  {product_name} from {business_name} is available again. Reserve before it runs out!
 ```
-
 > Note: No SMS for watchlist alerts — in-app only to avoid over-messaging.
 
 ---
 
 #### T18 — New Review Received (to Trader)
-
 ```
 [IN-APP TITLE-SW] ⭐ Tathmini Mpya - {rating}/5
 [IN-APP BODY-SW]  {resident_name} amekuachia tathmini: "{comment_preview}". Endelea na huduma nzuri!
@@ -2699,7 +2656,6 @@ class NotificationService
 ```
 
 Create `sms_log` table to track daily SMS per user:
-
 ```php
 Schema::create('sms_log', function (Blueprint $table) {
     $table->id();
@@ -2727,7 +2683,6 @@ Schema::create('sms_log', function (Blueprint $table) {
 Every trader card and profile shows a real-time open/closed badge.
 
 **Rules:**
-
 - Status is calculated from `opening_time` and `closing_time` fields automatically
 - Trader can manually override with a "Close Today" toggle (e.g. sick day, holiday)
 - Override resets automatically at midnight
@@ -2735,7 +2690,6 @@ Every trader card and profile shows a real-time open/closed badge.
 - Residents can still view their profile and products — just cannot reserve
 
 **Visual:**
-
 ```
 ┌──────────────────────────────┐
 │ 🟢 Wazi / Open  ·  Stendi A1 │   ← Green dot pulses
@@ -2758,7 +2712,6 @@ Every trader card and profile shows a real-time open/closed badge.
 The stall map is not just a static diagram. It shows live occupancy data.
 
 **Color coding for stalls:**
-
 - 🟢 Green — Occupied & Open (trader is trading right now)
 - 🟡 Yellow — Occupied but Closed (trader exists, not currently open)
 - 🔵 Blue — Reserved (allocation approved, trader not yet active)
@@ -2766,13 +2719,11 @@ The stall map is not just a static diagram. It shows live occupancy data.
 - 🔴 Red — Under Maintenance
 
 **Interaction on tap:**
-
 - If occupied → show mini trader card with name, category, rating, "View Profile" button
 - If available → show "Standi inapatikana / Stall Available" + "Omba / Apply" button (for logged-in traders without stalls)
 - If maintenance → show "Inakarabatiwa / Under Maintenance" + estimated return date if set
 
 **Implementation notes:**
-
 - Built with Leaflet.js using a custom market floor-plan overlay
 - Stall positions defined by `map_x` and `map_y` coordinates in the `stalls` table
 - Refreshes every 60 seconds automatically
@@ -2787,7 +2738,6 @@ Every completed reservation gets a unique 8-character alphanumeric pickup code.
 **Format:** `SM-{XXXXXXXX}` e.g. `SM-K7B2QX91`
 
 **How it works:**
-
 - Resident shows the code to the trader at pickup (displayed large on screen)
 - Trader enters the code in their app to mark as "Completed"
 - Code is single-use — expires immediately after marking complete
@@ -2795,7 +2745,6 @@ Every completed reservation gets a unique 8-character alphanumeric pickup code.
 - Large QR code display option on resident's reservation screen for easy scanning
 
 **UI for Resident (pickup screen):**
-
 ```
 ┌──────────────────────────────┐
 │ 📦 Chukua Bidhaa Yako       │
@@ -2825,7 +2774,6 @@ Every completed reservation gets a unique 8-character alphanumeric pickup code.
 Every evening at 7:00 PM (scheduled job), each trader receives a daily summary:
 
 **In-app only (no SMS — respects the 3 SMS/day limit):**
-
 ```
 📊 Muhtasari wa Leo / Today's Summary
 
@@ -2840,7 +2788,6 @@ Tomorrow: Sunny, 28°C - Great trading day! ☀️
 ```
 
 **Implementation:**
-
 - Scheduled via Laravel's task scheduler at 19:00 daily
 - Only sent if trader had at least 1 reservation or profile view that day
 - Weather data from Open-Meteo API (free, no key required)
@@ -2857,7 +2804,6 @@ On every product card, show a subtle price context badge:
 - **"Bei ya juu / Above average"** — more than 15% above category average → subtle orange
 
 **Implementation in `SearchService.php`:**
-
 ```php
 public function getPriceBadge(Product $product): string
 {
@@ -2882,20 +2828,17 @@ public function getPriceBadge(Product $product): string
 ### 27F. OFFLINE-FIRST MARKET DIRECTORY
 
 When a user has no connection, they can still:
-
 - Browse the last-cached list of traders and products
 - View trader contact details (to call directly)
 - See the stall map with last-known occupancy
 - See their active reservations and pickup codes
 
 **What they CANNOT do offline:**
-
 - Create new reservations
 - Make payments
 - Submit complaints or reviews
 
 **Offline UI behavior:**
-
 - Orange banner at top: "Huna muunganiko wa intaneti. Data ya akiba inaonyeshwa. / No internet. Showing cached data."
 - All action buttons (Reserve, Pay) are disabled with tooltip: "Unahitaji mtandao / Requires internet"
 - Cached data timestamp shown: "Ilisasishwa: leo 2:30 PM / Last updated: today 2:30 PM"
@@ -2907,7 +2850,6 @@ When a user has no connection, they can still:
 Admin can export reports as CSV or PDF for use in county planning meetings:
 
 **Available reports:**
-
 - Trader directory (all verified traders, stall assignments, contact details)
 - Monthly fee collection summary (who paid, who hasn't, total collected)
 - Reservation activity report (volume by day, by category, by trader)
@@ -2916,7 +2858,6 @@ Admin can export reports as CSV or PDF for use in county planning meetings:
 - Market performance dashboard (PDF — formatted for presentation)
 
 **Implementation:**
-
 - CSV: Use Laravel's `League\Csv` for fast generation
 - PDF: Use `barryvdh/laravel-dompdf` for formatted reports
 - All exports are generated as background jobs (queue) to avoid timeout on shared hosting
@@ -2930,7 +2871,6 @@ Admin can export reports as CSV or PDF for use in county planning meetings:
 Search must understand common Swahili market terms and map them to products:
 
 Define a keyword mapping table `search_aliases`:
-
 ```php
 Schema::create('search_aliases', function (Blueprint $table) {
     $table->id();
@@ -2942,7 +2882,6 @@ Schema::create('search_aliases', function (Blueprint $table) {
 ```
 
 Seed common aliases:
-
 ```php
 $aliases = [
     // Swahili nicknames for products
@@ -2960,7 +2899,6 @@ $aliases = [
 ```
 
 Search resolves the alias before querying:
-
 ```php
 public function search(string $query): \Illuminate\Database\Eloquent\Builder
 {
@@ -2998,14 +2936,12 @@ Badges are computed dynamically — not stored as flags. Recalculated on each pr
 These are non-negotiable for Soko Mtaa's target audience:
 
 **Performance targets (measured on a Tecno Spark or equivalent):**
-
 - First Contentful Paint: < 2.5 seconds on 3G
 - Time to Interactive: < 4 seconds on 3G
 - Largest Contentful Paint: < 3.5 seconds
 - Total page weight: < 200KB per route (excluding images)
 
 **Implementation checklist:**
-
 - [ ] All images served via Cloudinary with `q_auto,f_auto,w_400` transformations
 - [ ] Next.js `dynamic()` imports for heavy components (map, charts)
 - [ ] No third-party analytics scripts that block rendering

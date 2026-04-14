@@ -113,6 +113,26 @@
     "watchlist": "Orodha ya Mapendeleo",
     "help_center": "Kituo cha Msaada"
   },
+  "wallet": {
+    "title": "Wallet Yangu",
+    "subtitle": "Simamia salio lako na malipo ya soko",
+    "top_up": "Ongeza Salio",
+    "balance": "Salio la Sasa",
+    "last_deduction": "Deduction ya Mwisho",
+    "frequency": "Mfumo wa Malipo",
+    "deduction_choice": "Chagua kila lini ukatwe ada",
+    "daily": "Daily (Kila Siku)",
+    "weekly": "Weekly (Kila Wiki)",
+    "status": "Hali ya Wallet",
+    "history": "Historia ya Wallet",
+    "no_transactions": "Hakuna historia ya malipo bado.",
+    "top_up_mpesa": "Ongeza Salio na M-Pesa",
+    "top_up_desc": "Salio litaongezwa kwenye wallet yako mara moja.",
+    "active": "Wallet Iko Sawa",
+    "inactive": "Wallet Imefungwa",
+    "credits": "Uingizaji (Credits)",
+    "debits": "Utoaji (Debits)"
+  },
   "help": {
     "title": "Kituo cha Msaada",
     "how_can_we_help": "Tunawezaje kukusaidia?",

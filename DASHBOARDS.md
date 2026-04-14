@@ -178,12 +178,18 @@ PAGE LAYOUT:
 │ TWO-COLUMN ROW (desktop) / stacked (mobile):         │
 │                                                      │
 │ LEFT: STALL MAP (Leaflet — live occupancy heatmap)   │
-│   - Color-coded: green=open, yellow=closed,          │
-│     gray=empty, red=maintenance                      │
-│   - Tap a stall → mini popup with trader info        │
-│   - Popup shows: trader name, category, rating,      │
-│     open status, fee status — NO revenue figures     │
-│   - Refresh every 60s                                │
+│   Physical building layout rendered as schematic:    │
+│   - 3-column layout: Zone A (left) · Zone B (centre) │
+│     · Zone C (right), with centre aisle running N–S  │
+│   - Entrances marked in red at top and bottom edges  │
+│   - Color coded per stall status:                    │
+│     Green=open, Amber=closed, Blue=vacant, Gray=maint│
+│   - Each stall shows category icon + stall number    │
+│   - Tap a stall → mini popup with trader name,       │
+│     open status, rating — NO revenue figures shown   │
+│   - Refresh every 60s automatically                  │
+│   - Block tabs if market has multiple buildings      │
+│   - Occupancy % bar shown per block                  │
 │                                                      │
 │ RIGHT: RECENT ACTIVITY FEED                          │
 │   - Live-ish feed of events (poll every 30s)         │
@@ -264,25 +270,246 @@ PAGE LAYOUT:
 
 ### 1E. Admin — Stall Map Page `/admin/map`
 
-**Full-screen Leaflet map** of the market floor plan.
-- Legend: Open (green) / Closed (yellow) / Available (gray) / Maintenance (red) / Reserved (blue)
-- Filter bar: All / Open Now / Available / Maintenance
-- Click stall → side panel slides in with:
-  - Stall number, zone, size
-  - Current trader (if occupied): name, photo, verification status, fee status
-  - Quick actions: [Edit Stall] [Revoke Allocation] [Mark Maintenance]
-  - If available: [Allocate to Trader]
-- [+ Add Stall] button for new stall setup
+> This map reflects the real physical layout of a government-built market building.
+> Each building has three columns: left wall stalls (Zone A), centre double-row
+> with a walking aisle between them (Zone B), and right wall stalls (Zone C).
+> Entrances sit at the top and bottom edges of the building — two per side.
+> A single market centre like Kolenyo can contain multiple buildings (Block A, B, C…).
+
+#### Physical Layout Structure
+
+```
+SINGLE BUILDING — top-down schematic view:
+
+  [Entrance N]          [Entrance N2]
+  ┌────────────────────────────────────────┐
+  │  ZONE A   │   ZONE B (centre)  │ZONE C │
+  │  (left    │  ┌───────┬────────┐│(right │
+  │   wall)   │  │  B1   │  B2   ││ wall) │
+  │  [A1]     │  ├───────┼────────┤│ [C1]  │
+  │  [A2]     │  │  B3   │  B4   ││ [C2]  │
+  │  [A3]     │  ├───────┼────────┤│ [C3]  │
+  │  [A4]     │  │  B5   │  B6   ││ [C4]  │
+  │  [A5]     │  ├───────┼────────┤│ [C5]  │
+  │  [A6]     │  │  B7   │  B8   ││ [C6]  │
+  │  [A7]     │  ├───────┼────────┤│ [C7]  │
+  │  [A8]     │  │  B9   │  B10  ││ [C8]  │
+  │           │  ├───────┼────────┤│       │
+  │           │  │  B11  │  B12  ││       │
+  │           │  ├───────┼────────┤│       │
+  │           │  │  B13  │  B14  ││       │
+  │           │  └───────┴────────┘│       │
+  │           │   ← Centre Aisle →  │       │
+  └────────────────────────────────────────┘
+  [Entrance S]          [Entrance S2]
+```
+
+#### Stall Status — Color Coding
+
+| Status | Stall Color | Border | Icon | Meaning |
+|---|---|---|---|---|
+| Occupied & Open | Green tint `#D4EDDA` | `#3B7D4E` solid | House icon | Trader active right now |
+| Occupied & Closed | Amber tint `#FEF3C7` | `#B07D2A` solid | House icon | Trader assigned, not open today |
+| Vacant | Blue tint `#D6E4F7` | `#2A6099` dashed | Dashed rect | No trader assigned — available |
+| Maintenance | Warm amber `#F5E6C8` | `#B07D2A` solid | Wrench icon | Stall temporarily unavailable |
+| Entrance / Exit | Red `#E8736A` | `#C0392B` solid | Arrow icon | Entry/exit point — not a stall |
+
+#### Stall Icon System
+
+Each occupied stall displays an SVG icon indicating the trader's primary category:
+
+```
+House icon (shopfront)   → General goods, clothing, household
+Bag icon (shopping)      → Groceries, vegetables, fruits
+Fish outline             → Fish / seafood traders
+Wheat / leaf             → Cereals, grains, flour
+Coffee cup               → Beverages, street food
+Zap / bolt               → Electronics, mobile phones
+Wrench                   → Maintenance (not a category — status only)
+Dashed rectangle         → Vacant stall (no icon, just outline)
+```
+
+Category icon is derived from `traders.primary_category` and rendered
+as an inline SVG path inside each stall cell. Size: 20×20px always.
+Stroke color matches the stall status (dark green for occupied, etc.)
+
+#### Page Layout — Admin View
+
+```
+HEADER BAR (sticky):
+  [← Markets]  Block A — Kolenyo Market    [Filter ▼] [+ Add Stall]
+
+BUILDING SELECTOR TABS (if multiple blocks):
+  [Block A] [Block B] [Block C]   ← switches active building rendered
+
+MAP CANVAS (main area, fills viewport):
+  ┌─────────────────────────────────────────────────────┐
+  │  [Entrance N]           [Entrance N2]               │
+  │  ┌───────┬──────────────────────────┬───────┐       │
+  │  │  A1   │  B1  │  B2  │  B3  │... │  C1   │       │
+  │  │  A2   │  B4  │  B5  │  B6  │... │  C2   │       │
+  │  │  ...  │  ... │  ... │  ... │... │  ...  │       │
+  │  └───────┴──────────────────────────┴───────┘       │
+  │  [Entrance S]           [Entrance S2]               │
+  └─────────────────────────────────────────────────────┘
+
+OCCUPANCY SUMMARY BAR (below map):
+  Occupied: 22  ·  Vacant: 6  ·  Maintenance: 1  ·  73% occupancy
+
+LEGEND STRIP (bottom right of map):
+  🟢 Occupied & Open  🟡 Occupied & Closed  🔵 Vacant  🔴 Maintenance  🚪 Entrance
+```
+
+#### Stall Click — Admin Side Panel
+
+Clicking any stall slides in a right-side detail panel (desktop) or
+bottom sheet (mobile) showing:
+
+```
+IF OCCUPIED:
+  [Stall icon — large]  Stall A1 · Zone A · 9 sqm
+  ──────────────────────────────────────────────
+  [Avatar]  Mama Wanjiru's Mboga
+  Status:   ✅ Verified  ·  🟢 Open Now
+  Category: Vegetables · Fruits
+  Rating:   ⭐ 4.8 · 127 reviews
+  Fee:      ✅ Paid — January 2025
+  Since:    Allocated Jan 2024
+  ──────────────────────────────────────────────
+  [View Trader Profile]
+  [Edit Stall Details]
+  [Revoke Allocation]   ← requires confirmation + reason
+  [Mark as Maintenance]
+
+IF VACANT:
+  [Dashed stall icon]  Stall B7 · Zone B · 9 sqm
+  Status: Available for allocation
+  Zone: B — Monthly fee: KES 1,200
+  ──────────────────────────────────────────────
+  [Allocate to Trader]  ← opens trader search
+  [Edit Stall Details]
+  [Mark as Maintenance]
+
+IF MAINTENANCE:
+  [Wrench icon]  Stall B8 · Zone B · 9 sqm
+  Status: Under Maintenance
+  Notes: "Roof leak — awaiting repair" (editable)
+  ──────────────────────────────────────────────
+  [Mark as Available]
+  [Edit Notes]
+
+ENTRANCE MARKERS (click):
+  No side panel — entrances are structural, not actionable
+```
+
+#### Multi-Building Overview
+
+When admin is on the Markets page or the top-level map, they see a
+bird's-eye grid thumbnail for each block:
+
+```
+KOLENYO MARKET CENTRE
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│   Block A    │ │   Block B    │ │   Block C    │
+│  [mini grid] │ │  [mini grid] │ │  [mini grid] │
+│ 73% occupied │ │ 67% occupied │ │ 83% occupied │
+│ [View Map →] │ │ [View Map →] │ │ [View Map →] │
+└──────────────┘ └──────────────┘ └──────────────┘
+Overall: 90 stalls · 74% occupied · 5 vacant
+```
+
+Mini grid color rules: each cell is a 20×20px square.
+Green = occupied, blue = vacant, red = entrance, gray dashed = aisle.
+
+#### Leaflet.js Implementation Notes
+
+The market map is NOT a geographic map — it is a schematic floor plan overlay.
+
+```typescript
+// components/map/MarketMap.tsx
+
+// The map uses a custom CRS (coordinate reference system)
+// so stall map_x / map_y values from the DB map directly to pixels.
+const map = L.map('market-map', {
+  crs: L.CRS.Simple,          // Flat coordinate system — no geo projection
+  minZoom: -1,
+  maxZoom: 2,
+  zoomControl: true,
+});
+
+// Each stall is rendered as a custom L.divIcon
+stalls.forEach((stall) => {
+  const icon = L.divIcon({
+    className: `stall-marker stall-${stall.status} stall-${stall.is_open ? 'open' : 'closed'}`,
+    html: `
+      <div class="stall-cell">
+        <div class="stall-icon">${getCategoryIcon(stall.trader?.primary_category)}</div>
+        <span class="stall-num">${stall.stall_number}</span>
+        <span class="stall-name">${stall.trader?.business_name ?? 'Available'}</span>
+      </div>
+    `,
+    iconSize: [72, 64],
+    iconAnchor: [36, 32],
+  });
+
+  L.marker([stall.map_y, stall.map_x], { icon })
+    .on('click', () => openStallPanel(stall))
+    .addTo(map);
+});
+
+// Entrances rendered as fixed markers — not clickable
+entrances.forEach((entrance) => {
+  L.divIcon({ className: 'entrance-marker', html: entranceIcon })
+    .addTo(map);
+});
+
+// Refresh every 60 seconds
+setInterval(() => refreshStallStatuses(), 60_000);
+```
+
+#### Database Fields Required for Map Rendering
+
+The following fields in the `stalls` table power the map:
+
+```
+map_x         → horizontal position in the building schematic
+map_y         → vertical position in the building schematic
+zone          → 'A' (left wall), 'B' (centre), 'C' (right wall)
+stall_number  → displayed label (A1, B3, C7 etc.)
+status        → 'occupied' | 'vacant' | 'maintenance'
+```
+
+The `traders` table join provides:
+```
+business_name        → shown in stall label
+is_open              → determines open/closed color variant
+primary_category     → determines which icon to render
+average_rating       → shown in click-panel
+verification_status  → shown in click-panel
+```
+
+Entrance positions are hardcoded per building in a `building_config` JSON
+field on the `markets` table — they do not change and do not need DB rows.
 
 ---
 
 ### 1F. Admin — Stalls Page `/admin/stalls`
 
-**Table columns:** Stall No. · Zone · Size · Status · Trader Assigned · Monthly Fee · Fee Status · Actions
-**Filters:** All / Available / Occupied / Maintenance
-**Actions per row:** View · Edit · Allocate / Revoke · Mark Maintenance
+> Stalls are organised into three zones per building, matching the physical layout:
+> Zone A = left wall, Zone B = centre double-row, Zone C = right wall.
+> Each building (Block A, B, C…) has its own set of zones.
+
+**Table columns:** Stall No. · Block · Zone · Size (sqm) · Status · Trader Assigned · Monthly Fee · Fee Status · Actions
+**Filters:** All / Available / Occupied / Maintenance | Block: [All ▼] | Zone: [All ▼]
+**Actions per row:** View on Map · Edit · Allocate / Revoke · Mark Maintenance
 **Bulk actions:** Select multiple → Change Status / Generate Fee Invoices
 **Top actions:** [+ Add Stall] [Export CSV]
+
+**Stall number convention:**
+- Zone A stalls: `A1` through `A8` (left wall, top to bottom)
+- Zone B stalls: `B1` through `B14` (centre, pairs top to bottom)
+- Zone C stalls: `C1` through `C8` (right wall, top to bottom)
+- Multiple blocks prefix the block letter: `BLK-A-A1`, or use separate block filter
 
 ---
 
@@ -900,25 +1127,59 @@ ACCOUNT
 *Shown only if trader has no stall assigned.*
 
 ```
-HEADER: "Omba Stendi / Apply for a Stall"
+HEADER: "Apply for a Stall"
 
-Current status: No stall assigned
-Market: Kolenyo Market
+INTRO CARD:
+  You don't have a stall assigned yet.
+  Apply for one at Kolenyo Market below.
+  Admin will review your application within 24 hours.
 
-APPLICATION FORM:
-  Preferred Stall (optional — map picker or number input)
-  Preferred Zone: [Zone A ▼]
-  Why do you need this stall? (textarea, required)
+STEP 1 — CHOOSE YOUR PREFERRED ZONE:
+  [Zone A — Left wall]  [Zone B — Centre]  [Zone C — Right wall]
+  Monthly fee: Zone A: KES 1,500 · Zone B: KES 1,200 · Zone C: KES 1,000
+
+STEP 2 — PICK A STALL (optional — interactive map):
+  The building map renders below showing vacant stalls in blue.
+  Trader can tap any blue (vacant) stall to select it.
+
+  ┌──────────────────────────────────────┐
+  │ [Entrance N]        [Entrance N2]    │
+  │  [A1●] [A2●]  [B1●][B2●][B3○][B4○] [C1●][C2●] │
+  │  [A3○] [A4●]  [B5●][B6○][B7○][B8●] [C3○][C4●] │
+  │  ...                                 │
+  │ ● = Occupied  ○ = Vacant (selectable)│
+  │ [Entrance S]        [Entrance S2]    │
+  └──────────────────────────────────────┘
+
+  Selected: Stall B7 · Zone B · KES 1,200/month  ✅
+  [Clear selection — let admin decide]
+
+STEP 3 — MOTIVATION:
+  Why do you need this stall? *
+  [                                      ]
+  [                                      ]
+  (minimum 50 characters)
+
   [Submit Application]
 
-If application pending:
+─── IF APPLICATION ALREADY PENDING ───
   ┌───────────────────────────────────────┐
-  │ 🕐 Ombi lako linapitiwa              │
-  │ Uliwasilisha: Jan 12, 2025           │
-  │ Hali: Inasubiri · Kipaumbele namba 2 │
-  │ Utaarifiwa ukipata matokeo.          │
+  │ ⏳ Your application is under review   │
+  │ Submitted: Jan 12, 2025              │
+  │ Preferred stall: B7 · Zone B         │
+  │ Status: Pending · Queue position: 2  │
+  │ You'll be notified by SMS & in-app.  │
   └───────────────────────────────────────┘
+
+  [Withdraw Application]  ← with confirmation modal
 ```
+
+**Map interaction rules for the application picker:**
+- Only blue (vacant) stalls are tappable — occupied and maintenance stalls are dimmed and non-interactive
+- Tapping a vacant stall highlights it with an amber selection ring
+- Selecting a stall is optional — trader can submit without a preference
+- Entrance markers are never selectable
+- The same Leaflet component is reused from the main map — just with a `selectionMode={true}` prop that disables the detail panel and enables the selection callback instead
 
 ---
 
@@ -1065,26 +1326,95 @@ RESULTS PAGE (after submit):
 
 ### 3D. Resident — Market Map Page `/map`
 
+> The resident map shows the same physical building layout as the admin map
+> but with reduced information — no admin actions, no fee status, no personal
+> trader details beyond what is publicly visible.
+
+#### Page Layout
+
 ```
-HEADER: "Ramani ya Soko / Market Map"
+HEADER: "Market Map"
+BUILDING TABS (if multiple blocks): [Block A] [Block B] [Block C]
 
-FULL-SCREEN LEAFLET MAP:
-  - Stall markers color coded (same as admin map)
-  - Green = open trader, Yellow = closed, Gray = empty
+MAP CANVAS (full width, fills screen below header):
 
-BOTTOM PANEL (slides up on stall tap):
-  ┌─────────────────────────────────────────┐
-  │ Stendi A1 · Zone A                      │
-  │ [Avatar] Mama Wanjiru's Mboga           │
-  │ 🟢 Wazi Sasa · ⭐ 4.8 · 127 reviews    │
-  │ Mboga · Matunda · Nafaka                │
-  │                                         │
-  │ [Tazama Wasifu →]  [Piga Simu 📞]      │
-  └─────────────────────────────────────────┘
+  [Entrance N]             [Entrance N2]
+  ┌──────────────────────────────────────┐
+  │  [A1]    │  [B1] [B2] [B3] [B4]  │ [C1]  │
+  │  [A2]    │  [B5] [B6] [B7] [B8]  │ [C2]  │
+  │  [A3]    │  ...centre stalls...   │ [C3]  │
+  │  ...     │                        │ ...   │
+  └──────────────────────────────────────┘
+  [Entrance S]             [Entrance S2]
 
-LEGEND CHIP (bottom left):
-  🟢 Wazi · 🟡 Imefungwa · ⬜ Inapatikana · 🔴 Ukarabati
+LEGEND (bottom of map, compact pill row):
+  🟢 Open Now   🟡 Closed   🔵 Vacant   🚪 Entrance
 ```
+
+#### Stall Status — Resident-Visible Colors
+
+| Status | Color | What Resident Sees |
+|---|---|---|
+| Occupied & Open | Green `#D4EDDA` + solid border | Trader name + category icon |
+| Occupied & Closed | Amber `#FEF3C7` + solid border | Trader name + "Closed" |
+| Vacant | Blue `#D6E4F7` + dashed border | "Available" — no trader |
+| Maintenance | Gray `#E5E7EB` + dashed border | "Unavailable" — no detail |
+| Entrance | Red `#E8736A` + solid border | "Entrance / Exit" label |
+
+> Residents do NOT see: fee status, verification status, allocation dates,
+> permit details, or any admin-only fields.
+
+#### Stall Tap — Resident Bottom Sheet
+
+Tapping any occupied stall slides up a bottom sheet:
+
+```
+IF OPEN TRADER:
+┌──────────────────────────────────────────┐
+│ ████ [handle]                            │
+│ [Avatar]  Mama Wanjiru's Mboga  🟢 Open  │
+│ ⭐ 4.8 · 127 reviews · Stall A1          │
+│ Vegetables · Fruits · Cereals            │
+│                                          │
+│ Closes at 6:00 PM today                 │
+│                                          │
+│ [View Profile & Products →]             │
+│ [📞 Call Trader]                         │
+└──────────────────────────────────────────┘
+
+IF CLOSED TRADER:
+┌──────────────────────────────────────────┐
+│ [Avatar]  Ochieng Fish Stall  🟡 Closed  │
+│ ⭐ 4.6 · 89 reviews · Stall C2           │
+│ Fish · Seafood                           │
+│ Opens tomorrow at 6:00 AM               │
+│                                          │
+│ [View Profile →]                         │
+└──────────────────────────────────────────┘
+
+IF VACANT STALL:
+┌──────────────────────────────────────────┐
+│ 🔵  Stall B7 · Zone B                   │
+│ This stall is currently available.       │
+│ No trader has been assigned here yet.   │
+└──────────────────────────────────────────┘
+
+IF ENTRANCE MARKER:
+  No bottom sheet — entrances are informational only.
+  A small tooltip appears: "Market Entrance — North"
+```
+
+#### Multi-Building Switcher (Resident)
+
+If the market has multiple blocks, a horizontal tab row appears
+at the top of the map:
+
+```
+[Block A — 73% full] [Block B — 67% full] [Block C — 83% full]
+```
+
+Occupancy percentage shows as a subtle progress bar under each tab.
+Helps residents know which block has more open traders today.
 
 ---
 

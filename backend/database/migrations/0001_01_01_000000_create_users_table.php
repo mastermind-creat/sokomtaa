@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('password');
             $table->enum('role', ['trader', 'resident', 'admin'])->default('resident');
             $table->string('national_id')->nullable();
-            $table->string('preferred_language', 5)->default('sw');
+            $table->string('preferred_language', 5)->default('en');
             $table->boolean('phone_verified')->default(false);
             $table->timestamp('phone_verified_at')->nullable();
             $table->string('avatar_url')->nullable();

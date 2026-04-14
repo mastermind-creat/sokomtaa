@@ -26,7 +26,7 @@ import api from '@/lib/api';
 import { ApiResponse, TraderDashboardStats, RevenueTrend } from '@/types';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { useTranslation } from '@/hooks/useTranslation';
-import DashboardLayout from '@/components/shared/DashboardLayout';
+import { useUIStore } from '@/store/uiStore';
 import PriorityOrderList from '../../../components/trader/PriorityOrderList';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -34,6 +34,11 @@ export default function TraderDashboard() {
     const { user } = useAuthStore();
     const router = useRouter();
     const { t } = useTranslation();
+    const { setPageTitle } = useUIStore();
+
+    React.useEffect(() => {
+        setPageTitle('Dashboard');
+    }, [setPageTitle]);
 
     // Fetch Analytics Stats
     const { data: stats, isLoading: statsLoading } = useQuery({
@@ -58,8 +63,7 @@ export default function TraderDashboard() {
     const isPendingVerification = user?.role === 'trader' && !user?.phone_verified;
 
     return (
-        <DashboardLayout title={t('trader.dashboard_title')}>
-            <div className="space-y-6 lg:space-y-10 pb-10">
+        <div className="space-y-6 lg:space-y-10 pb-10 px-4 pt-6">
                 
                 {/* 1. TOP: Status Banners */}
                 <AnimatePresence>
@@ -231,6 +235,5 @@ export default function TraderDashboard() {
                     </div>
                 </div>
             </div>
-        </DashboardLayout>
     );
 }

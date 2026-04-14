@@ -127,7 +127,7 @@ export default function TraderSidebar() {
                 <div>
                     <p className="px-3 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">{t('sidebar.store_mgmt')}</p>
                     <div className="space-y-1">
-                        <SidebarLink href="/trader/payments" icon={Briefcase} label={t('sidebar.fees_payments')} active={pathname === '/trader/payments'} />
+                        <SidebarLink href="/trader/wallet" icon={CreditCard} label={t('sidebar.my_wallet') || 'Wallet Yangu'} active={pathname === '/trader/wallet'} />
                         <SidebarLink href="/trader/analytics" icon={BarChart3} label={t('sidebar.store_analytics')} active={pathname === '/trader/analytics'} />
                         <SidebarLink href="/trader/reviews" icon={MessageSquare} label={t('sidebar.reviews')} active={pathname === '/trader/reviews'} />
                     </div>
