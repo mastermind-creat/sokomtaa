@@ -81,8 +81,12 @@ export default function StallMapPreview() {
                     // If map_x/map_y are defined, use them as offsets from center for demo, 
                     // or treat them as lat/long if they look like it.
                     // For now, we'll scatter them slightly around center if they are 0.
-                    const lat = stall.map_x ? Number(stall.map_x) : center[0] + (Math.random() - 0.5) * 0.001;
-                    const lng = stall.map_y ? Number(stall.map_y) : center[1] + (Math.random() - 0.5) * 0.001;
+                    // Using a deterministic offset based on stall.id to ensure the component is pure.
+                    const offsetLat = ((stall.id * 123.456) % 1 - 0.5) * 0.002;
+                    const offsetLng = ((stall.id * 789.012) % 1 - 0.5) * 0.002;
+                    
+                    const lat = stall.map_x ? Number(stall.map_x) : center[0] + offsetLat;
+                    const lng = stall.map_y ? Number(stall.map_y) : center[1] + offsetLng;
 
                     return (
                         <Marker 
