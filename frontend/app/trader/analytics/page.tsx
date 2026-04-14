@@ -4,7 +4,7 @@ import React from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { ApiResponse } from '@/types';
+import { ApiResponse, TraderDashboardStats, RevenueTrend } from '@/types';
 import BottomNav from '@/components/shared/BottomNav';
 import { 
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
@@ -37,17 +37,17 @@ export default function TraderAnalyticsPage() {
     // Fetch Analytics Data
     const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ['trader-stats'],
-        queryFn: async () => (await api.get<never, ApiResponse<any>>('/trader/analytics/stats')).data
+        queryFn: async () => (await api.get<never, ApiResponse<TraderDashboardStats>>('/trader/analytics/stats')).data
     });
 
     const { data: revenueData, isLoading: revenueLoading } = useQuery({
         queryKey: ['trader-revenue'],
-        queryFn: async () => (await api.get<never, ApiResponse<any>>('/trader/analytics/revenue')).data
+        queryFn: async () => (await api.get<never, ApiResponse<RevenueTrend[]>>('/trader/analytics/revenue')).data
     });
 
     const { data: priceInsights, isLoading: pricingLoading } = useQuery({
         queryKey: ['trader-price-insights'],
-        queryFn: async () => (await api.get<never, ApiResponse<any>>('/trader/analytics/price-insights')).data
+        queryFn: async () => (await api.get<never, ApiResponse<{ market_id: number; insights: PriceInsight[] }>>('/trader/analytics/price-insights')).data
     });
 
     const containerVariants = {
