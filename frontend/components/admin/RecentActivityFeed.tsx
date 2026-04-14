@@ -11,7 +11,8 @@ import {
     ChevronRight,
     Search,
     Clock,
-    User
+    User,
+    LucideIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -26,7 +27,7 @@ interface ActivityItem {
     icon: string;
 }
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, LucideIcon> = {
     UserPlus,
     AlertCircle,
     CheckCircle,
