@@ -13,7 +13,8 @@ import {
     User,
     RefreshCw,
     Briefcase,
-    MessageSquare
+    MessageSquare,
+    LucideIcon
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -23,7 +24,7 @@ import { LanguageToggle } from '../shared/LanguageToggle';
 
 interface SidebarLinkProps {
     href: string;
-    icon: any;
+    icon: LucideIcon;
     label: string;
     active: boolean;
     count?: number | string;
