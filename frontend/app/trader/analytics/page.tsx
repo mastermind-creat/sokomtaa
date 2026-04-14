@@ -36,17 +36,17 @@ export default function TraderAnalyticsPage() {
     // Fetch Analytics Data
     const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ['trader-stats'],
-        queryFn: async () => (await api.get('/trader/analytics/stats')).data.data
+        queryFn: async () => (await api.get<never, ApiResponse<any>>('/trader/analytics/stats')).data
     });
 
     const { data: revenueData, isLoading: revenueLoading } = useQuery({
         queryKey: ['trader-revenue'],
-        queryFn: async () => (await api.get('/trader/analytics/revenue')).data.data
+        queryFn: async () => (await api.get<never, ApiResponse<any>>('/trader/analytics/revenue')).data
     });
 
     const { data: priceInsights, isLoading: pricingLoading } = useQuery({
         queryKey: ['trader-price-insights'],
-        queryFn: async () => (await api.get('/trader/analytics/price-insights')).data.data
+        queryFn: async () => (await api.get<never, ApiResponse<any>>('/trader/analytics/price-insights')).data
     });
 
     const containerVariants = {

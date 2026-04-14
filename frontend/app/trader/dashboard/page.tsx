@@ -40,7 +40,7 @@ export default function TraderDashboard() {
         queryKey: ['trader-stats'],
         queryFn: async () => {
             const res = await api.get<never, ApiResponse<TraderDashboardStats>>('/analytics/stats');
-            return res.data.data;
+            return res.data;
         }
     });
 
@@ -49,7 +49,7 @@ export default function TraderDashboard() {
         queryKey: ['trader-revenue'],
         queryFn: async () => {
             const res = await api.get<never, ApiResponse<RevenueTrend[]>>('/analytics/revenue');
-            return res.data.data;
+            return res.data;
         }
     });
 
