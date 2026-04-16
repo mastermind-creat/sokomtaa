@@ -51,7 +51,7 @@ export const Logo: React.FC<LogoProps> = ({
         return (
             <svg 
                 width={width || 200} 
-                height={height || 'auto'} 
+                height={height} 
                 viewBox="0 0 220 75" 
                 fill="none" 
                 xmlns="http://www.w3.org/2000/svg"
@@ -86,7 +86,7 @@ export const Logo: React.FC<LogoProps> = ({
         return (
             <svg 
                 width={width || 200} 
-                height={height || 'auto'} 
+                height={height} 
                 viewBox="0 0 220 75" 
                 fill="none" 
                 xmlns="http://www.w3.org/2000/svg"
@@ -116,7 +116,7 @@ export const Logo: React.FC<LogoProps> = ({
     return (
         <svg 
             width={width || 200} 
-            height={height || 'auto'} 
+            height={height} 
             viewBox="0 0 220 75" 
             fill="none" 
             xmlns="http://www.w3.org/2000/svg"

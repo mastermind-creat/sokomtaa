@@ -14,6 +14,7 @@ interface LoginFormData {
     password: string;
 }
 import { Logo } from '@/components/shared/Logo';
+import { Navbar } from '@/components/landing/Navbar';
 
 export default function LoginPage() {
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>();
@@ -43,7 +44,9 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen w-full flex">
+        <div className="bg-white">
+            <Navbar />
+            <div className="min-h-screen w-full flex pt-20 lg:pt-0">
             {/* Left Panel — Branding (desktop only) */}
             <div className="hidden lg:flex flex-col justify-between w-[45%] bg-gradient-to-br from-green-900 via-brand-700 to-green-800 p-14 relative overflow-hidden">
                 {/* Background decoration */}
@@ -196,6 +199,7 @@ export default function LoginPage() {
                     </div>
                 </div>
             </motion.div>
+            </div>
         </div>
     );
 }
