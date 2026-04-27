@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useMpesa } from '@/hooks/useMpesa';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/authStore';
 
 interface Product {
     id: number;
@@ -45,7 +45,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
     const [reservationId, setReservationId] = useState<number | null>(null);
     const [reservationCode, setReservationCode] = useState<string>('');
     
-    const { user } = useAuth();
+    const { user } = useAuthStore();
     const router = useRouter();
     const { initiateStk, isPolling, status, error, stopPolling } = useMpesa();
 

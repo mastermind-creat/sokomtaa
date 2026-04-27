@@ -17,7 +17,11 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/shared/DashboardLayout';
-import MarketSchematicMap from '@/components/map/MarketSchematicMap';
+import dynamic from 'next/dynamic';
+const MarketSchematicMap = dynamic(() => import('@/components/map/MarketSchematicMap'), { 
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-neutral-50 animate-pulse rounded-[2.5rem] flex items-center justify-center text-xs font-black text-brand-700 uppercase tracking-widest">Loading Map...</div>
+});
 import { motion, AnimatePresence } from 'framer-motion';
 import { ApiResponse } from '@/types';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Bell, LogOut, ChevronDown, User as UserIcon } from 'lucide-react';
+import { Search, Bell, LogOut, ChevronDown, User as UserIcon, Menu } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -13,9 +13,10 @@ import { Logo } from './Logo';
 
 interface TopBarProps {
     title?: string;
+    onMenuToggle?: () => void;
 }
 
-export default function TopBar({ title: propTitle }: TopBarProps) {
+export default function TopBar({ title: propTitle, onMenuToggle }: TopBarProps) {
     const { user, logout } = useAuthStore();
     const { pageTitle } = useUIStore();
     const { t } = useTranslation();
@@ -25,19 +26,29 @@ export default function TopBar({ title: propTitle }: TopBarProps) {
     const displayTitle = propTitle || pageTitle || t('common.dashboard');
 
     return (
-        <header className="sticky top-0 z-40 w-full h-20 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-6 lg:px-10 flex items-center justify-between transition-all duration-300">
+        <header className="sticky top-0 z-40 w-full h-20 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 lg:px-10 flex items-center justify-between transition-all duration-300">
             {/* Left: Title / Breadcrumb / Mobile Logo */}
-            <div className="flex items-center gap-4 flex-1">
+            <div className="flex items-center gap-3 lg:gap-4 flex-1">
+                {/* Mobile Menu Trigger (Admin Only) */}
+                {user?.role === 'admin' && (
+                    <button 
+                        onClick={onMenuToggle}
+                        className="lg:hidden w-11 h-11 flex items-center justify-center bg-brand-50 text-brand-700 rounded-xl active:scale-90 transition-transform flex-shrink-0"
+                    >
+                        <Menu size={22} />
+                    </button>
+                )}
+
                 {/* Mobile Logo */}
                 <div className="lg:hidden">
-                    <Logo variant="icon" width={36} height={36} />
+                    <Logo variant="icon" width={32} height={32} />
                 </div>
 
                 <h2 className="text-xl font-black text-green-950 tracking-tight hidden md:block">
                     {displayTitle}
                 </h2>
                 <div className="w-[1px] h-6 bg-gray-200 hidden md:block" />
-                <div className="relative group max-w-md w-64 lg:w-96">
+                <div className="relative group max-w-md hidden sm:block w-64 lg:w-96">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-500 transition-colors" size={18} />
                     <input 
                         type="text" 
@@ -55,26 +66,26 @@ export default function TopBar({ title: propTitle }: TopBarProps) {
                 
                 <NotificationBell />
 
-                <div className="w-[1px] h-6 bg-gray-200 ml-2" />
+                <div className="w-[1px] h-6 bg-gray-200" />
 
                 {/* Profile Dropdown */}
                 <div className="relative">
                     <button 
                         onClick={() => setIsProfileOpen(!isProfileOpen)}
-                        className="flex items-center gap-3 p-1.5 pr-3 hover:bg-gray-50 rounded-2xl transition-all active:scale-95"
+                        className="flex items-center gap-2 lg:gap-3 p-1 hover:bg-gray-50 rounded-2xl transition-all active:scale-95"
                     >
-                        <div className="w-10 h-10 bg-brand-50 text-brand-700 rounded-xl flex items-center justify-center font-black shadow-sm">
+                        <div className="w-9 h-9 lg:w-10 lg:h-10 bg-brand-50 text-brand-700 rounded-xl flex items-center justify-center font-black shadow-sm">
                             {user?.avatar_url ? (
                                 <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover rounded-xl" />
                             ) : (
-                                <UserIcon size={20} />
+                                <UserIcon size={18} />
                             )}
                         </div>
-                        <div className="text-left hidden sm:block">
+                        <div className="text-left hidden lg:block">
                             <p className="text-xs font-black text-green-950 leading-none mb-1">{user?.name}</p>
                             <p className="text-[10px] text-brand-600 font-bold uppercase tracking-widest">{user?.role}</p>
                         </div>
-                        <ChevronDown size={14} className={`text-gray-400 transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown size={14} className={`text-gray-400 transition-transform duration-300 hidden md:block ${isProfileOpen ? 'rotate-180' : ''}`} />
                     </button>
 
                     <AnimatePresence>
