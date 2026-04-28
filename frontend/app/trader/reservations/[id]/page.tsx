@@ -110,12 +110,82 @@ export default function OrderDetailPage() {
 
     const cfg = STATUS_CONFIG[order.status];
     const deadline = order.pickup_deadline ? new Date(order.pickup_deadline) : null;
-    const isOverdue = deadline && deadline < new Date();
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-            {/* ... content ... */}
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+            <div className="flex items-center gap-4">
+                <button onClick={() => router.back()} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+                    <ArrowLeft className="w-5 h-5 text-text-secondary" />
+                </button>
+                <div className={`px-4 py-1.5 rounded-full border ${cfg.bg} ${cfg.color} ${cfg.border} text-xs font-black uppercase tracking-widest`}>
+                    {cfg.label}
+                </div>
+            </div>
+
+            {/* Order Card */}
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center">
+                            <Package className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-0.5">Order Code</p>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl font-black text-green-950 font-mono tracking-tighter">#{order.reservation_code}</span>
+                                <button onClick={copyCode} className="text-brand-600 hover:text-brand-700 transition-colors">
+                                    <Copy className="w-4 h-4" />
+                                </button>
+                                {copied && <span className="text-[10px] font-bold text-success">Copied!</span>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-6 space-y-6">
+                    <DetailRow icon={<User className="w-4 h-4" />} label="Resident" value={order.resident.name} />
+                    <DetailRow icon={<Phone className="w-4 h-4" />} label="Phone" value={order.resident.phone} />
+                    <DetailRow icon={<Package className="w-4 h-4" />} label="Product" value={`${order.quantity}x ${order.product.name}`} />
+                    <DetailRow icon={<Clock className="w-4 h-4" />} label="Pickup Deadline" value={deadline ? deadline.toLocaleString() : 'No deadline'} />
+                    <DetailRow icon={<MessageSquare className="w-4 h-4" />} label="Notes" value={order.notes || 'No notes provided'} />
+                    
+                    <div className="pt-4 mt-4 border-t border-gray-50 flex items-center justify-between">
+                        <p className="text-sm font-bold text-text-secondary">Summary</p>
+                        <p className="text-2xl font-black text-green-950">KES {parseFloat(order.total_amount).toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="grid grid-cols-1 gap-3">
+                {order.status === 'paid' && (
+                    <button
+                        onClick={() => updateStatus('ready')}
+                        disabled={isPending}
+                        className="w-full py-4 bg-brand-600 text-white rounded-2xl font-black text-base shadow-lg shadow-brand-900/10 hover:bg-brand-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                        {isPending ? 'Updating...' : 'Mark as Ready for Pickup'}
+                    </button>
+                )}
+                {order.status === 'ready' && (
+                    <button
+                        onClick={() => updateStatus('completed')}
+                        disabled={isPending}
+                        className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-base shadow-lg shadow-green-900/10 hover:bg-green-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                        {isPending ? 'Updating...' : 'Confirm Handover / Completed'}
+                    </button>
+                )}
+                {['pending', 'paid', 'ready'].includes(order.status) && (
+                    <button
+                        onClick={() => updateStatus('cancelled')}
+                        disabled={isPending}
+                        className="w-full py-4 border border-red-200 text-red-600 rounded-2xl font-bold text-sm hover:bg-red-50 transition-colors"
+                    >
+                        Cancel Order
+                    </button>
+                )}
+            </div>
         </div>
     );
-}
 }

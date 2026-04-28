@@ -248,6 +248,5 @@ export default function TraderFeesPage() {
                     )}
                 </div>
             </div>
-        </div>
     );
 }

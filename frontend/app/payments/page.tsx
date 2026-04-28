@@ -63,6 +63,11 @@ export default function ResidentPaymentsPage() {
         queryFn: () => api.get('/resident/payments/summary'),
     });
 
+    const [isMounted, setIsMounted] = React.useState(false);
+    React.useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     const payments = paymentsData?.data?.data || [];
     const summary = summaryData?.data;
 
@@ -81,7 +86,7 @@ export default function ResidentPaymentsPage() {
         return months.map((name, i) => ({
             name,
             total: monthlyTotals[i]
-        })).filter(m => m.total > 0 || i <= new Date().getMonth());
+        })).filter((m, i) => m.total > 0 || i <= new Date().getMonth());
     }, [payments]);
 
     return (
@@ -95,7 +100,7 @@ export default function ResidentPaymentsPage() {
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-200 mb-1">Annual Spending (2025)</p>
                             <h2 className="text-4xl font-black font-mono tracking-tighter">
-                                KES {summary?.total_spent_this_year.toLocaleString() || '0'}
+                                KES {(summary?.total_spent_this_year ?? 0).toLocaleString()}
                             </h2>
                         </div>
                         <div className="w-14 h-14 bg-brand-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -126,30 +131,34 @@ export default function ResidentPaymentsPage() {
                             <option>Yearly</option>
                         </select>
                     </div>
-                    <div className="h-40 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData}>
-                                <XAxis 
-                                    dataKey="name" 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{ fontSize: 10, fontWeight: 700, fill: '#9CA3AF' }}
-                                    dy={10}
-                                />
-                                <Tooltip 
-                                    cursor={{ fill: '#F9FAFB' }}
-                                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                />
-                                <Bar dataKey="total" radius={[8, 8, 8, 8]}>
-                                    {chartData.map((entry, index) => (
-                                        <Cell 
-                                            key={`cell-${index}`} 
-                                            fill={index === chartData.length - 1 ? '#1ea34d' : '#E5E7EB'} 
-                                        />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <div className="h-40 w-full overflow-hidden">
+                        {isMounted ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData}>
+                                    <XAxis 
+                                        dataKey="name" 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fontSize: 10, fontWeight: 700, fill: '#9CA3AF' }}
+                                        dy={10}
+                                    />
+                                    <Tooltip 
+                                        cursor={{ fill: '#F9FAFB' }}
+                                        contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                    />
+                                    <Bar dataKey="total" radius={[8, 8, 8, 8]}>
+                                        {chartData.map((entry, index) => (
+                                            <Cell 
+                                                key={`cell-${index}`} 
+                                                fill={index === chartData.length - 1 ? '#1ea34d' : '#E5E7EB'} 
+                                            />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="w-full h-full bg-gray-50 rounded-2xl animate-pulse" />
+                        )}
                     </div>
                 </div>
 

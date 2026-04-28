@@ -1,13 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import BottomNav from './BottomNav';
 import TopBar from './TopBar';
-import AdminSidebar from '../admin/AdminSidebar';
-import TraderSidebar from '../trader/TraderSidebar';
-import ResidentSidebar from '../resident/ResidentSidebar';
 import { useAuthStore } from '@/store/authStore';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+
+// Dynamic imports to prevent SSR issues with client-only sidebars
+const AdminSidebar = dynamic(() => import('../admin/AdminSidebar'), { ssr: false });
+const TraderSidebar = dynamic(() => import('../trader/TraderSidebar'), { ssr: false });
+const ResidentSidebar = dynamic(() => import('../resident/ResidentSidebar'), { ssr: false });
+const MobileSidebar = dynamic(() => import('../admin/MobileSidebar'), { ssr: false });
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -16,14 +20,16 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, title }: DashboardLayoutProps) {
     const { user } = useAuthStore();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const renderSidebar = () => {
-        switch (user?.role) {
+        if (!user) return <ResidentSidebar />;
+        
+        switch (user.role) {
             case 'admin':
                 return <AdminSidebar />;
             case 'trader':
                 return <TraderSidebar />;
-            case 'resident':
             default:
                 return <ResidentSidebar />;
         }
@@ -31,13 +37,24 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
 
     return (
         <div className="flex flex-col lg:flex-row min-h-screen bg-[#FAFAF8] w-full max-w-full overflow-hidden">
+            {/* Mobile Drawer (Only for Admin role in this phase) */}
+            {user?.role === 'admin' && (
+                <MobileSidebar 
+                    isOpen={isMobileMenuOpen} 
+                    onClose={() => setIsMobileMenuOpen(false)} 
+                />
+            )}
+
             {/* Sidebar (Desktop Only) */}
             {renderSidebar()}
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
                 {/* Navbar */}
-                <TopBar title={title} />
+                <TopBar 
+                    title={title} 
+                    onMenuToggle={() => setIsMobileMenuOpen(true)}
+                />
 
                 {/* Content */}
                 <main className="flex-1 overflow-y-auto w-full no-scrollbar pb-24 lg:pb-0">

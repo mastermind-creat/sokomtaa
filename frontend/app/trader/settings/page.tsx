@@ -163,6 +163,5 @@ export default function TraderSettingsPage() {
                     </button>
                 </Section>
             </div>
-        </div>
     );
 }

@@ -74,6 +74,11 @@ export default function AdminDashboard() {
         setPageTitle(t('admin.dashboard_title') || 'Admin Overview');
     }, [setPageTitle, t]);
 
+    const [isMounted, setIsMounted] = React.useState(false);
+    React.useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     // Fetch stats
     const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ['admin-stats'],
@@ -122,13 +127,14 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 1. TOP: 4-Stat Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
+                {/* 1. TOP: High-Density Metrics Row */}
+                <div className="grid grid-cols-3 xl:grid-cols-4 gap-2 md:gap-6">
                     <StatCard
-                        title={`Market Fees (County Levy)`}
-                        value={`KES ${stats?.revenue.total.toLocaleString()}`}
+                        title={`Fees`}
+                        value={`KES ${stats?.revenue.total >= 1000 ? (stats.revenue.total / 1000).toFixed(1) + 'k' : stats?.revenue.total}`}
                         icon={TrendingUp}
                         color="bg-brand-600"
+                        variant="compact"
                         trend={{ value: stats?.revenue.percentage || 0, isPositive: true, label: "VS Target" }}
                         description={t('admin.revenue_subtitle')}
                     />
@@ -137,24 +143,28 @@ export default function AdminDashboard() {
                         value={stats?.traders.total || '0'}
                         icon={Users}
                         color="bg-amber-500"
+                        variant="compact"
                         trend={{ value: stats?.traders.growth || 0, isPositive: true, label: 'New this month' }}
                         description="Verified & Active"
                     />
                     <StatCard
-                        title="Stall Occupancy"
+                        title="Occupancy"
                         value={`${stats?.stalls.occupancy_rate || 0}%`}
                         icon={Home}
                         color="bg-blue-600"
+                        variant="compact"
                         description={`${stats?.stalls.occupied} / ${stats?.stalls.total} units filled`}
                     />
-                    <StatCard
-                        title="Pending Orders"
-                        value="142"
-                        icon={Activity}
-                        color="bg-brand-950"
-                        trend={{ value: 8, isPositive: true, label: 'Today' }}
-                        description="Market-wide reservations"
-                    />
+                    <div className="hidden xl:block">
+                        <StatCard
+                            title="Pending Orders"
+                            value="142"
+                            icon={Activity}
+                            color="bg-brand-950"
+                            trend={{ value: 8, isPositive: true, label: 'Today' }}
+                            description="Market-wide reservations"
+                        />
+                    </div>
                 </div>
 
                 {/* 2. MIDDLE: Trends + Activity Split */}
@@ -172,8 +182,9 @@ export default function AdminDashboard() {
                             </select>
                         </div>
 
-                        <div className="h-[300px] lg:h-[400px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
+                        <div className="h-[300px] lg:h-[400px] w-full overflow-hidden">
+                            {isMounted ? (
+                                <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={trends}>
                                     <defs>
                                         <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -215,6 +226,9 @@ export default function AdminDashboard() {
                                     />
                                 </AreaChart>
                             </ResponsiveContainer>
+                            ) : (
+                                <div className="w-full h-full bg-gray-50 rounded-3xl animate-pulse" />
+                            )}
                         </div>
                     </div>
 

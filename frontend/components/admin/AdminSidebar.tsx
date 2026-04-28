@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     LayoutDashboard, 
     Store, 
@@ -12,100 +12,231 @@ import {
     Bell,
     Settings,
     ChevronRight,
-    Search
+    ChevronDown,
+    Search,
+    BarChart3,
+    Map as MapIcon,
+    CreditCard,
+    ShoppingBag,
+    Star,
+    UsersRound,
+    SquareChartGantt,
+    ShieldCheck
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AdminSidebar() {
     const router = useRouter();
     const pathname = usePathname();
     const { t } = useTranslation();
+    
+    // Track which sections are expanded
+    const [expandedSections, setExpandedSections] = useState<string[]>(['Operations']);
 
-    const menuItems = [
-        { icon: LayoutDashboard, label: t('admin.dashboard_title'), path: '/admin/dashboard', badge: null },
-        { icon: MapPin, label: t('common.markets'), path: '/admin/markets', badge: null },
-        { icon: Store, label: t('common.stalls'), path: '/admin/stalls', badge: null },
-        { icon: FileText, label: 'Applications', path: '/admin/applications', badge: 'New' },
-        { icon: Users, label: t('common.traders'), path: '/admin/traders', badge: null },
-        { icon: Ticket, label: t('common.fees'), path: '/admin/fees', badge: 'Paid' },
-        { icon: MessageSquare, label: t('common.complaints'), path: '/admin/complaints', badge: 5 },
-        { icon: Bell, label: t('common.notifications'), path: '/admin/notices', badge: null },
+    const menuSections = [
+        {
+            title: 'Operations',
+            icon: LayoutDashboard,
+            items: [
+                { icon: LayoutDashboard, label: t('admin.dashboard_title'), path: '/admin/dashboard' },
+                { icon: BarChart3, label: t('common.analytics') || 'Analytics', path: '/admin/analytics' },
+                { icon: MapIcon, label: t('common.market_map') || 'Market Map', path: '/admin/map' },
+            ]
+        },
+        {
+            title: 'Infrastructure',
+            icon: Building2,
+            items: [
+                { icon: MapPin, label: t('common.markets'), path: '/admin/markets' },
+                { icon: Store, label: t('common.stalls'), path: '/admin/stalls' },
+                { icon: SquareChartGantt, label: 'Allocations', path: '/admin/allocations' },
+            ]
+        },
+        {
+            title: 'Traders & Users',
+            icon: Users,
+            items: [
+                { icon: FileText, label: 'Applications', path: '/admin/applications', badge: 'New' },
+                { icon: Users, label: t('common.traders'), path: '/admin/traders' },
+                { icon: UsersRound, label: 'User Management', path: '/admin/users' },
+            ]
+        },
+        {
+            title: 'Commerce',
+            icon: CreditCard,
+            items: [
+                { icon: Ticket, label: t('common.fees'), path: '/admin/fees' },
+                { icon: CreditCard, label: 'Payment History', path: '/admin/payments' },
+                { icon: ShoppingBag, label: 'Reservations', path: '/admin/reservations' },
+                { icon: Star, label: 'Reviews', path: '/admin/reviews' },
+            ]
+        },
+        {
+            title: 'Communication',
+            icon: MessageSquare,
+            items: [
+                { icon: MessageSquare, label: t('common.complaints'), path: '/admin/complaints', badge: 5 },
+                { icon: Bell, label: t('common.notifications'), path: '/admin/notices' },
+            ]
+        },
+        {
+            title: 'System',
+            icon: Settings,
+            items: [
+                { icon: ShieldCheck, label: 'Audit Log', path: '/admin/audit-log' },
+                { icon: Settings, label: t('common.settings'), path: '/admin/settings' },
+            ]
+        }
     ];
 
+    // Automatically expand the section that contains the current active route
+    useEffect(() => {
+        const activeSection = menuSections.find(section => 
+            section.items.some(item => pathname === item.path)
+        );
+        if (activeSection && !expandedSections.includes(activeSection.title)) {
+            setExpandedSections(prev => [...prev, activeSection.title]);
+        }
+    }, [pathname]);
+
+    const toggleSection = (title: string) => {
+        setExpandedSections(prev => 
+            prev.includes(title) 
+                ? prev.filter(t => t !== title) 
+                : [...prev, title]
+        );
+    };
+
     return (
-        <aside className="hidden lg:flex flex-col w-[280px] h-screen bg-white border-r border-gray-100 sticky top-0 left-0 overflow-y-auto no-scrollbar">
+        <aside className="hidden lg:flex flex-col w-[300px] h-screen bg-white border-r border-neutral-100 sticky top-0 left-0 overflow-hidden">
             {/* Logo Area */}
-            <div className="p-8 pb-10">
+            <div className="p-8 pb-6">
                 <div 
                     onClick={() => router.push('/admin/dashboard')} 
                     className="cursor-pointer active:scale-95 transition-transform"
                 >
-                    <Logo variant="light" width={160} />
-                </div>
-                <div className="mt-6 flex items-center gap-2 px-4 py-2 bg-brand-50 rounded-xl border border-brand-100">
-                    <div className="w-2 h-2 bg-brand-600 rounded-full animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-700">{t('sidebar.portal_status')}</span>
+                    <Logo variant="light" width={140} />
                 </div>
             </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 px-4 space-y-1">
-                <p className="px-4 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">{t('sidebar.main_menu')}</p>
-                {menuItems.map((item) => {
-                    const isActive = pathname === item.path;
+            {/* Scrollable Navigation */}
+            <nav className="flex-1 px-4 space-y-2 overflow-y-auto no-scrollbar pb-10">
+                {menuSections.map((section, sIdx) => {
+                    const isExpanded = expandedSections.includes(section.title);
+                    const isAnyItemActive = section.items.some(item => pathname === item.path);
+
                     return (
-                        <button
-                            key={item.path}
-                            onClick={() => router.push(item.path)}
-                            className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group active:scale-[0.98] ${
-                                isActive 
-                                    ? 'bg-green-950 text-white shadow-xl shadow-green-900/20' 
-                                    : 'text-text-secondary hover:bg-gray-50'
-                            }`}
-                        >
-                            <div className="flex items-center gap-4">
-                                <item.icon 
-                                    size={20} 
-                                    className={isActive ? 'text-brand-400' : 'text-gray-400 group-hover:text-green-950 transition-colors'} 
-                                    strokeWidth={isActive ? 2.5 : 2}
-                                />
-                                <span className={`text-sm font-bold tracking-tight ${isActive ? 'text-white' : ''}`}>
-                                    {item.label}
-                                </span>
-                            </div>
-                            {item.badge && (
-                                <div className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${
-                                    isActive ? 'bg-white/20 text-white' : 'bg-brand-50 text-brand-700'
-                                }`}>
-                                    {item.badge}
+                        <div key={sIdx} className="space-y-1">
+                            <button
+                                onClick={() => toggleSection(section.title)}
+                                className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all ${
+                                    isAnyItemActive && !isExpanded 
+                                        ? 'bg-brand-50 text-brand-700' 
+                                        : 'text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50'
+                                }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                                        {section.title}
+                                    </span>
+                                    {isAnyItemActive && !isExpanded && (
+                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-600" />
+                                    )}
                                 </div>
-                            )}
-                            {!item.badge && isActive && (
-                                <ChevronRight size={14} className="text-white/40" />
-                            )}
-                        </button>
+                                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            </button>
+
+                            <AnimatePresence initial={false}>
+                                {isExpanded && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.3, ease: 'circOut' }}
+                                        className="overflow-hidden space-y-1 ml-2"
+                                    >
+                                        {section.items.map((item) => {
+                                            const isActive = pathname === item.path;
+                                            return (
+                                                <button
+                                                    key={item.path}
+                                                    onClick={() => router.push(item.path)}
+                                                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all group active:scale-[0.98] ${
+                                                        isActive 
+                                                            ? 'bg-green-950 text-white shadow-lg shadow-green-900/20' 
+                                                            : 'text-neutral-600 hover:bg-neutral-50 hover:pl-5'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <item.icon 
+                                                            size={16} 
+                                                            className={isActive ? 'text-brand-400' : 'text-neutral-400 group-hover:text-green-950 transition-colors'} 
+                                                            strokeWidth={isActive ? 2.5 : 2}
+                                                        />
+                                                        <span className={`text-[13px] font-bold tracking-tight ${isActive ? 'text-white' : ''}`}>
+                                                            {item.label}
+                                                        </span>
+                                                    </div>
+                                                    {item.badge && (
+                                                        <div className={`px-2 py-0.5 rounded-md text-[8px] font-black ${
+                                                            isActive ? 'bg-white/20 text-white' : 'bg-brand-100 text-brand-700'
+                                                        }`}>
+                                                            {item.badge}
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
                     );
                 })}
             </nav>
 
-            {/* Footer Area */}
-            <div className="p-6 mt-auto space-y-4">
-                <button 
-                    onClick={() => router.push('/admin/settings')}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl text-text-secondary hover:bg-gray-50 transition-all font-bold text-sm"
-                >
-                    <Settings size={20} className="text-gray-400" />
-                    {t('common.settings')}
-                </button>
-                
-                <div className="p-4 bg-gray-50 rounded-3xl space-y-3">
-                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">{t('common.language')}</p>
-                    <LanguageToggle />
+            {/* Bottom Section */}
+            <div className="p-6 border-t border-neutral-50 bg-neutral-50/30">
+                <div className="p-4 bg-white rounded-3xl border border-neutral-100 space-y-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{t('common.language')}</p>
+                        <LanguageToggle />
+                    </div>
+                    
+                    <button 
+                        onClick={() => router.push('/logout')}
+                        className="w-full flex items-center justify-center p-3 rounded-xl bg-red-50 text-red-600 font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-colors"
+                    >
+                        Sign Out
+                    </button>
                 </div>
             </div>
         </aside>
     );
 }
+
+const Building2 = ({ size, className, strokeWidth }: any) => (
+    <svg 
+        width={size} 
+        height={size} 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth={strokeWidth} 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        className={className}
+    >
+        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+        <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+        <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+        <path d="M10 6h4" />
+        <path d="M10 10h4" />
+        <path d="M10 14h4" />
+        <path d="M10 18h4" />
+    </svg>
+);

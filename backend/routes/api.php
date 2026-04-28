@@ -220,6 +220,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::patch('/stalls/{stall}', [\App\Http\Controllers\Admin\StallController::class, 'update']);
         Route::delete('/stalls/{stall}', [\App\Http\Controllers\Admin\StallController::class, 'destroy']);
         Route::post('/stalls/bulk', [\App\Http\Controllers\Admin\StallController::class, 'bulkGenerate']);
+        Route::get('/map-data', [\App\Http\Controllers\Admin\StallMapController::class, 'getMapData']);
+        Route::get('/allocations', [\App\Http\Controllers\Admin\StallAllocationController::class, 'index']);
 
         // Stall Application Review
         Route::get('/applications', [\App\Http\Controllers\Admin\ApplicationReviewController::class, 'index']);
@@ -233,6 +235,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/delinquents', [\App\Http\Controllers\Admin\FeeManagementController::class, 'delinquents']);
             Route::post('/update-rate', [\App\Http\Controllers\Admin\FeeManagementController::class, 'updateFee']);
         });
+
+        // Traders Management
+        Route::get('/traders', [\App\Http\Controllers\Admin\TraderController::class, 'index']);
+
+        // Analytics & Ledgers
+        Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'getAnalytics']);
+        Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index']);
+        Route::get('/reviews', [\App\Http\Controllers\Admin\ReviewController::class, 'index']);
+        Route::get('/reservations', [\App\Http\Controllers\Admin\ReservationController::class, 'index']);
+        Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index']);
+        Route::get('/audit-logs', [\App\Http\Controllers\Admin\AuditLogController::class, 'index']);
     });
 });
 

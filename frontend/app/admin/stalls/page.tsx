@@ -352,6 +352,5 @@ export default function AdminStallsPage() {
                     )}
                 </AnimatePresence>
             </div>
-        </div>
     );
 }

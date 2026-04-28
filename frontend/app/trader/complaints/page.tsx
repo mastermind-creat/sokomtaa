@@ -174,6 +174,7 @@ function NewComplaintSheet({ onClose }: { onClose: () => void }) {
 }
 
 export default function TraderComplaintsPage() {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<'against' | 'mine'>('against');
     const [showForm, setShowForm] = useState(false);
     const { setPageTitle } = useUIStore();
@@ -237,8 +238,7 @@ export default function TraderComplaintsPage() {
                         {complaints.map(c => <ComplaintCard key={c.id} complaint={c} />)}
                     </div>
                 )}
-            </div>
-
+            
             {showForm && <NewComplaintSheet onClose={() => setShowForm(false)} />}
         </div>
     );
