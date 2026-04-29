@@ -5,27 +5,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUIStore } from '@/store/uiStore';
 import { 
-    LayoutGrid, 
     List, 
     Map as MapIcon, 
     Plus, 
     Zap, 
     Search, 
-    Filter,
-    ChevronRight,
-    Store,
-    MapPin,
-    AlertCircle,
     Loader2,
-    Settings,
     Layers,
-    ArrowRight,
     Edit3,
-    Trash2,
-    Check
+    Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ApiResponse } from '@/types';
+import { ApiResponse, Stall, Market } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
@@ -35,24 +26,6 @@ const StallMapPreview = dynamic(() => import('../../../components/admin/StallMap
     ssr: false,
     loading: () => <div className="h-[500px] w-full bg-gray-50 animate-pulse rounded-[3rem] flex items-center justify-center font-black uppercase text-text-muted tracking-widest text-xs">Loading Market Schematic...</div>
 });
-
-interface Stall {
-    id: number;
-    stall_number: string;
-    zone: 'A' | 'B' | 'C';
-    block: string;
-    status: 'available' | 'occupied' | 'maintenance';
-    monthly_fee: number;
-    current_trader?: {
-        business_name: string;
-    };
-}
-
-interface Market {
-    id: number;
-    name: string;
-    location: string;
-}
 
 export default function AdminStallsPage() {
     const { t } = useTranslation();

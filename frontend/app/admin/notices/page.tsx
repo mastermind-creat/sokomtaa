@@ -35,9 +35,9 @@ export default function AdminNoticesPage() {
         setPageTitle('Broadcast Center');
     }, [setPageTitle]);
 
-    const { data: noticesRaw, isLoading } = useQuery({
+    const { data: noticesRaw, isLoading, refetch } = useQuery({
         queryKey: ['admin-notices', typeFilter],
-        queryFn: () => api.get('/admin/notices', { params: { type: typeFilter !== 'all' ? typeFilter : undefined } }).catch(() => ({ data: { data: [] } })),
+        queryFn: () => api.get('/notices', { params: { type: typeFilter !== 'all' ? typeFilter : undefined } }).catch(() => ({ data: { data: [] } })),
     });
 
     const notices = (noticesRaw as any)?.data?.data || [];

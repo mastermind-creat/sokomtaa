@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import { useParams, useRouter } from 'next/navigation';
 import { 
     ChevronLeft,
+    ChevronRight,
     MapPin, 
     CheckCircle2, 
     ShoppingBag, 
@@ -21,10 +22,11 @@ import {
     Award
 } from 'lucide-react';
 import { ApiResponse, Trader, Product, Review } from '@/types';
-import BottomNav from '@/components/shared/BottomNav';
+import Image from 'next/image';
 import ReservationFlow from '@/components/resident/ReservationFlow';
 import ReviewCard from '@/components/shared/ReviewCard';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/hooks/useTranslation';
 
 type Tab = 'products' | 'about' | 'reviews';
 
@@ -34,6 +36,7 @@ export default function TraderStorefrontPage() {
     const [selectedTab, setSelectedTab] = useState<Tab>('products');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const { user } = useAuthStore();
+    const { t } = useTranslation();
 
     // 1. Fetch Trader Details & Products
     const { data: storefrontData, isLoading: isTraderLoading } = useQuery<ApiResponse<{
@@ -97,16 +100,26 @@ export default function TraderStorefrontPage() {
             {/* 2. Hero Section */}
             <div className="relative h-64 w-full bg-green-950 overflow-hidden">
                 {trader.banner_url ? (
-                    <img src={trader.banner_url} alt="Banner" className="w-full h-full object-cover opacity-60" />
+                    <Image 
+                        src={trader.banner_url} 
+                        alt="Banner" 
+                        fill
+                        className="object-cover opacity-60" 
+                    />
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-green-800 via-brand-900 to-green-950" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent" />
                 
                 <div className="absolute -bottom-8 left-6 flex items-end gap-6 z-10 w-full px-6">
-                    <div className="w-28 h-28 bg-white rounded-[2.5rem] shadow-2xl flex items-center justify-center border-4 border-white overflow-hidden transition-transform hover:rotate-3 duration-500 shrink-0">
+                    <div className="w-28 h-28 bg-white rounded-[2.5rem] shadow-2xl flex items-center justify-center border-4 border-white overflow-hidden transition-transform hover:rotate-3 duration-500 shrink-0 relative">
                         {trader.avatar_url ? (
-                            <img src={trader.avatar_url} alt={trader.business_name} className="w-full h-full object-cover" />
+                            <Image 
+                                src={trader.avatar_url} 
+                                alt={trader.business_name} 
+                                fill
+                                className="object-cover" 
+                            />
                         ) : (
                             <Store size={48} className="text-brand-800" />
                         )}
@@ -149,7 +162,7 @@ export default function TraderStorefrontPage() {
                 </div>
 
                 <p className="text-[13px] text-text-secondary leading-relaxed font-medium line-clamp-2">
-                    {trader.description || "Karibu katika duka letu kwa bidhaa bora na bei nafuu kabisa mjini."}
+                    {trader.description || t('storefront.default_description')}
                 </p>
             </section>
 
@@ -164,7 +177,7 @@ export default function TraderStorefrontPage() {
                                 selectedTab === tab ? 'text-brand-600' : 'text-text-muted hover:text-text-primary'
                             }`}
                         >
-                            {tab === 'products' ? 'Bidhaa' : tab === 'about' ? 'Kuhusu' : 'Maoni'}
+                            {t(`storefront.${tab}`)}
                             {selectedTab === tab && (
                                 <motion.div 
                                     layoutId="activeTab" 
@@ -196,13 +209,18 @@ export default function TraderStorefrontPage() {
                                 >
                                     <div className="aspect-square bg-neutral-50 relative overflow-hidden">
                                         {product.image_url ? (
-                                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                            <Image 
+                                                src={product.image_url} 
+                                                alt={product.name} 
+                                                fill
+                                                className="object-cover group-hover:scale-110 transition-transform duration-700" 
+                                            />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-text-muted"><ShoppingBag size={32} /></div>
                                         )}
                                         <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded-xl shadow-md border border-white">
                                             <p className="text-[9px] font-black text-brand-600 uppercase tracking-wider">
-                                                {product.stock_status === 'available' ? 'Ipo' : 'Nyingi'}
+                                                {product.stock_status === 'available' ? t('common.available') : t('common.low_stock')}
                                             </p>
                                         </div>
                                     </div>
@@ -215,7 +233,7 @@ export default function TraderStorefrontPage() {
                                         </div>
                                         <div className="pt-2">
                                             <button className="w-full h-10 bg-neutral-50 text-green-950 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 group-hover:bg-brand-600 group-hover:text-white transition-all">
-                                                <Plus size={14} /> Hifadhi
+                                                <Plus size={14} /> {t('storefront.reserve_item')}
                                             </button>
                                         </div>
                                     </div>
@@ -223,7 +241,7 @@ export default function TraderStorefrontPage() {
                             )) : (
                                 <div className="col-span-2 py-12 text-center space-y-3">
                                     <ShoppingBag size={48} className="mx-auto text-neutral-200" />
-                                    <p className="text-sm font-bold text-text-muted uppercase tracking-widest">Hakuna bidhaa kwa sasa</p>
+                                    <p className="text-sm font-bold text-text-muted uppercase tracking-widest">{t('storefront.no_products') || 'No products yet'}</p>
                                 </div>
                             )}
                         </motion.div>
@@ -238,34 +256,34 @@ export default function TraderStorefrontPage() {
                             className="space-y-8"
                         >
                             <div className="space-y-4">
-                                <h3 className="text-lg font-black text-green-950 tracking-tight">Maelezo ya Biashara</h3>
+                                <h3 className="text-lg font-black text-green-950 tracking-tight">{t('storefront.business_desc_title')}</h3>
                                 <p className="text-sm text-text-secondary leading-relaxed font-medium">
-                                    {trader.description || "Duka hili liko tayari kukuhudumia na bidhaa bora zaidi katika soko la " + trader.market?.name + "."}
+                                    {trader.description || t('storefront.description_fallback').replace('{market}', trader.market?.name || 'Soko')}
                                 </p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-neutral-50 p-6 rounded-[2rem] border border-gray-100 flex flex-col items-center text-center">
                                     <Calendar className="text-brand-600 mb-2" size={24} />
-                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Amefungua Tangu</p>
-                                    <h4 className="text-sm font-black text-green-950">Januari 2024</h4>
+                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">{t('storefront.opened_since')}</p>
+                                    <h4 className="text-sm font-black text-green-950">Jan 2024</h4>
                                 </div>
                                 <div className="bg-neutral-50 p-6 rounded-[2rem] border border-gray-100 flex flex-col items-center text-center">
                                     <Award className="text-brand-600 mb-2" size={24} />
-                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Mauzo (Total)</p>
-                                    <h4 className="text-sm font-black text-green-950">500+ Oda</h4>
+                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">{t('storefront.total_sales')}</p>
+                                    <h4 className="text-sm font-black text-green-950">500+ {t('common.orders')}</h4>
                                 </div>
                             </div>
 
                             <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-4">
-                                <h4 className="font-black text-green-950 text-sm tracking-tight uppercase">Mawasiliano & Huduma</h4>
+                                <h4 className="font-black text-green-950 text-sm tracking-tight uppercase">{t('storefront.contact_info')}</h4>
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-brand-600">
                                             <Phone size={18} />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">Simu</p>
+                                            <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">{t('storefront.phone')}</p>
                                             <p className="text-sm font-bold text-green-950">0712 345 678</p>
                                         </div>
                                     </div>
@@ -274,7 +292,7 @@ export default function TraderStorefrontPage() {
                                             <MapPin size={18} />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">Location</p>
+                                            <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">{t('storefront.location')}</p>
                                             <p className="text-sm font-bold text-green-950">{trader.market?.name}, Stall {trader.stall?.stall_number}</p>
                                         </div>
                                     </div>
@@ -299,36 +317,36 @@ export default function TraderStorefrontPage() {
                                         <h2 className="text-5xl font-black font-mono tracking-tighter">{stats.avg}</h2>
                                         <span className="text-xs font-bold text-white/60">/ 5.0</span>
                                     </div>
-                                    <p className="text-[11px] font-black uppercase tracking-widest text-brand-200 mt-1">{stats.count} Maoni ya wateja</p>
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                    {[5,4,3,2,1].map((star) => (
-                                        <div key={star} className="flex items-center gap-2">
-                                            <span className="text-[8px] font-black opacity-60 w-2">{star}</span>
-                                            <div className="w-20 h-1 bg-white/10 rounded-full overflow-hidden">
-                                                <div className="h-full bg-brand-500 rounded-full" style={{ width: star > 3 ? `${90 - (5-star)*20}%` : '10%' }} />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                    <p className="text-[11px] font-black uppercase tracking-widest text-brand-200 mt-1">{stats.count} {t('storefront.customer_reviews')}</p>
+                                 </div>
+                                 <div className="flex flex-col gap-1">
+                                     {[5,4,3,2,1].map((star) => (
+                                         <div key={star} className="flex items-center gap-2">
+                                             <span className="text-[8px] font-black opacity-60 w-2">{star}</span>
+                                             <div className="w-20 h-1 bg-white/10 rounded-full overflow-hidden">
+                                                 <div className="h-full bg-brand-500 rounded-full" style={{ width: star > 3 ? `${90 - (5-star)*20}%` : '10%' }} />
+                                             </div>
+                                         </div>
+                                     ))}
+                                 </div>
                             </div>
 
                             {/* Review List */}
                             <div className="space-y-4">
                                 {isReviewsLoading ? (
-                                    <div className="py-12 flex justify-center">
-                                        <Loader2 className="animate-spin text-brand-600" />
-                                    </div>
-                                ) : reviews.length > 0 ? (
-                                    reviews.map((review) => (
-                                        <ReviewCard key={review.id} review={review} />
-                                    ))
-                                ) : (
-                                    <div className="py-12 text-center space-y-2 opacity-40">
-                                        <Star size={40} className="mx-auto" />
-                                        <p className="text-xs font-black uppercase tracking-widest">Hakuna maoni bado</p>
-                                    </div>
-                                )}
+                                     <div className="py-12 flex justify-center">
+                                         <Loader2 className="animate-spin text-brand-600" />
+                                     </div>
+                                 ) : reviews.length > 0 ? (
+                                     reviews.map((review) => (
+                                         <ReviewCard key={review.id} review={review} />
+                                     ))
+                                 ) : (
+                                     <div className="py-12 text-center space-y-2 opacity-40">
+                                         <Star size={40} className="mx-auto" />
+                                         <p className="text-xs font-black uppercase tracking-widest">{t('storefront.no_reviews')}</p>
+                                     </div>
+                                 )}
                             </div>
                         </motion.div>
                     )}
@@ -348,7 +366,7 @@ export default function TraderStorefrontPage() {
                         onClick={() => products.length > 0 && setSelectedProduct(products[0])}
                         className="flex-1 h-16 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-brand-200 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
-                        Hifadhi Bidhaa <ChevronRight size={18} />
+                        {t('storefront.reserve_item')} <ChevronRight size={18} />
                     </button>
                 </div>
             </div>
@@ -363,8 +381,6 @@ export default function TraderStorefrontPage() {
                     />
                 )}
             </AnimatePresence>
-
-            <BottomNav />
         </div>
     );
 }

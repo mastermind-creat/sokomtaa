@@ -4,22 +4,15 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
     TrendingUp, 
-    CreditCard, 
     AlertTriangle, 
     ArrowUpRight, 
     ArrowDownLeft, 
     Search,
     Download,
-    Settings,
     MoreHorizontal,
     Bell,
-    Wallet,
-    Calendar,
-    Filter,
     Activity,
-    DollarSign,
     ShieldCheck,
-    ChevronRight,
     ArrowRightCircle,
     Store
 } from 'lucide-react';
@@ -28,6 +21,7 @@ import { useUIStore } from '@/store/uiStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { ApiResponse, MarketFee } from '@/types';
 
 export default function AdminFeesPage() {
     const { setPageTitle } = useUIStore();
@@ -40,23 +34,23 @@ export default function AdminFeesPage() {
     const [activeTab, setActiveTab] = useState<'audit' | 'delinquents' | 'rates'>('audit');
     const [searchQuery, setSearchQuery] = useState('');
 
-    const { data: statsDataRaw, isLoading: statsLoading } = useQuery({
+    const { data: statsDataRaw, isLoading: statsLoading } = useQuery<ApiResponse<{ total_collected: number; collection_rate: number; delinquent_count: number }>>({
         queryKey: ['admin-fee-stats'],
-        queryFn: () => api.get('/admin/fees/stats').catch(() => ({ data: {} })),
+        queryFn: () => api.get('/admin/fees/stats').then(res => res.data),
     });
-    const statsData = (statsDataRaw as any)?.data || {};
+    const statsData = statsDataRaw?.data;
 
-    const { data: delinquentsRaw, isLoading: delinquentsLoading } = useQuery({
+    const { data: delinquentsRaw, isLoading: delinquentsLoading } = useQuery<ApiResponse<MarketFee[]>>({
         queryKey: ['admin-delinquents'],
-        queryFn: () => api.get('/admin/fees/delinquents').catch(() => ({ data: [] })),
+        queryFn: () => api.get('/admin/fees/delinquents').then(res => res.data),
     });
-    const delinquents = (delinquentsRaw as any)?.data || [];
+    const delinquents = delinquentsRaw?.data || [];
 
-    const { data: transactionsDataRaw, isLoading: transactionsLoading } = useQuery({
+    const { data: transactionsDataRaw, isLoading: transactionsLoading } = useQuery<ApiResponse<{ data: MarketFee[] }>>({
         queryKey: ['admin-transactions'],
-        queryFn: () => api.get('/admin/fees/transactions').catch(() => ({ data: { data: [] } })),
+        queryFn: () => api.get('/admin/fees/transactions').then(res => res.data),
     });
-    const transactions = (transactionsDataRaw as any)?.data?.data || [];
+    const transactions = transactionsDataRaw?.data?.data || [];
 
     const stats = [
         { label: 'Collected', value: `KES ${Number(statsData?.total_collected || 42500).toLocaleString()}`, color: 'text-brand-600', icon: TrendingUp },

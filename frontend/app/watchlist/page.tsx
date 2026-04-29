@@ -10,7 +10,6 @@ import {
     Trash2, 
     ShoppingBag, 
     Store, 
-    ChevronRight,
     Loader2,
     ArrowUpRight,
     TrendingDown,
@@ -18,7 +17,8 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/shared/DashboardLayout';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { ApiResponse } from '@/types';
 
 interface WatchlistItem {
@@ -109,7 +109,7 @@ export default function WatchlistPage() {
                                 <div className="flex gap-4">
                                     <div className="w-24 h-24 bg-neutral-50 rounded-2xl overflow-hidden border border-gray-100 shrink-0 relative">
                                         {item.product.image_url ? (
-                                            <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
+                                            <Image src={item.product.image_url} alt={item.product.name} fill className="object-cover" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-text-muted"><ShoppingBag size={24} /></div>
                                         )}

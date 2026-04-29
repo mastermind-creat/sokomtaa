@@ -5,10 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    FileText, 
     BarChart3, 
     TrendingUp, 
-    Calendar, 
     Download, 
     Mail, 
     Clock, 
@@ -17,10 +15,9 @@ import {
     Activity,
     ShieldCheck,
     Zap,
-    Filter,
     Search,
-    FileSearch,
-    RefreshCcw
+    RefreshCcw,
+    Plus
 } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/lib/utils';
@@ -193,8 +190,4 @@ export default function AdminReportsPage() {
             </div>
         </div>
     );
-}
-
-function Plus({ size }: { size: number }) {
-    return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14m-7-7v14"/></svg>;
 }

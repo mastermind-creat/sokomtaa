@@ -14,35 +14,14 @@ import {
     ChevronRight,
     User,
     Phone,
-    Filter,
     Activity,
     CheckCircle2,
     Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ApiResponse } from '@/types';
+import { ApiResponse, Trader } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
-
-interface Trader {
-    id: number;
-    business_name: string;
-    verification_status: 'pending' | 'verified' | 'rejected';
-    average_rating: number;
-    user: {
-        name: string;
-        phone: string;
-        email?: string;
-    };
-    market?: {
-        name: string;
-    };
-    stall?: {
-        stall_number: string;
-        block: string;
-    };
-    created_at: string;
-}
 
 export default function AdminTradersPage() {
     const { t } = useTranslation();
@@ -57,20 +36,16 @@ export default function AdminTradersPage() {
 
     const { data: tradersData, isLoading } = useQuery<ApiResponse<Trader[]>>({
         queryKey: ['admin-traders'],
-        queryFn: () => api.get('/admin/traders').catch(() => ({ data: { data: [
-            { id: 1, business_name: 'Mama Ngina Fruits', verification_status: 'verified', average_rating: 4.8, user: { name: 'Ngina W.', phone: '0712345678' }, market: { name: 'Muthurwa Market' }, stall: { stall_number: 'B12', block: 'B' } },
-            { id: 2, business_name: 'Zambezi Electronics', verification_status: 'pending', average_rating: 0, user: { name: 'John Doe', phone: '0722334455' }, market: { name: 'City Market' }, stall: { stall_number: 'A4', block: 'A' } },
-            { id: 3, business_name: 'Coastal Fish Supply', verification_status: 'verified', average_rating: 4.2, user: { name: 'Salim K.', phone: '0733445566' }, market: { name: 'Kongowea' }, stall: { stall_number: 'C1', block: 'C' } }
-        ] } } as any)),
+        queryFn: () => api.get('/admin/traders').then(res => res.data),
     });
     
-    const traders: Trader[] = Array.isArray(tradersData?.data) ? tradersData.data : ((tradersData?.data as any)?.data || []);
+    const traders = tradersData?.data || [];
 
     const filteredTraders = traders.filter(t => {
         const matchesSearch = 
             t.business_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            t.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            t.user.phone.includes(searchQuery);
+            (t.user?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (t.user?.phone || '').includes(searchQuery);
             
         const matchesStatus = filterStatus === 'all' || t.verification_status === filterStatus;
         return matchesSearch && matchesStatus;

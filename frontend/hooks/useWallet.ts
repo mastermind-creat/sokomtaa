@@ -33,7 +33,7 @@ export function useWallet() {
         queryFn: () => api.get('/trader/wallet'),
     });
 
-    const { data: transactionsData, isLoading: transactionsLoading } = useQuery<ApiResponse<any>>({
+    const { data: transactionsData, isLoading: transactionsLoading } = useQuery<ApiResponse<{ data: WalletTransaction[] }>>({
         queryKey: ['wallet-transactions'],
         queryFn: () => api.get('/trader/wallet/transactions'),
     });

@@ -13,7 +13,6 @@ import {
     Settings,
     ChevronRight,
     ChevronDown,
-    Search,
     BarChart3,
     Map as MapIcon,
     CreditCard,
@@ -25,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useAuthStore } from '@/store/authStore';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -208,8 +208,12 @@ export default function AdminSidebar() {
                     </div>
                     
                     <button 
-                        onClick={() => router.push('/logout')}
-                        className="w-full flex items-center justify-center p-3 rounded-xl bg-red-50 text-red-600 font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-colors"
+                        onClick={() => {
+                            const { logout } = useAuthStore.getState();
+                            logout();
+                            router.push('/login');
+                        }}
+                        className="w-full h-14 flex items-center justify-center p-3 rounded-2xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-100 active:scale-95 transition-all"
                     >
                         Sign Out
                     </button>
@@ -219,7 +223,7 @@ export default function AdminSidebar() {
     );
 }
 
-const Building2 = ({ size, className, strokeWidth }: any) => (
+const Building2 = ({ size, className, strokeWidth }: { size?: number; className?: string; strokeWidth?: number }) => (
     <svg 
         width={size} 
         height={size} 

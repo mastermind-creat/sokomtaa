@@ -7,6 +7,8 @@ import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { ChevronLeft, Search, Frown, Loader2, Store, MapPin, Package } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface SearchResult {
     id: number;
@@ -37,6 +39,7 @@ interface SearchResponse {
 function SearchPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const { t, locale } = useTranslation();
     const query = searchParams.get('q') || '';
     
     const [inputValue, setInputValue] = useState(query);
@@ -64,7 +67,7 @@ function SearchPageContent() {
                     <button 
                         onClick={() => router.back()} 
                         className="w-14 h-14 flex items-center justify-center rounded-2xl bg-white border border-border-default active:scale-90 transition-all shrink-0"
-                        aria-label="Rudi nyuma (Back)"
+                        aria-label={t('common.back')}
                     >
                         <ChevronLeft size={24} />
                     </button>
@@ -77,7 +80,7 @@ function SearchPageContent() {
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             className="w-full h-14 pl-12 pr-4 bg-white rounded-2xl border-2 border-transparent shadow-brand-sm focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 focus:outline-none transition-all placeholder:text-text-muted text-text-primary text-base font-medium"
-                            placeholder="Tafuta..."
+                            placeholder={t('common.search_placeholder')}
                             autoFocus
                         />
                     </form>
@@ -89,30 +92,27 @@ function SearchPageContent() {
                 {query.length < 2 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-text-muted text-center">
                         <Search size={48} className="mb-4 opacity-20" />
-                        <p className="font-medium">Andika herufi 2 au zaidi kuanza utafutaji.</p>
-                        <p className="text-sm mt-1">(Type 2 or more characters to search)</p>
+                        <p className="font-medium">{t('search.min_chars') || 'Type 2 or more characters to search.'}</p>
                     </div>
                 ) : isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-brand-600">
                         <Loader2 size={40} className="animate-spin mb-4" />
-                        <p className="font-bold">Inatafuta...</p>
+                        <p className="font-bold">{t('common.loading')}</p>
                     </div>
                 ) : isError ? (
                     <div className="flex flex-col items-center justify-center py-20 text-color-error text-center">
                         <Frown size={48} className="mb-4 opacity-50" />
-                        <p className="font-bold mb-1">Samahani, kuna tatizo.</p>
-                        <p className="text-sm text-text-secondary">Jaribu tena baadae.</p>
+                        <p className="font-bold mb-1">{t('common.error')}</p>
                     </div>
                 ) : results.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <Frown size={48} className="mb-4 text-neutral-300" />
-                        <p className="font-bold text-text-primary mb-1">Hatujapata matokeo ya &quot;{query}&quot;</p>
-                        <p className="text-sm text-text-secondary">Jaribu kutumia maneno mengine.</p>
+                        <p className="font-bold text-text-primary mb-1">{t('search.no_results').replace('{query}', query)}</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         <h2 className="text-sm font-bold text-text-secondary mb-2 uppercase tracking-wider">
-                            Matokeo ({searchData?.data.total})
+                            {t('search.results_count').replace('{total}', searchData?.data.total.toString() || '0')}
                         </h2>
                         
                         <div className="grid gap-4">
@@ -126,9 +126,14 @@ function SearchPageContent() {
                                     }
                                     className="flex items-center gap-4 bg-surface-card p-4 rounded-3xl border border-border-default shadow-sm active:scale-[0.98] transition-all group"
                                 >
-                                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden ${result.search_type === 'market' ? 'bg-amber-100 text-amber-600' : 'bg-brand-50 text-brand-500'}`}>
+                                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden relative ${result.search_type === 'market' ? 'bg-amber-100 text-amber-600' : 'bg-brand-50 text-brand-500'}`}>
                                         {(result.image_url || result.avatar_url) ? (
-                                            <img src={(result.image_url || result.avatar_url)!} alt="" className="w-full h-full object-cover" />
+                                            <Image 
+                                                src={(result.image_url || result.avatar_url)!} 
+                                                alt="" 
+                                                fill
+                                                className="object-cover" 
+                                            />
                                         ) : (
                                             result.search_type === 'product' ? <Package size={24} /> :
                                             result.search_type === 'trader' ? <Store size={24} /> :
@@ -142,12 +147,12 @@ function SearchPageContent() {
                                                 result.search_type === 'trader' ? 'bg-blue-100 text-blue-700' :
                                                 'bg-amber-100 text-amber-700'
                                             }`}>
-                                                {result.search_type}
+                                                {t(`common.${result.search_type}`)}
                                             </span>
                                         </div>
                                         <h3 className="font-bold text-text-primary text-base truncate group-hover:text-brand-700 transition-colors">
-                                            {result.search_type === 'product' ? (result.name_sw || result.name) :
-                                             result.search_type === 'trader' ? (result.business_name_sw || result.business_name) :
+                                            {result.search_type === 'product' ? (locale === 'sw' ? (result.name_sw || result.name) : result.name) :
+                                             result.search_type === 'trader' ? (locale === 'sw' ? (result.business_name_sw || result.business_name) : result.business_name) :
                                              result.name}
                                         </h3>
                                         <div className="text-xs text-text-secondary mt-1 truncate">

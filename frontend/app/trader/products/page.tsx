@@ -13,18 +13,9 @@ import {
     Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { ApiResponse } from '@/types';
+import { ApiResponse, Product } from '@/types';
 import { useUIStore } from '@/store/uiStore';
-
-interface Product {
-    id: number;
-    name: string;
-    price: string;
-    unit: string;
-    stock_status: 'available' | 'low' | 'out_of_stock';
-    image_url: string;
-    category: { name: string };
-}
+import Image from 'next/image';
 
 export default function ProductListPage() {
     const router = useRouter();
@@ -87,7 +78,12 @@ export default function ProductListPage() {
                         <div key={product.id} className="card p-3 flex gap-4 hover:shadow-brand-md transition-all">
                             <div className="w-24 h-24 bg-neutral-100 rounded-xl overflow-hidden relative shadow-inner grow-0 shrink-0">
                                 {product.image_url ? (
-                                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                                    <Image 
+                                        src={product.image_url} 
+                                        alt={product.name} 
+                                        fill
+                                        className="object-cover" 
+                                    />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-text-muted">
                                         <Package size={32} />

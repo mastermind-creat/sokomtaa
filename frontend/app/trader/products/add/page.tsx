@@ -19,6 +19,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { ApiResponse } from '@/types';
 import { useUIStore } from '@/store/uiStore';
+import Image from 'next/image';
 
 interface Category {
     id: number;
@@ -71,15 +72,17 @@ export default function AddProductPage() {
     // Create Category Mutation
     const createCategoryMutation = useMutation({
         mutationFn: (data: { name: string; name_sw: string }) => api.post('/categories', data),
-        onSuccess: (response: any) => {
+        onSuccess: (response: ApiResponse<Category>) => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
-            setValue('category_id', String(response.data.data.id));
+            if (response.data?.id) {
+                setValue('category_id', String(response.data.id));
+            }
             setIsAddingCategory(false);
             setNewCatName('');
             setNewCatNameSw('');
         },
-        onError: (error: any) => {
-            alert('Imeshindikana kuongeza kundi. Category already exists or server error.');
+        onError: (error: Error) => {
+            alert(`Imeshindikana kuongeza kundi: ${error.message}`);
         }
     });
 
@@ -90,7 +93,7 @@ export default function AddProductPage() {
         onSuccess: () => {
             router.push('/trader/products');
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
             console.error('Submission error:', error);
             alert(`Imeshindikana kuhifadhi: ${error.message || 'Hitilafu ya seva'}`);
         }
@@ -133,7 +136,12 @@ export default function AddProductPage() {
                     <div className="relative aspect-video w-full rounded-[32px] border-2 border-dashed border-neutral-200 bg-neutral-50/50 flex flex-col items-center justify-center overflow-hidden group hover:border-brand-500 transition-all shadow-inner">
                         {imagePreview ? (
                             <>
-                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                <Image 
+                                    src={imagePreview} 
+                                    alt="Preview" 
+                                    fill
+                                    className="object-cover" 
+                                />
                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                     <div className="p-4 bg-white/20 backdrop-blur-md rounded-full border border-white/30">
                                         <Camera size={32} className="text-white" />

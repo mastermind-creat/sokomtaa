@@ -8,7 +8,7 @@ import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 
 import { useUIStore } from '@/store/uiStore';
-import { useTranslation } from '@/hooks/useTranslation';
+
 
 interface TraderSettings {
     notifications: {
@@ -87,7 +87,7 @@ export default function TraderSettingsPage() {
     const update = (path: string, value: boolean | string) => {
         if (!current) return;
         const [section, key] = path.split('.');
-        setLocal({ ...current, [section]: { ...(current as any)[section], [key]: value } } as TraderSettings);
+        setLocal({ ...current, [section]: { ...(current as Record<string, unknown>)[section] as Record<string, unknown>, [key]: value } } as TraderSettings);
     };
 
     if (isLoading || !current) {

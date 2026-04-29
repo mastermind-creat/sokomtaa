@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useAuthStore } from '@/store/authStore';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
 
@@ -104,9 +105,22 @@ export default function ResidentSidebar() {
                     {t('common.profile')}
                 </button>
                 
-                <div className="p-4 bg-white/50 rounded-3xl space-y-3 border border-gray-100">
-                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">{t('common.language')}</p>
-                    <LanguageToggle />
+                <div className="p-4 bg-white/50 rounded-3xl space-y-4 border border-gray-100">
+                    <div className="space-y-1.5">
+                        <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">{t('common.language')}</p>
+                        <LanguageToggle />
+                    </div>
+                    
+                    <button 
+                        onClick={() => {
+                            const { logout } = useAuthStore.getState();
+                            logout();
+                            router.push('/login');
+                        }}
+                        className="w-full h-12 flex items-center justify-center p-3 rounded-2xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-100 active:scale-95 transition-all"
+                    >
+                        Sign Out
+                    </button>
                 </div>
             </div>
         </aside>

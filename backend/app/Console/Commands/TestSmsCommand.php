@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\AfricasTalkingService;
+use App\Services\TalkSasaService;
 use Illuminate\Console\Command;
 
 class TestSmsCommand extends Command
@@ -19,12 +19,12 @@ class TestSmsCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Test sending an SMS via Africa\'s Talking';
+    protected $description = 'Test sending an SMS via Talk Sasa';
 
     /**
      * Execute the console command.
      */
-    public function handle(AfricasTalkingService $smsService)
+    public function handle(TalkSasaService $smsService)
     {
         $phone = $this->argument('phone');
         $message = $this->argument('message');

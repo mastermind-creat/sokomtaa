@@ -10,7 +10,7 @@ class NotificationService
 {
     protected $smsService;
 
-    public function __construct(AfricasTalkingService $smsService)
+    public function __construct(TalkSasaService $smsService)
     {
         $this->smsService = $smsService;
     }

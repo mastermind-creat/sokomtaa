@@ -8,11 +8,8 @@ import {
     BarChart3, 
     CreditCard, 
     Settings,
-    ChevronRight,
     Store,
-    User,
     RefreshCw,
-    Briefcase,
     MessageSquare,
     LucideIcon
 } from 'lucide-react';
@@ -65,7 +62,6 @@ const SidebarLink = ({ href, icon: Icon, label, active, count }: SidebarLinkProp
 export default function TraderSidebar() {
     const router = useRouter();
     const pathname = usePathname();
-    const { user } = useAuthStore();
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = React.useState(true);
 
@@ -144,9 +140,22 @@ export default function TraderSidebar() {
                     {t('common.settings')}
                 </button>
                 
-                <div className="p-4 bg-gray-50 rounded-3xl space-y-3">
-                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">{t('common.language')}</p>
-                    <LanguageToggle />
+                <div className="p-4 bg-gray-50 rounded-3xl space-y-4">
+                    <div className="space-y-1.5">
+                        <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">{t('common.language')}</p>
+                        <LanguageToggle />
+                    </div>
+                    
+                    <button 
+                        onClick={() => {
+                            const { logout } = useAuthStore.getState();
+                            logout();
+                            router.push('/login');
+                        }}
+                        className="w-full h-12 flex items-center justify-center p-3 rounded-2xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-100 active:scale-95 transition-all"
+                    >
+                        Sign Out
+                    </button>
                 </div>
             </div>
         </aside>

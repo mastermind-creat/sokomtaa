@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 
@@ -27,11 +28,6 @@ export const MarketPreview = () => {
       return response.data;
     }
   });
-
-  const handleMarketClick = (e: React.MouseEvent) => {
-    // For now, any click on "View Traders" or the card redirects to login as requested
-    // except if we want them to see the market details (but the user said redirect to login page)
-  };
 
   const CATEGORIES = [
     { id: 'all', label: 'All Markets' },
@@ -103,11 +99,14 @@ export const MarketPreview = () => {
                     <div key={market.id} className="group flex flex-col bg-white border border-gray-100 rounded-[40px] overflow-hidden hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500 relative">
                       <div className="h-56 bg-gray-200 relative overflow-hidden">
                         {market.banner_url ? (
-                          <img 
-                            src={market.banner_url} 
-                            alt={market.name} 
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                          />
+                          <div className="relative w-full h-full">
+                            <Image 
+                              src={market.banner_url} 
+                              alt={market.name} 
+                              fill
+                              className="object-cover transition-transform duration-700 group-hover:scale-110" 
+                            />
+                          </div>
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-green-900 to-green-700 flex items-center justify-center">
                             <span className="text-white font-black text-4xl opacity-20">{market.name.charAt(0)}</span>
@@ -125,7 +124,9 @@ export const MarketPreview = () => {
                           </div>
                           <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-xl">
                             {market.icon_url ? (
-                                <img src={market.icon_url} alt="" className="w-6 h-6" />
+                                <div className="relative w-6 h-6">
+                                <Image src={market.icon_url} alt="" fill className="object-contain" />
+                              </div>
                             ) : (
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
                             )}

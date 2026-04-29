@@ -7,16 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Plus, 
     Search, 
-    Filter, 
-    Calendar, 
     User, 
     Building2, 
-    MoreHorizontal,
-    ExternalLink,
-    AlertCircle,
-    XCircle,
-    CheckCircle2,
-    CalendarClock,
     ChevronRight,
     MapPin,
     ArrowUpRight
@@ -24,6 +16,7 @@ import {
 import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ApiResponse, Allocation } from '@/types';
 
 export default function AdminAllocationsPage() {
     const { setPageTitle } = useUIStore();
@@ -34,17 +27,17 @@ export default function AdminAllocationsPage() {
         setPageTitle('Stall Allocations');
     }, [setPageTitle]);
 
-    const { data: allocationsRaw, isLoading } = useQuery({
+    const { data: allocationsRaw, isLoading } = useQuery<ApiResponse<{ data: Allocation[] }>>({
         queryKey: ['admin-allocations', statusFilter],
-        queryFn: () => api.get('/admin/allocations', { params: { status: statusFilter } }).catch(() => ({ data: { data: [] } })),
+        queryFn: () => api.get('/admin/allocations', { params: { status: statusFilter } }).then(res => res.data),
     });
 
-    const allocations = (allocationsRaw as any)?.data?.data || [];
+    const allocations = allocationsRaw?.data?.data || [];
 
     const stats = [
-        { label: 'Occupied', count: allocations.filter((a: any) => a.status === 'active').length, color: 'text-brand-600' },
+        { label: 'Occupied', count: allocations.filter((a: Allocation) => a.status === 'active').length, color: 'text-brand-600' },
         { label: 'Vacant', count: 12, color: 'text-orange-600' }, // Mock vacant data for matrix
-        { label: 'Expiring', count: allocations.filter((a: any) => a.status === 'expired').length, color: 'text-red-600' },
+        { label: 'Expiring', count: allocations.filter((a: Allocation) => a.status === 'expired').length, color: 'text-red-600' },
     ];
 
     return (
@@ -99,7 +92,7 @@ export default function AdminAllocationsPage() {
                     [1, 2, 3].map(i => <div key={i} className="h-40 bg-gray-100 rounded-[2.5rem] animate-pulse" />)
                 ) : (
                     <AnimatePresence>
-                        {allocations.map((item: any) => (
+                        {allocations.map((item: Allocation) => (
                             <motion.div 
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}

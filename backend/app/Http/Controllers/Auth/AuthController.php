@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use App\Services\TalkSasaService;
+use Illuminate\Support\Facades\Cache;
 
 class AuthController extends Controller
 {
@@ -26,14 +28,21 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'national_id' => $request->national_id,
-            'preferred_language' => $request->preferred_language ?? 'sw',
+            'preferred_language' => $request->preferred_language ?? 'en',
         ]);
 
-        // Generate a simple 6-digit OTP for testing
+        // Generate a 6-digit OTP
         $otp = rand(100000, 999999);
         
-        // Log Mode: Africa's Talking placeholder
-        Log::info("OTP for {$user->phone}: {$otp}");
+        // Store OTP in cache for 10 minutes
+        Cache::put("otp_{$user->id}", $otp, now()->addMinutes(config('otp.expiry_minutes', 10)));
+
+        // Send OTP via Talk Sasa
+        $smsService = app(TalkSasaService::class);
+        $message = "Soko Mtaa: Your verification code is {$otp}. Please do not share it with anyone.";
+        $smsService->sendSms($user->phone, $message);
+        
+        Log::info("OTP sent to {$user->phone}");
         
         // In a real scenario, we'd store this in cache or a verification table
         // For now, we'll return it in the response if APP_DEBUG is true for easy testing
@@ -80,15 +89,21 @@ class AuthController extends Controller
     public function verifyPhone(Request $request): JsonResponse
     {
         $request->validate(['otp' => 'required|string|size:6']);
-
-        // Since we are in log mode/testing, any 6-digit code works for now
-        // Or we could implement a simple verification logic if needed.
         
         $user = $request->user();
+        $cachedOtp = Cache::get("otp_{$user->id}");
+
+        if (!$cachedOtp || $cachedOtp != $request->otp) {
+            return $this->error('The OTP is incorrect or has expired.', 'INVALID_OTP', 422);
+        }
+
         $user->update([
             'phone_verified' => true,
             'phone_verified_at' => now(),
         ]);
+
+        // Clear OTP from cache
+        Cache::forget("otp_{$user->id}");
 
         return $this->success($user, 'Phone number verified successfully.');
     }

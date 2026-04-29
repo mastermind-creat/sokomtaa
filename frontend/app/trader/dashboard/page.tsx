@@ -12,13 +12,10 @@ import {
     Activity,
     ChevronRight,
     Zap,
-    MoreHorizontal,
     Phone,
     CheckCircle2,
     AlertTriangle,
     BarChart3,
-    Search,
-    Bell,
     Loader2
 } from 'lucide-react';
 import api from '@/lib/api';
@@ -27,6 +24,12 @@ import { useAuthStore } from '@/store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { Reservation, TraderDashboardStats, ApiResponse } from '@/types';
+
+interface TraderStats extends TraderDashboardStats {
+    growth?: string;
+    has_overdue_fees?: boolean;
+}
 
 export default function TraderDashboard() {
     const { setPageTitle } = useUIStore();
@@ -44,17 +47,17 @@ export default function TraderDashboard() {
         setTimeout(() => setProcessingId(null), 2000);
     };
 
-    const { data: statsRaw, isLoading: statsLoading } = useQuery({
+    const { data: statsRaw, isLoading: statsLoading } = useQuery<ApiResponse<TraderStats>>({
         queryKey: ['trader-stats'],
-        queryFn: () => api.get('/trader/stats').catch(() => ({ data: {} })),
+        queryFn: () => api.get('/trader/stats').then(res => res.data),
     });
-    const statsData = (statsRaw as any)?.data || {};
+    const statsData = statsRaw?.data;
 
-    const { data: recentReservationsRaw, isLoading: resLoading } = useQuery({
+    const { data: recentReservationsRaw, isLoading: resLoading } = useQuery<ApiResponse<Reservation[]>>({
         queryKey: ['recent-reservations'],
-        queryFn: () => api.get('/trader/reservations/recent').catch(() => ({ data: [] })),
+        queryFn: () => api.get('/trader/reservations/recent').then(res => res.data),
     });
-    const reservations = (recentReservationsRaw as any)?.data || [];
+    const reservations = recentReservationsRaw?.data || [];
 
     const profitabilityStats = [
         { label: 'Growth', value: statsData?.growth || '+12%', color: 'text-brand-600', icon: TrendingUp },
@@ -157,7 +160,7 @@ export default function TraderDashboard() {
                             <p className="text-xs font-black text-text-muted uppercase tracking-widest">Inventory is stationary.</p>
                         </div>
                     ) : (
-                        reservations.map((res: any) => (
+                        reservations.map((res: Reservation) => (
                             <div key={res.id} className="bg-white rounded-[2.5rem] border border-gray-50 shadow-sm overflow-hidden group">
                                 <div className="p-6">
                                     <div className="flex items-start justify-between mb-4">
@@ -215,7 +218,7 @@ export default function TraderDashboard() {
                 </div>
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex gap-3 z-50">
+            <div className="fixed bottom-[72px] lg:bottom-6 left-0 right-0 p-4 md:p-6 bg-white/80 backdrop-blur-xl border-t lg:border border-gray-100 flex gap-3 z-40 lg:rounded-[2.5rem] lg:left-auto lg:right-10 lg:w-[400px] lg:shadow-2xl">
                 <Link href="/trader/products/add" className="flex-1 h-16 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-2xl shadow-brand-600/30">
                     <Plus size={20} /> Deploy Inventory
                 </Link>

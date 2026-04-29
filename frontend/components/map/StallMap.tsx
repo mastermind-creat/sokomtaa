@@ -4,16 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Store, Navigation, MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 // Fix for default Leaflet icons in Next.js
-const icon = L.icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-});
+
 
 // Custom Brand Icon for Stalls
 const createStallIcon = (color: string) => L.divIcon({
@@ -40,15 +34,7 @@ interface StallMapProps {
     zoom?: number;
 }
 
-const SetViewOnClick = ({ animateRef }: { animateRef: any }) => {
-    const map = useMap();
-    useEffect(() => {
-        if (animateRef) {
-            map.flyTo(animateRef, 18, { duration: 1.5 });
-        }
-    }, [animateRef]);
-    return null;
-};
+
 
 export default function StallMap({ center, stalls, zoom = 16 }: StallMapProps) {
     const router = useRouter();

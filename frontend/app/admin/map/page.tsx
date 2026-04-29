@@ -20,6 +20,7 @@ import {
     Users,
     ArrowRight
 } from 'lucide-react';
+import { ApiResponse, Stall } from '@/types';
 
 const MarketSchematicMap = dynamic(() => import('@/components/map/MarketSchematicMap'), { 
     ssr: false,
@@ -29,24 +30,18 @@ const MarketSchematicMap = dynamic(() => import('@/components/map/MarketSchemati
 export default function AdminMapPage() {
     const { setPageTitle } = useUIStore();
     const [selectedBlock, setSelectedBlock] = useState('A');
-    const [selectedStall, setSelectedStall] = useState<any>(null);
+    const [selectedStall, setSelectedStall] = useState<Stall | null>(null);
 
     React.useEffect(() => {
         setPageTitle('Market Map (Ramani)');
     }, [setPageTitle]);
 
-    const { data: mapDataRaw, isLoading } = useQuery({
+    const { data: mapDataRaw, isLoading } = useQuery<ApiResponse<Stall[]>>({
         queryKey: ['admin-map-data', selectedBlock],
-        queryFn: () => api.get('/admin/map-data', { params: { block: selectedBlock } }).catch(() => ({ data: [] })),
+        queryFn: () => api.get('/admin/map-data', { params: { block: selectedBlock } }).then(res => res.data),
     });
 
-    const stalls = (mapDataRaw as any)?.data || [
-        { id: 1, stall_number: 'A1', zone: 'A', status: 'occupied', map_x: 60, map_y: 100, trader: { business_name: "Mama Wanjiru's Mboga", is_open: true, active_since: '2023-01-12' } },
-        { id: 2, stall_number: 'A2', zone: 'A', status: 'occupied', map_x: 60, map_y: 180, trader: { business_name: "Ochieng Fish", is_open: false, active_since: '2023-05-20' } },
-        { id: 7, stall_number: 'B1', zone: 'B', status: 'available', map_x: 180, map_y: 100 },
-        { id: 8, stall_number: 'B2', zone: 'B', status: 'maintenance', map_x: 320, map_y: 100 },
-        { id: 3, stall_number: 'C1', zone: 'C', status: 'occupied', map_x: 440, map_y: 100, trader: { business_name: "Tech Safi", is_open: true } },
-    ];
+    const stalls = mapDataRaw?.data || [];
 
     return (
         <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row gap-6 p-4 md:p-8 max-w-[1600px] mx-auto overflow-hidden">

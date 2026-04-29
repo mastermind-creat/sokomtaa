@@ -72,123 +72,125 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
     return (
         <AnimatePresence>
             {isOpen && (
-                <>
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
-                    />
-                    <motion.div 
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] p-8 z-[70] shadow-2xl safe-bottom"
-                    >
-                        <div className="flex justify-between items-center mb-1">
-                            <h2 className="text-2xl font-bold text-green-950">{title || 'Lipa na M-Pesa'}</h2>
-                            <button 
-                                onClick={onClose} 
-                                className="p-2 bg-slate-100 rounded-full active:scale-90 transition-all"
-                                aria-label="Funga (Close)"
-                                title="Funga (Close)"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        {description && (
-                            <p className="text-xs text-text-secondary font-medium mb-6">
-                                {description}
-                            </p>
-                        )}
+                <motion.div 
+                    key="mpesa-backdrop"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={onClose}
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
+                />
+            )}
+            {isOpen && (
+                <motion.div 
+                    key="mpesa-sheet"
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                    className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] p-8 z-[70] shadow-2xl safe-bottom"
+                >
+                    <div className="flex justify-between items-center mb-1">
+                        <h2 className="text-2xl font-bold text-green-950">{title || 'Lipa na M-Pesa'}</h2>
+                        <button 
+                            onClick={onClose} 
+                            className="p-2 bg-slate-100 rounded-full active:scale-90 transition-all"
+                            aria-label="Funga (Close)"
+                            title="Funga (Close)"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+                    {description && (
+                        <p className="text-xs text-text-secondary font-medium mb-6">
+                            {description}
+                        </p>
+                    )}
 
-                        {type !== 'wallet_topup' ? (
-                            <div className="mb-8 p-6 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-4">
-                                <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white shrink-0">
-                                    <span className="font-bold">KES</span>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-green-800">Kiasi cha Kulipa (Amount to Pay)</p>
-                                    <p className="text-3xl font-bold text-green-900">{amount?.toLocaleString()}</p>
-                                </div>
+                    {type !== 'wallet_topup' ? (
+                        <div className="mb-8 p-6 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-4">
+                            <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                                <span className="font-bold">KES</span>
                             </div>
-                        ) : (
-                            <div className="mb-8 space-y-2">
-                                <label className="input-label mb-2 block tracking-tight font-black text-green-950 uppercase text-[10px]">Kiasi unachoongeza (Top-up Amount)</label>
+                            <div>
+                                <p className="text-sm text-green-800">Kiasi cha Kulipa (Amount to Pay)</p>
+                                <p className="text-3xl font-bold text-green-900">{amount?.toLocaleString()}</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="mb-8 space-y-2">
+                            <label className="input-label mb-2 block tracking-tight font-black text-green-950 uppercase text-[10px]">Kiasi unachoongeza (Top-up Amount)</label>
+                            <div className="flex items-center gap-3">
+                                <div className="h-16 px-5 bg-brand-50 border border-brand-100 rounded-xl flex shrink-0 items-center justify-center font-black text-brand-600">KES</div>
+                                <input
+                                    value={inputAmount}
+                                    onChange={(e) => setInputAmount(e.target.value)}
+                                    disabled={isProcessing}
+                                    placeholder="Min 10"
+                                    className="input flex-1 h-16 text-2xl font-black tracking-tighter"
+                                    type="number"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {status === 'idle' || status === 'pending' || status === 'error' ? (
+                        <div className="space-y-6">
+                            <div>
+                                <label className="input-label mb-2 block">Namba ya Simu (M-Pesa Number)</label>
                                 <div className="flex items-center gap-3">
-                                    <div className="h-16 px-5 bg-brand-50 border border-brand-100 rounded-xl flex shrink-0 items-center justify-center font-black text-brand-600">KES</div>
+                                    <div className="h-14 w-14 bg-gray-50 border border-gray-100 rounded-xl flex shrink-0 items-center justify-center text-text-muted">
+                                        <Phone size={20} />
+                                    </div>
                                     <input
-                                        value={inputAmount}
-                                        onChange={(e) => setInputAmount(e.target.value)}
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
                                         disabled={isProcessing}
-                                        placeholder="Min 10"
-                                        className="input flex-1 h-16 text-2xl font-black tracking-tighter"
-                                        type="number"
+                                        placeholder="2547XXXXXXXX"
+                                        className="input flex-1 h-14"
+                                        type="tel"
                                     />
                                 </div>
+                                {status === 'error' && (
+                                    <p className="mt-2 text-color-error text-sm flex items-center gap-2">
+                                        <AlertCircle size={16} /> {message}
+                                    </p>
+                                )}
                             </div>
-                        )}
 
-                        {status === 'idle' || status === 'pending' || status === 'error' ? (
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="input-label mb-2 block">Namba ya Simu (M-Pesa Number)</label>
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-14 w-14 bg-gray-50 border border-gray-100 rounded-xl flex shrink-0 items-center justify-center text-text-muted">
-                                            <Phone size={20} />
-                                        </div>
-                                        <input
-                                            value={phone}
-                                            onChange={(e) => setPhone(e.target.value)}
-                                            disabled={isProcessing}
-                                            placeholder="2547XXXXXXXX"
-                                            className="input flex-1 h-14"
-                                            type="tel"
-                                        />
-                                    </div>
-                                    {status === 'error' && (
-                                        <p className="mt-2 text-color-error text-sm flex items-center gap-2">
-                                            <AlertCircle size={16} /> {message}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <button
-                                    onClick={handlePayment}
-                                    disabled={isProcessing || !phone}
-                                    className="btn btn-primary w-full h-14 text-lg relative overflow-hidden"
-                                >
-                                    {isProcessing ? (
-                                        <div className="flex items-center gap-3">
-                                            <Loader2 className="animate-spin" />
-                                            Inachakata... (Processing...)
-                                        </div>
-                                    ) : (
-                                        'Lipa Sasa / Pay Now'
-                                    )}
-                                </button>
-                                
-                                <p className="text-center text-xs text-text-muted">
-                                    Tafadhali kamilisha malipo kwenye simu yako baada ya kugusa &quot;Lipa Sasa&quot;.
-                                </p>
-                            </div>
-                        ) : (
-                            <motion.div 
-                                initial={{ scale: 0.9, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="flex flex-col items-center py-8 text-center"
+                            <button
+                                onClick={handlePayment}
+                                disabled={isProcessing || !phone}
+                                className="btn btn-primary w-full h-14 text-lg relative overflow-hidden"
                             >
-                                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
-                                    <CheckCircle size={48} className="text-green-600" />
-                                </div>
-                                <h3 className="text-xl font-bold text-green-900 mb-2">Ombi Limetumwa!</h3>
-                                <p className="text-green-800 px-6">{message}</p>
-                            </motion.div>
-                        )}
-                    </motion.div>
-                </>
+                                {isProcessing ? (
+                                    <div className="flex items-center gap-3">
+                                        <Loader2 className="animate-spin" />
+                                        Inachakata... (Processing...)
+                                    </div>
+                                ) : (
+                                    'Lipa Sasa / Pay Now'
+                                )}
+                            </button>
+                            
+                            <p className="text-center text-xs text-text-muted">
+                                Tafadhali kamilisha malipo kwenye simu yako baada ya kugusa &quot;Lipa Sasa&quot;.
+                            </p>
+                        </div>
+                    ) : (
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="flex flex-col items-center py-8 text-center"
+                        >
+                            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                                <CheckCircle size={48} className="text-green-600" />
+                            </div>
+                            <h3 className="text-xl font-bold text-green-900 mb-2">Ombi Limetumwa!</h3>
+                            <p className="text-green-800 px-6">{message}</p>
+                        </motion.div>
+                    )}
+                </motion.div>
             )}
         </AnimatePresence>
     );

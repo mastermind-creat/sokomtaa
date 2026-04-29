@@ -20,25 +20,10 @@ import {
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ApiResponse } from '@/types';
+import { ApiResponse, Reservation } from '@/types';
+import Image from 'next/image';
 
-interface Reservation {
-    id: number;
-    reservation_code: string;
-    quantity: number;
-    total_amount: string;
-    status: 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled' | 'expired';
-    pickup_deadline: string;
-    product: {
-        name: string;
-        image_url?: string;
-    };
-    trader: {
-        business_name: string;
-        stall_number?: string;
-    };
-    created_at: string;
-}
+
 
 type StatusFilter = 'all' | 'pending' | 'active' | 'completed';
 
@@ -158,9 +143,9 @@ export default function ResidentReservationsPage() {
                                 onClick={() => router.push(`/reservations/${res.id}`)}
                             >
                                 <div className="flex gap-4">
-                                    <div className="w-20 h-20 bg-neutral-50 rounded-2xl overflow-hidden border border-gray-100 shrink-0">
-                                        {res.product.image_url ? (
-                                            <img src={res.product.image_url} alt={res.product.name} className="w-full h-full object-cover" />
+                                    <div className="w-20 h-20 bg-neutral-50 rounded-2xl overflow-hidden border border-gray-100 shrink-0 relative">
+                                        {res.product?.image_url ? (
+                                            <Image src={res.product.image_url} alt={res.product.name} fill className="object-cover" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-text-muted"><ShoppingBag size={24} /></div>
                                         )}
@@ -172,9 +157,9 @@ export default function ResidentReservationsPage() {
                                             </span>
                                             <span className="text-[10px] font-mono font-black text-text-muted">#{res.reservation_code}</span>
                                         </div>
-                                        <h4 className="font-black text-green-950 text-sm">{res.product.name}</h4>
+                                        <h4 className="font-black text-green-950 text-sm">{res.product?.name}</h4>
                                         <p className="text-[10px] font-bold text-text-muted uppercase tracking-tight">
-                                            {res.trader.business_name} • Quantity: {res.quantity}
+                                            {res.trader?.business_name} • Quantity: {res.quantity}
                                         </p>
                                     </div>
                                 </div>
@@ -187,7 +172,7 @@ export default function ResidentReservationsPage() {
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <p className="text-sm font-black text-green-950">KES {parseFloat(res.total_amount).toLocaleString()}</p>
+                                        <p className="text-sm font-black text-green-950">KES {Number(res.total_amount).toLocaleString()}</p>
                                         <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
                                             {['ready', 'paid'].includes(res.status) ? <QrCode size={18} /> : <ChevronRight size={18} />}
                                         </div>

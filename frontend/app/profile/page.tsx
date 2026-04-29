@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { 
-    User, 
+    User as UserIcon, 
     Mail, 
     Phone, 
     Globe, 
@@ -22,18 +22,11 @@ import {
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ApiResponse } from '@/types';
+import { ApiResponse, User } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import Image from 'next/image';
 
-interface UserProfile {
-    id: number;
-    name: string;
-    phone: string;
-    email: string | null;
-    role: string;
-    preferred_language: 'en' | 'sw';
-    avatar_url: string | null;
-}
+
 
 export default function ResidentProfilePage() {
     const router = useRouter();
@@ -44,9 +37,9 @@ export default function ResidentProfilePage() {
     const [email, setEmail] = useState('');
     const [language, setLanguage] = useState<'en' | 'sw'>('sw');
 
-    const { data: profileData, isLoading } = useQuery<ApiResponse<UserProfile>>({
+    const { data: profileData, isLoading } = useQuery<ApiResponse<User>>({
         queryKey: ['profile'],
-        queryFn: () => api.get('/profile'),
+        queryFn: () => api.get('/profile').then(res => res.data),
     });
 
     useEffect(() => {
@@ -58,7 +51,7 @@ export default function ResidentProfilePage() {
     }, [profileData]);
 
     const updateProfileMutation = useMutation({
-        mutationFn: (data: Partial<UserProfile>) => api.patch('/profile', data),
+        mutationFn: (data: Partial<User>) => api.patch('/profile', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['profile'] });
         }
@@ -95,8 +88,12 @@ export default function ResidentProfilePage() {
                     <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24" />
                     <div className="flex flex-col items-center text-center space-y-4">
                         <div className="relative group">
-                            <div className="w-28 h-28 bg-brand-500 rounded-[2.5rem] flex items-center justify-center text-4xl font-black shadow-xl border-4 border-white/20">
-                                {user?.avatar_url ? <img src={user.avatar_url} className="w-full h-full object-cover rounded-[2.5rem]" /> : user?.name.charAt(0)}
+                            <div className="w-28 h-28 bg-brand-500 rounded-[2.5rem] flex items-center justify-center text-4xl font-black shadow-xl border-4 border-white/20 relative overflow-hidden">
+                                {user?.avatar_url ? (
+                                    <Image src={user.avatar_url} alt={user.name} fill className="object-cover" />
+                                ) : (
+                                    user?.name.charAt(0)
+                                )}
                             </div>
                             <button className="absolute bottom-1 right-1 w-10 h-10 bg-white text-green-950 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all">
                                 <Camera size={18} />
@@ -120,7 +117,7 @@ export default function ResidentProfilePage() {
                         <div className="space-y-2">
                              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest pl-2">Full Name</label>
                              <div className="relative">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+                                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
                                 <input 
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}

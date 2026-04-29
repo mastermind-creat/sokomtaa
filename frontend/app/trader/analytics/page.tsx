@@ -6,14 +6,12 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { ApiResponse, TraderDashboardStats, RevenueTrend } from '@/types';
 import { 
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
-    BarChart, Bar, Cell
+    ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import { 
-    TrendingUp, TrendingDown, Users, Package, DollarSign, 
-    ArrowUpRight, AlertCircle, Info, Loader2, ChevronRight,
-    BarChart3, Target, CheckCircle2, RefreshCcw, Download,
-    MoreHorizontal, Star
+    TrendingUp, Package, DollarSign, 
+    RefreshCcw, Download, Target, ChevronRight,
+    Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '@/store/uiStore';

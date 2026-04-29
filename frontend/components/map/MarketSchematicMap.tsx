@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Wrench, X, Store, Info, MessageCircle, ArrowRight, Zap, CreditCard } from 'lucide-react';
+import { Store, MessageCircle, ArrowRight, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 

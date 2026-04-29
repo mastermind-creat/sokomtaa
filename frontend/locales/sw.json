@@ -25,7 +25,13 @@
     "complaints": "Malalamiko",
     "fees": "Ada za Soko",
     "reports": "Ripoti",
-    "verification": "Uhakiki"
+    "verification": "Uhakiki",
+    "available": "Inapatikana",
+    "low_stock": "Iko Kidogo",
+    "orders": "Oda",
+    "product": "Bidhaa",
+    "trader": "Mfanyabiashara",
+    "market": "Soko"
   },
   "home": {
     "greeting": "Hujambo",
@@ -133,6 +139,16 @@
     "credits": "Uingizaji (Credits)",
     "debits": "Utoaji (Debits)"
   },
+  "search": {
+    "title": "Tafuta",
+    "placeholder": "Tafuta masoko, wafanyabiashara, au bidhaa...",
+    "min_chars": "Andika herufi 2 au zaidi kuanza utafutaji.",
+    "results_count": "Matokeo ({total})",
+    "no_results": "Hatujapata matokeo ya \"{query}\"",
+    "product": "Bidhaa",
+    "trader": "Mfanyabiashara",
+    "market": "Soko"
+  },
   "help": {
     "title": "Kituo cha Msaada",
     "how_can_we_help": "Tunawezaje kukusaidia?",
@@ -150,5 +166,25 @@
     "contact_title": "Bado unahitaji msaada?",
     "contact_subtitle": "Timu yetu ya msaada iko tayari kukusaidia.",
     "contact_button": "WASILIANA NASI SASA"
+  },
+  "storefront": {
+    "products": "Bidhaa",
+    "about": "Kuhusu",
+    "reviews": "Maoni",
+    "open_now": "Wazi Sasa",
+    "closed": "Limefungwa",
+    "verified_trader": "Mfanyabiashara Aliyeidhinishwa",
+    "high_rated": "Amepata Alama Za Juu",
+    "reserves_accepted": "Uhifadhi Unakubalika",
+    "business_desc_title": "Maelezo ya Biashara",
+    "opened_since": "Amefungua Tangu",
+    "total_sales": "Mauzo Jumla",
+    "contact_info": "Mawasiliano & Huduma",
+    "phone": "Simu",
+    "location": "Mahali",
+    "customer_reviews": "Maoni ya Wateja",
+    "no_reviews": "Hakuna maoni bado",
+    "reserve_item": "Hifadhi Bidhaa",
+    "call": "Piga Simu"
   }
 }

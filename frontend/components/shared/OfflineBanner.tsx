@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { WifiOff, AlertCircle } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOffline } from '@/hooks/useOffline';
 

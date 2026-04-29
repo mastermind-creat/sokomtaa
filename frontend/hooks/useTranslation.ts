@@ -5,8 +5,6 @@ import { useLocaleStore } from '@/store/localeStore';
 import en from '@/locales/en.json';
 import sw from '@/locales/sw.json';
 
-type TranslationKeys = typeof en;
-
 export function useTranslation() {
   const { locale, toggleLocale, setLocale } = useLocaleStore();
 
@@ -17,22 +15,24 @@ export function useTranslation() {
    */
   const t = useCallback((key: string): string => {
     const keys = key.split('.');
-    let result: any = translations;
+    let result: unknown = translations;
 
     for (const k of keys) {
-      if (result && result[k]) {
-        result = result[k];
+      const current = result as Record<string, unknown>;
+      if (current && current[k]) {
+        result = current[k];
       } else {
         // Fallback to English if key missing in Swahili
-        let fallback: any = en;
+        let fallback: unknown = en;
         for (const fk of keys) {
-            if (fallback && fallback[fk]) {
-                fallback = fallback[fk];
+            const currentFallback = fallback as Record<string, unknown>;
+            if (currentFallback && currentFallback[fk]) {
+                fallback = currentFallback[fk];
             } else {
                 return key; // Final fallback: return the key itself
             }
         }
-        return fallback;
+        return fallback as string;
       }
     }
 

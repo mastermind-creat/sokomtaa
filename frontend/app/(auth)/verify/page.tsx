@@ -25,7 +25,9 @@ export default function VerifyPage() {
         if (!user) {
             router.push('/login');
         } else if (user.phone_verified) {
-            router.push('/');
+            if (user.role === 'admin') router.push('/admin/dashboard');
+            else if (user.role === 'trader') router.push('/trader/dashboard');
+            else router.push('/');
         }
     }, [user, router]);
 
@@ -34,7 +36,12 @@ export default function VerifyPage() {
             setError(null);
             await api.post<never, ApiResponse<void>>('/auth/verify-phone', data);
             await refreshUser();
-            router.push('/');
+            
+            // Get updated user from store
+            const updatedUser = useAuthStore.getState().user;
+            if (updatedUser?.role === 'admin') router.push('/admin/dashboard');
+            else if (updatedUser?.role === 'trader') router.push('/trader/dashboard');
+            else router.push('/');
         } catch (err: unknown) {
             const errorObj = err as { response?: { data?: { message?: string } }, message?: string };
             setError(errorObj.response?.data?.message || errorObj.message || 'Verification failed. Try again.');

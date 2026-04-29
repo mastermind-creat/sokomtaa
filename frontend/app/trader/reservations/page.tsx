@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Package, Clock, CheckCircle2, XCircle, ShoppingBag,
-    Phone, ChevronRight, AlertCircle, RefreshCw, Filter
+    Package, Clock, CheckCircle2, ShoppingBag,
+    Phone, ChevronRight, AlertCircle, RefreshCw
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
@@ -202,7 +202,6 @@ function OrderSkeleton() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function TraderOrdersPage() {
-    const { t } = useTranslation();
     const { setPageTitle } = useUIStore();
 
     React.useEffect(() => {
@@ -244,7 +243,7 @@ export default function TraderOrdersPage() {
         },
     });
 
-    const orders = Array.isArray(ordersData) ? ordersData : (ordersData as any)?.data ?? [];
+    const orders: ReservationItem[] = Array.isArray(ordersData) ? ordersData : ((ordersData as { data?: ReservationItem[] })?.data ?? []);
 
     return (
         <div className="min-h-screen bg-transparent">

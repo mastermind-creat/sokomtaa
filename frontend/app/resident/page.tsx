@@ -6,14 +6,10 @@ import api from '@/lib/api';
 import { 
     Search, 
     MapPin, 
-    Loader2, 
     Sparkles, 
     ArrowRight,
-    ShoppingBag,
-    Star,
     ChevronRight,
     Map as MapIcon,
-    Flame,
     Zap,
     TrendingUp
 } from 'lucide-react';
@@ -37,7 +33,8 @@ interface Market {
 export default function HomePage() {
     const { user } = useAuthStore();
     const router = useRouter();
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
+    const language = user?.preferred_language || locale;
 
     // Fetch Markets
     const { data: marketData, isLoading: marketsLoading } = useQuery<ApiResponse<Market[]>>({
@@ -46,16 +43,6 @@ export default function HomePage() {
     });
 
     const markets = marketData?.data || [];
-
-    // Helper for localized greeting time
-    const getGreeting = () => {
-        const hour = new Date().getHours();
-        if (hour < 12) return language === 'sw' ? 'Habari za asubuhi' : 'Good Morning';
-        if (hour < 16) return language === 'sw' ? 'Habari za mchana' : 'Good Afternoon';
-        return language === 'sw' ? 'Habari za jioni' : 'Good Evening';
-    };
-
-    const language = user?.preferred_language || 'sw';
 
     return (
         <>

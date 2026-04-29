@@ -9,7 +9,6 @@ import {
     AlertCircle, 
     CheckCircle, 
     ChevronRight,
-    Search,
     Clock,
     User,
     LucideIcon

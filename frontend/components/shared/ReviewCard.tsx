@@ -58,7 +58,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
                 {/* Visual marker for premium feel */}
                 <div className="absolute -left-1 top-0 bottom-0 w-1 bg-brand-200/50 rounded-full" />
                 <p className="pl-4 text-sm text-text-secondary leading-relaxed font-medium">
-                    "{review.comment}"
+                    &quot;{review.comment}&quot;
                 </p>
             </div>
 

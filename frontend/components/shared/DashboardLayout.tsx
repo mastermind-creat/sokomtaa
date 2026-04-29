@@ -12,6 +12,8 @@ const AdminSidebar = dynamic(() => import('../admin/AdminSidebar'), { ssr: false
 const TraderSidebar = dynamic(() => import('../trader/TraderSidebar'), { ssr: false });
 const ResidentSidebar = dynamic(() => import('../resident/ResidentSidebar'), { ssr: false });
 const MobileSidebar = dynamic(() => import('../admin/MobileSidebar'), { ssr: false });
+const TraderMobileSidebar = dynamic(() => import('../trader/TraderMobileSidebar'), { ssr: false });
+const ResidentMobileSidebar = dynamic(() => import('../resident/ResidentMobileSidebar'), { ssr: false });
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -37,9 +39,21 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
 
     return (
         <div className="flex flex-col lg:flex-row min-h-screen bg-[#FAFAF8] w-full max-w-full overflow-hidden">
-            {/* Mobile Drawer (Only for Admin role in this phase) */}
+            {/* Mobile Drawer */}
             {user?.role === 'admin' && (
                 <MobileSidebar 
+                    isOpen={isMobileMenuOpen} 
+                    onClose={() => setIsMobileMenuOpen(false)} 
+                />
+            )}
+            {user?.role === 'trader' && (
+                <TraderMobileSidebar 
+                    isOpen={isMobileMenuOpen} 
+                    onClose={() => setIsMobileMenuOpen(false)} 
+                />
+            )}
+            {(!user || user.role === 'resident') && (
+                <ResidentMobileSidebar 
                     isOpen={isMobileMenuOpen} 
                     onClose={() => setIsMobileMenuOpen(false)} 
                 />
@@ -57,7 +71,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                 />
 
                 {/* Content */}
-                <main className="flex-1 overflow-y-auto w-full no-scrollbar pb-24 lg:pb-0">
+                <main className="flex-1 overflow-y-auto w-full no-scrollbar pb-36 lg:pb-0">
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}

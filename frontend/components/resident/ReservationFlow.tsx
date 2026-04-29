@@ -11,7 +11,6 @@ import {
     Loader2, 
     CheckCircle2, 
     ChevronRight, 
-    X,
     TrendingUp,
     ShieldCheck,
     Smartphone
@@ -42,12 +41,11 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
     const [quantity, setQuantity] = useState(1);
     const [phoneNumber, setPhoneNumber] = useState('');
     const [secondsLeft, setSecondsLeft] = useState(60);
-    const [reservationId, setReservationId] = useState<number | null>(null);
     const [reservationCode, setReservationCode] = useState<string>('');
     
     const { user } = useAuthStore();
     const router = useRouter();
-    const { initiateStk, isPolling, status, error, stopPolling } = useMpesa();
+    const { initiateStk, isPolling, status, error } = useMpesa();
 
     useEffect(() => {
         if (user?.phone) {
