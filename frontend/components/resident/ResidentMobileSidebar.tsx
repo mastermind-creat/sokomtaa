@@ -17,6 +17,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
 import { Logo } from '../shared/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 interface ResidentMobileSidebarProps {
     isOpen: boolean;
@@ -30,7 +31,7 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
     const { logout } = useAuthStore();
 
     const menuItems = [
-        { icon: Home, label: t('nav.home'), path: '/', badge: null },
+        { icon: Home, label: t('common.dashboard'), path: '/resident/dashboard', badge: null },
         { icon: Search, label: t('nav.discover'), path: '/search', badge: null },
         { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: 2 },
         { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: null },
@@ -67,7 +68,9 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
                     className="fixed top-0 left-0 bottom-0 w-[280px] bg-[#FAFAF8] z-[70] flex flex-col shadow-2xl lg:hidden"
                 >
                         <div className="p-6 flex items-center justify-between border-b border-gray-100">
-                            <Logo variant="light" width={110} />
+                            <Link href="/" onClick={onClose} className="active:scale-95 transition-transform">
+                                <Logo variant="light" width={110} />
+                            </Link>
                             <button 
                                 onClick={onClose}
                                 className="w-10 h-10 rounded-xl bg-white text-gray-400 flex items-center justify-center border border-gray-100 active:scale-90 transition-transform"

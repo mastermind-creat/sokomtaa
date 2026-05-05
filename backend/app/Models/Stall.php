@@ -15,6 +15,7 @@ class Stall extends Model
     protected $fillable = [
         'market_id',
         'stall_number',
+        'block',
         'zone',
         'size_sqm',
         'map_x',

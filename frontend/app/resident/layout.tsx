@@ -8,7 +8,7 @@ export default function ResidentLayout({ children }: { children: React.ReactNode
     const { t } = useTranslation();
     
     return (
-        <DashboardLayout title={t('res.my_market') || 'Soko Mtaa'}>
+        <DashboardLayout title="My Dashboard">
             {children}
         </DashboardLayout>
     );

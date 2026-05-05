@@ -19,9 +19,31 @@ import {
     ShoppingBag,
     Star,
     UsersRound,
-    SquareChartGantt,
-    ShieldCheck
+    ShieldCheck,
+    GanttChartSquare
 } from 'lucide-react';
+
+const Building2 = ({ size, className, strokeWidth }: { size?: number; className?: string; strokeWidth?: number }) => (
+    <svg 
+        width={size} 
+        height={size} 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth={strokeWidth} 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        className={className}
+    >
+        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+        <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+        <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+        <path d="M10 6h4" />
+        <path d="M10 10h4" />
+        <path d="M10 14h4" />
+        <path d="M10 18h4" />
+    </svg>
+);
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
@@ -53,7 +75,7 @@ export default function AdminSidebar() {
             items: [
                 { icon: MapPin, label: t('common.markets'), path: '/admin/markets' },
                 { icon: Store, label: t('common.stalls'), path: '/admin/stalls' },
-                { icon: SquareChartGantt, label: 'Allocations', path: '/admin/allocations' },
+                { icon: GanttChartSquare, label: 'Allocations', path: '/admin/allocations' },
             ]
         },
         {
@@ -116,7 +138,7 @@ export default function AdminSidebar() {
             {/* Logo Area */}
             <div className="p-8 pb-6">
                 <div 
-                    onClick={() => router.push('/admin/dashboard')} 
+                    onClick={() => router.push('/')} 
                     className="cursor-pointer active:scale-95 transition-transform"
                 >
                     <Logo variant="light" width={140} />
@@ -223,24 +245,4 @@ export default function AdminSidebar() {
     );
 }
 
-const Building2 = ({ size, className, strokeWidth }: { size?: number; className?: string; strokeWidth?: number }) => (
-    <svg 
-        width={size} 
-        height={size} 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth={strokeWidth} 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        className={className}
-    >
-        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
-        <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
-        <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
-        <path d="M10 6h4" />
-        <path d="M10 10h4" />
-        <path d="M10 14h4" />
-        <path d="M10 18h4" />
-    </svg>
-);
+

@@ -24,7 +24,7 @@ export default function StallMapPreview({ marketId, isAdmin }: StallMapPreviewPr
     });
 
     return (
-        <div className="h-[500px] w-full">
+        <div className="h-[600px] w-full">
             <MarketSchematicMap
                 stalls={stalls ?? []}
                 onStallClick={() => {}} // No-op in preview mode; full interaction on /admin/map

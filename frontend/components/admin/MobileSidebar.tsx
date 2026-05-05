@@ -13,7 +13,7 @@ import {
     BarChart3,
     Map as MapIcon,
     UsersRound,
-    SquareChartGantt,
+    GanttChartSquare,
     ShieldCheck,
     LogOut
 } from 'lucide-react';
@@ -22,6 +22,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
 import { Logo } from '../shared/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 interface MobileSidebarProps {
     isOpen: boolean;
@@ -48,7 +49,7 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             items: [
                 { icon: MapPin, label: 'Markets', path: '/admin/markets' },
                 { icon: Store, label: 'Stalls', path: '/admin/stalls' },
-                { icon: SquareChartGantt, label: 'Allocations', path: '/admin/allocations' },
+                { icon: GanttChartSquare, label: 'Allocations', path: '/admin/allocations' },
             ]
         },
         {
@@ -98,7 +99,9 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                     className="fixed top-0 left-0 bottom-0 w-[280px] bg-white z-[70] flex flex-col shadow-2xl lg:hidden"
                 >
                         <div className="p-6 flex items-center justify-between border-b border-neutral-100">
-                            <Logo variant="light" width={110} />
+                            <Link href="/" onClick={onClose} className="active:scale-95 transition-transform">
+                                <Logo variant="light" width={110} />
+                            </Link>
                             <button 
                                 onClick={onClose}
                                 className="w-10 h-10 rounded-xl bg-neutral-50 text-neutral-400 flex items-center justify-center active:scale-90 transition-transform"

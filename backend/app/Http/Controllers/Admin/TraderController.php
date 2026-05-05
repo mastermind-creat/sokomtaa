@@ -12,6 +12,7 @@ class TraderController extends Controller
     /**
      * Display a listing of physical market traders.
      * Optionally filter by verification_status.
+     * Optionally filter by unallocated (traders without a stall).
      *
      * @param Request $request
      * @return JsonResponse
@@ -19,10 +20,14 @@ class TraderController extends Controller
     public function index(Request $request): JsonResponse
     {
         $statusFilter = $request->query('verification_status');
+        $unallocatedFilter = $request->query('unallocated');
 
         $traders = Trader::with(['user', 'stall', 'market'])
             ->when($statusFilter, function ($query, $status) {
                 return $query->where('verification_status', $status);
+            })
+            ->when($unallocatedFilter, function ($query) {
+                return $query->whereNull('stall_id');
             })
             ->latest()
             ->get();

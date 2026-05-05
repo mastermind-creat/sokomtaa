@@ -8,12 +8,12 @@ import { useAuthStore } from '@/store/authStore';
 import { motion } from 'framer-motion';
 
 // Dynamic imports to prevent SSR issues with client-only sidebars
-const AdminSidebar = dynamic(() => import('../admin/AdminSidebar'), { ssr: false });
-const TraderSidebar = dynamic(() => import('../trader/TraderSidebar'), { ssr: false });
-const ResidentSidebar = dynamic(() => import('../resident/ResidentSidebar'), { ssr: false });
-const MobileSidebar = dynamic(() => import('../admin/MobileSidebar'), { ssr: false });
-const TraderMobileSidebar = dynamic(() => import('../trader/TraderMobileSidebar'), { ssr: false });
-const ResidentMobileSidebar = dynamic(() => import('../resident/ResidentMobileSidebar'), { ssr: false });
+const AdminSidebar = dynamic(() => import('@/components/admin/AdminSidebar').then(m => m.default));
+const TraderSidebar = dynamic(() => import('@/components/trader/TraderSidebar').then(m => m.default));
+const ResidentSidebar = dynamic(() => import('@/components/resident/ResidentSidebar').then(m => m.default));
+const MobileSidebar = dynamic(() => import('@/components/admin/MobileSidebar').then(m => m.default));
+const TraderMobileSidebar = dynamic(() => import('@/components/trader/TraderMobileSidebar').then(m => m.default));
+const ResidentMobileSidebar = dynamic(() => import('@/components/resident/ResidentMobileSidebar').then(m => m.default));
 
 interface DashboardLayoutProps {
     children: React.ReactNode;

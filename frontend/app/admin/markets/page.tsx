@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUIStore } from '@/store/uiStore';
 import { 
@@ -14,27 +14,86 @@ import {
     ChevronRight,
     Store,
     LayoutGrid,
-    PieChart
+    PieChart,
+    AlertCircle,
+    Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ApiResponse, Market } from '@/types';
 import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
+import { MarketModal } from '@/components/admin/MarketModal';
 
 export default function AdminMarketsPage() {
     const { setPageTitle } = useUIStore();
+    const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState('');
+    
+    // Modal state
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
 
     React.useEffect(() => {
         setPageTitle('Market Infrastructure');
     }, [setPageTitle]);
 
+    // ── Queries ──
     const { data: marketsData, isLoading } = useQuery<ApiResponse<Market[]>>({
         queryKey: ['admin-markets'],
-        queryFn: () => api.get('/markets'),
+        queryFn: () => api.get('/admin/markets'),
     });
     
     const markets = marketsData?.data || [];
+
+    // ── Mutations ──
+    const createMutation = useMutation({
+        mutationFn: (data: any) => api.post('/admin/markets', data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+            setIsModalOpen(false);
+        }
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: number, data: any }) => api.put(`/admin/markets/${id}`, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+            setIsModalOpen(false);
+            setSelectedMarket(null);
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => api.delete(`/admin/markets/${id}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+        }
+    });
+
+    const toggleStatusMutation = useMutation({
+        mutationFn: (id: number) => api.patch(`/admin/markets/${id}/toggle`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+        }
+    });
+
+    const handleFormSubmit = (data: any) => {
+        if (selectedMarket) {
+            updateMutation.mutate({ id: selectedMarket.id, data });
+        } else {
+            createMutation.mutate(data);
+        }
+    };
+
+    const handleEdit = (market: Market) => {
+        setSelectedMarket(market);
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = (id: number) => {
+        if (window.confirm('Are you sure you want to delete this market? This action cannot be undone if the market has no active data.')) {
+            deleteMutation.mutate(id);
+        }
+    };
 
     const stats = [
         { label: 'Market sites', value: markets.length, color: 'text-brand-600' },
@@ -61,25 +120,34 @@ export default function AdminMarketsPage() {
             </div>
 
             {/* ── Search Bar ── */}
-            <div className="px-4 mb-8">
-                <div className="relative group">
+            <div className="px-4 mb-8 flex items-center gap-3">
+                <div className="relative group flex-1">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
                     <input 
                         type="text"
                         placeholder="Search market name or county..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-12 pl-12 pr-4 bg-white border border-gray-100 rounded-2xl text-sm font-bold shadow-sm outline-none focus:border-brand-300"
+                        className="w-full h-12 pl-12 pr-4 bg-white border border-gray-100 rounded-2xl text-sm font-bold shadow-sm outline-none focus:border-brand-300 transition-all"
                     />
                 </div>
+                <button 
+                    onClick={() => {
+                        setSelectedMarket(null);
+                        setIsModalOpen(true);
+                    }}
+                    className="h-12 w-12 bg-brand-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-100 active:scale-95 transition-all"
+                >
+                    <Plus size={20} />
+                </button>
             </div>
 
             {/* ── Market Cards ── */}
-            <div className="space-y-4 px-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4">
                 {isLoading ? (
-                    [1, 2, 3].map(i => <div key={i} className="h-48 bg-gray-100 rounded-[2.5rem] animate-pulse" />)
+                    [1, 2, 3, 4].map(i => <div key={i} className="h-64 bg-gray-100 rounded-[2.5rem] animate-pulse" />)
                 ) : filteredMarkets.length === 0 ? (
-                    <div className="py-20 text-center opacity-40">
+                    <div className="col-span-full py-20 text-center opacity-40">
                         <MapPin size={48} className="mx-auto mb-4" />
                         <p className="text-xs font-black uppercase tracking-widest">No market sites found</p>
                     </div>
@@ -90,27 +158,30 @@ export default function AdminMarketsPage() {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 key={market.id}
-                                className="bg-white rounded-[2.5rem] border border-gray-50 shadow-sm overflow-hidden"
+                                className="bg-white rounded-[2.5rem] border border-gray-50 shadow-sm overflow-hidden flex flex-col"
                             >
-                                <div className="p-6">
+                                <div className="p-6 flex-1">
                                     <div className="flex items-start justify-between mb-6">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 bg-gray-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-gray-200">
+                                            <div className="w-14 h-14 bg-gray-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-gray-200 shrink-0">
                                                 <Store size={28} />
                                             </div>
                                             <div>
-                                                <h3 className="text-xl font-black text-green-950 uppercase tracking-tight">{market.name}</h3>
+                                                <h3 className="text-xl font-black text-green-950 uppercase tracking-tight leading-tight">{market.name}</h3>
                                                 <p className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-1.5 mt-1">
                                                     <Map size={10} /> {market.county} County
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className={cn(
-                                            "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                                            market.is_active ? "bg-brand-50 text-brand-700 border-brand-100" : "bg-gray-50 text-gray-700 border-gray-200"
-                                        )}>
+                                        <button 
+                                            onClick={() => toggleStatusMutation.mutate(market.id)}
+                                            className={cn(
+                                                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95",
+                                                market.is_active ? "bg-brand-50 text-brand-700 border-brand-100" : "bg-gray-50 text-gray-700 border-gray-200"
+                                            )}
+                                        >
                                             {market.is_active ? 'Online' : 'Restricted'}
-                                        </div>
+                                        </button>
                                     </div>
 
                                     <div className="space-y-4">
@@ -131,12 +202,21 @@ export default function AdminMarketsPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 h-14 border-t border-gray-50">
-                                    <button className="flex items-center justify-center gap-2 bg-white text-text-muted border-r border-gray-50 active:bg-gray-50 transition-all font-black text-[10px] uppercase tracking-widest">
-                                        <LayoutGrid size={16} /> Edit STalls
+                                <div className="grid grid-cols-3 h-14 border-t border-gray-50">
+                                    <button 
+                                        onClick={() => handleEdit(market)}
+                                        className="flex items-center justify-center gap-2 bg-white text-blue-600 border-r border-gray-50 active:bg-blue-50 transition-all font-black text-[10px] uppercase tracking-widest"
+                                    >
+                                        <Edit3 size={16} /> Edit
                                     </button>
-                                    <button className="flex items-center justify-center gap-2 bg-white text-brand-700 active:bg-brand-50 transition-all font-black text-[10px] uppercase tracking-widest">
-                                        <PieChart size={16} /> Analytics
+                                    <button className="flex items-center justify-center gap-2 bg-white text-text-muted border-r border-gray-50 active:bg-gray-50 transition-all font-black text-[10px] uppercase tracking-widest">
+                                        <LayoutGrid size={16} /> Stalls
+                                    </button>
+                                    <button 
+                                        onClick={() => handleDelete(market.id)}
+                                        className="flex items-center justify-center gap-2 bg-white text-rose-600 active:bg-rose-50 transition-all font-black text-[10px] uppercase tracking-widest"
+                                    >
+                                        <Trash2 size={16} /> Delete
                                     </button>
                                 </div>
                                 <button className="w-full h-12 bg-gray-950 hover:bg-black flex items-center justify-between px-6 active:scale-[0.98] transition-all">
@@ -149,8 +229,26 @@ export default function AdminMarketsPage() {
                 )}
             </div>
 
-            {/* ── Site Builder Floating Action ── */}
-            <button className="fixed bottom-24 right-4 w-14 h-14 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all z-40 border-4 border-white">
+            {/* ── Site Builder Modal ── */}
+            <MarketModal 
+                isOpen={isModalOpen}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setSelectedMarket(null);
+                }}
+                onSubmit={handleFormSubmit}
+                initialData={selectedMarket}
+                isLoading={createMutation.isPending || updateMutation.isPending}
+            />
+
+            {/* ── Site Builder Floating Action (Desktop/Mobile fallback) ── */}
+            <button 
+                onClick={() => {
+                    setSelectedMarket(null);
+                    setIsModalOpen(true);
+                }}
+                className="fixed bottom-24 right-4 w-14 h-14 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all z-40 border-4 border-white md:hidden"
+            >
                 <Plus size={24} />
             </button>
         </div>

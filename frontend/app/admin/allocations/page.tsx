@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -17,28 +17,56 @@ import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiResponse, Allocation } from '@/types';
+import { AllocationModal } from '@/components/admin/AllocationModal';
 
 export default function AdminAllocationsPage() {
     const { setPageTitle } = useUIStore();
+    const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     React.useEffect(() => {
         setPageTitle('Stall Allocations');
     }, [setPageTitle]);
 
-    const { data: allocationsRaw, isLoading } = useQuery<ApiResponse<{ data: Allocation[] }>>({
+    const { data: allocationsRes, isLoading } = useQuery<ApiResponse<Allocation[]>>({
         queryKey: ['admin-allocations', statusFilter],
-        queryFn: () => api.get('/admin/allocations', { params: { status: statusFilter } }).then(res => res.data),
+        queryFn: () => api.get('/admin/allocations', { params: { status: statusFilter } }),
     });
 
-    const allocations = allocationsRaw?.data?.data || [];
+    const createMutation = useMutation({
+        mutationFn: (data: any) => api.post('/admin/allocations', data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-allocations'] });
+            queryClient.invalidateQueries({ queryKey: ['admin-stalls-available'] });
+            queryClient.invalidateQueries({ queryKey: ['admin-traders-unallocated'] });
+            alert('Stall allocated successfully');
+            setIsModalOpen(false);
+        },
+        onError: (error: any) => {
+            alert(error?.message || 'Failed to allocate stall');
+        }
+    });
+
+    const allocations = allocationsRes?.data || [];
 
     const stats = [
-        { label: 'Occupied', count: allocations.filter((a: Allocation) => a.status === 'active').length, color: 'text-brand-600' },
+        { label: 'Occupied', count: allocations.filter((a: any) => a.status === 'active').length, color: 'text-brand-600' },
         { label: 'Vacant', count: 12, color: 'text-orange-600' }, // Mock vacant data for matrix
-        { label: 'Expiring', count: allocations.filter((a: Allocation) => a.status === 'expired').length, color: 'text-red-600' },
+        { label: 'Expiring', count: allocations.filter((a: any) => a.status === 'expired').length, color: 'text-red-600' },
     ];
+
+    const filteredAllocations = allocations.filter((item: any) => {
+        // Handle both flattened strings from API and potential objects from types
+        const traderName = typeof item.trader === 'string' ? item.trader : item.trader?.business_name || '';
+        const stallNumber = typeof item.stall === 'string' ? item.stall : item.stall?.stall_number || '';
+
+        const matchesSearch = stallNumber.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                             traderName.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
 
     return (
         <div className="pb-32 -mx-4 md:-mx-0">
@@ -91,8 +119,14 @@ export default function AdminAllocationsPage() {
                 {isLoading ? (
                     [1, 2, 3].map(i => <div key={i} className="h-40 bg-gray-100 rounded-[2.5rem] animate-pulse" />)
                 ) : (
-                    <AnimatePresence>
-                        {allocations.map((item: Allocation) => (
+                    <AnimatePresence mode="popLayout">
+                        {filteredAllocations.length === 0 ? (
+                            <div className="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
+                                <Building2 className="mx-auto text-gray-200 mb-4" size={48} />
+                                <p className="text-sm font-black text-text-muted uppercase tracking-widest">No Allocations Found</p>
+                            </div>
+                        ) : (
+                            filteredAllocations.map((item: any) => (
                             <motion.div 
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -150,15 +184,26 @@ export default function AdminAllocationsPage() {
                                     <ChevronRight size={16} className="text-white/40" />
                                 </button>
                             </motion.div>
-                        ))}
-                    </AnimatePresence>
-                )}
+                        ))
+                    )}
+                </AnimatePresence>
+            )}
             </div>
 
             {/* ── Floating Resource Adder ── */}
-            <button className="fixed bottom-24 right-4 w-14 h-14 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all z-40 border-4 border-white">
+            <button 
+                onClick={() => setIsModalOpen(true)}
+                className="fixed bottom-24 right-4 w-14 h-14 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all z-40 border-4 border-white"
+            >
                 <Plus size={24} />
             </button>
+
+            <AllocationModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSubmit={(data) => createMutation.mutate(data)}
+                isLoading={createMutation.isPending}
+            />
         </div>
     );
 }

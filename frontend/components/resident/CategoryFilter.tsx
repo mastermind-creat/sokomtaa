@@ -68,26 +68,26 @@ export default function CategoryFilter({ onSelectCategory, selectedCategoryId }:
         <div className="flex gap-4 overflow-x-auto px-6 py-2 no-scrollbar snap-x snap-mandatory">
             <button 
                 onClick={() => onSelectCategory(null)}
-                className={`flex flex-col items-center gap-2 min-w-[72px] snap-center transition-all ${selectedCategoryId === null ? 'scale-105 opacity-100' : 'opacity-60 hover:opacity-100'}`}
+                className={`flex flex-col items-center gap-1.5 min-w-[64px] snap-center transition-all ${selectedCategoryId === null ? 'scale-105 opacity-100' : 'opacity-60 hover:opacity-100'}`}
             >
                 <div 
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all relative overflow-hidden"
-                    style={{ borderColor: selectedCategoryId === null ? 'transparent' : '#E5E7EB', borderWidth: selectedCategoryId === null ? 0 : 2 }}
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all relative overflow-hidden shadow-sm"
+                    style={{ borderColor: selectedCategoryId === null ? 'transparent' : '#F3F4F6', borderWidth: selectedCategoryId === null ? 0 : 2 }}
                 >
                     <div 
                         className="absolute inset-0"
                         style={{
-                            backgroundColor: '#1B8040', 
-                            opacity: selectedCategoryId === null ? 1 : 0.1
+                            backgroundColor: '#1B6B3A', 
+                            opacity: selectedCategoryId === null ? 1 : 0.08
                         }}
                     />
                     <span 
-                        className={`relative z-10 text-2xl filter drop-shadow-sm ${selectedCategoryId === null ? 'brightness-0 invert' : ''}`}
+                        className={`relative z-10 text-xl filter drop-shadow-sm ${selectedCategoryId === null ? 'brightness-0 invert' : ''}`}
                     >
                         ✨
                     </span>
                 </div>
-                <span className={`text-[11px] font-bold tracking-wide ${selectedCategoryId === null ? 'text-brand-700' : 'text-text-secondary'}`}>Zote</span>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${selectedCategoryId === null ? 'text-brand-700' : 'text-text-muted'}`}>All</span>
             </button>
 
             {categories.map((cat) => {
@@ -98,27 +98,27 @@ export default function CategoryFilter({ onSelectCategory, selectedCategoryId }:
                     <button 
                         key={cat.id}
                         onClick={() => onSelectCategory(cat.id)}
-                        className={`flex flex-col items-center gap-2 min-w-[72px] snap-center transition-all ${isSelected ? 'scale-105 opacity-100' : 'opacity-60 hover:opacity-100'}`}
+                        className={`flex flex-col items-center gap-1.5 min-w-[64px] snap-center transition-all ${isSelected ? 'scale-105 opacity-100' : 'opacity-60 hover:opacity-100'}`}
                     >
                         <div 
-                            className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all relative overflow-hidden"
-                            style={{ borderColor: isSelected ? 'transparent' : '#E5E7EB', borderWidth: isSelected ? 0 : 2 }}
+                            className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all relative overflow-hidden shadow-sm"
+                            style={{ borderColor: isSelected ? 'transparent' : '#F3F4F6', borderWidth: isSelected ? 0 : 2 }}
                         >
                             <div 
                                 className="absolute inset-0"
                                 style={{
                                     backgroundColor: cat.color || '#F5A623',
-                                    opacity: isSelected ? 1 : 0.15
+                                    opacity: isSelected ? 1 : 0.1
                                 }}
                             />
                             <span 
-                                className={`relative z-10 text-2xl filter drop-shadow-sm ${isSelected ? 'brightness-125 saturate-150' : ''}`}
+                                className={`relative z-10 text-xl filter drop-shadow-sm ${isSelected ? 'brightness-110 saturate-150' : ''}`}
                             >
                                 {emoji}
                             </span>
                         </div>
-                        <span className={`text-[11px] font-bold tracking-wide truncate w-full text-center px-1 ${isSelected ? 'text-brand-700' : 'text-text-secondary'}`}>
-                            {cat.name_sw || cat.name}
+                        <span className={`text-[10px] font-black uppercase tracking-widest truncate w-full text-center px-1 ${isSelected ? 'text-brand-700' : 'text-text-muted'}`}>
+                            {cat.name}
                         </span>
                     </button>
                 );

@@ -116,9 +116,8 @@
   --border-accent:      var(--amber-300);
 
   /* ── FLUID TYPOGRAPHY ── */
-  --text-xs:   clamp(0.70rem, 1.8vw, 0.75rem);
-  --text-sm:   clamp(0.813rem, 2vw, 0.875rem);
-  --text-base: clamp(0.938rem, 2.5vw, 1rem);
+  --text-sm:   clamp(0.875rem, 2vw, 0.938rem); /* Min 14px -> 14px on mobile, but body should be 16px */
+  --text-base: clamp(1rem, 2.5vw, 1.063rem);   /* Min 16px for mobile body text */
   --text-lg:   clamp(1rem, 3vw, 1.125rem);
   --text-xl:   clamp(1.125rem, 3.5vw, 1.25rem);
   --text-2xl:  clamp(1.25rem, 4vw, 1.5rem);

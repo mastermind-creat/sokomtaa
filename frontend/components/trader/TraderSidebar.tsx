@@ -69,7 +69,7 @@ export default function TraderSidebar() {
         <aside className="hidden lg:flex flex-col w-[280px] h-screen bg-white border-r border-gray-100 sticky top-0 left-0 overflow-y-auto no-scrollbar">
             {/* Logo Area */}
             <div className="p-8 pb-2">
-                <div onClick={() => router.push('/trader/dashboard')} className="cursor-pointer">
+                <div onClick={() => router.push('/')} className="cursor-pointer">
                     <Logo variant="light" width={140} />
                 </div>
             </div>

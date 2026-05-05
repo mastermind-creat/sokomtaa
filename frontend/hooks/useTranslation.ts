@@ -14,6 +14,7 @@ export function useTranslation() {
    * Translate a key string (e.g., "common.search")
    */
   const t = useCallback((key: string): string => {
+    if (!key) return '';
     const keys = key.split('.');
     let result: unknown = translations;
 

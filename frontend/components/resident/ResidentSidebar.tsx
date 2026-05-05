@@ -24,7 +24,7 @@ export default function ResidentSidebar() {
     const { t } = useTranslation();
 
     const menuItems = [
-        { icon: Home, label: t('nav.home'), path: '/', badge: null },
+        { icon: Home, label: t('common.dashboard'), path: '/resident/dashboard', badge: null },
         { icon: Search, label: t('nav.discover'), path: '/search', badge: null },
         { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: 2 }, // Mock badge for active orders
         { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: null },
