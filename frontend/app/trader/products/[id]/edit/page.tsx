@@ -1,253 +1,354 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Trash2, Save, AlertTriangle } from 'lucide-react';
 import api from '@/lib/api';
-import { ApiResponse } from '@/types';
-
+import { 
+    ChevronLeft, 
+    Camera, 
+    Loader2, 
+    Package, 
+    Tag, 
+    Coins,
+    Layers,
+    Save,
+    Trash2,
+    AlertTriangle,
+    Eye,
+    EyeOff
+} from 'lucide-react';
+import { useRouter, useParams } from 'next/navigation';
+import { ApiResponse, Product, Category } from '@/types';
 import { useUIStore } from '@/store/uiStore';
-import { useTranslation } from '@/hooks/useTranslation';
+import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 
-interface Product {
-    id: number;
+interface EditProductForm {
     name: string;
-    name_sw: string | null;
-    description: string | null;
+    category_id: string;
     price: string;
     unit: string;
-    stock_status: 'available' | 'low' | 'out_of_stock';
-    stock_quantity: number | null;
+    description: string;
     is_active: boolean;
-    category_id: number;
-    image_url: string | null;
-}
-
-interface Category { id: number; name: string; }
-
-const UNITS = ['piece', 'kg', 'bunch', 'litre', 'bag', 'tray', 'box', 'dozen'];
-const STOCK_STATUSES = [
-    { value: 'available', label: 'Available' },
-    { value: 'low', label: 'Running Low' },
-    { value: 'out_of_stock', label: 'Out of Stock' },
-];
-
-function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
-    return (
-        <div>
-            <label htmlFor={id} className="block text-sm font-bold text-text-primary mb-2">{label}</label>
-            {children}
-        </div>
-    );
+    image: FileList;
 }
 
 export default function EditProductPage() {
     const params = useParams();
     const router = useRouter();
     const queryClient = useQueryClient();
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const { setPageTitle } = useUIStore();
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    React.useEffect(() => {
-        if (product) {
-            setPageTitle(`Edit: ${product.name}`);
-        } else {
-            setPageTitle('Edit Product');
-        }
-    }, [product, setPageTitle]);
+    const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<EditProductForm>();
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-    const { data: product, isLoading } = useQuery({
+    // Fetch Product Data
+    const { data: productResponse, isLoading: productLoading } = useQuery<ApiResponse<Product>>({
         queryKey: ['product', params.id],
-        queryFn: async () => {
-            const res = await api.get<never, ApiResponse<Product>>(`/products/${params.id}`);
-            return res.data;
-        },
+        queryFn: () => api.get(`/products/${params.id}`),
     });
 
-    const { data: categories = [] } = useQuery({
+    const product = productResponse?.data;
+
+    useEffect(() => {
+        if (product) {
+            setPageTitle(`Editing: ${product.name}`);
+            reset({
+                name: product.name,
+                category_id: String(product.category_id),
+                price: String(product.price),
+                unit: product.unit,
+                description: product.description || '',
+                is_active: product.is_active
+            });
+            if (product.image_url) {
+                setImagePreview(product.image_url);
+            }
+        }
+    }, [product, setPageTitle, reset]);
+
+    // Watch image for preview
+    const imageFiles = watch('image');
+    useEffect(() => {
+        if (imageFiles && imageFiles.length > 0) {
+            const reader = new FileReader();
+            reader.onloadend = () => setImagePreview(reader.result as string);
+            reader.readAsDataURL(imageFiles[0]);
+        }
+    }, [imageFiles]);
+
+    // Fetch Categories
+    const { data: catData, isLoading: categoriesLoading } = useQuery<ApiResponse<Category[]>>({
         queryKey: ['categories'],
-        queryFn: async () => {
-            const res = await api.get<never, ApiResponse<Category[]>>('/categories');
-            return res.data as Category[];
-        },
+        queryFn: () => api.get('/categories'),
     });
+    const categories = catData?.data || [];
 
-    const [form, setForm] = useState<Partial<Product>>({});
-    const current = { ...product, ...form } as Product;
-    const set = (k: keyof Product, v: string | number | boolean | null) => setForm(f => ({ ...f, [k]: v }));
-
-    const { mutate: saveProduct, isPending: isSaving } = useMutation({
-        mutationFn: (data: Partial<Product>) => api.put(`/products/${params.id}`, data),
+    // Save Mutation
+    const saveMutation = useMutation({
+        mutationFn: (formData: FormData) => api.post(`/products/${params.id}?_method=PUT`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        }),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['trader-products'] });
+            queryClient.invalidateQueries({ queryKey: ['my-products'] });
+            queryClient.invalidateQueries({ queryKey: ['product', params.id] });
             router.push('/trader/products');
         },
+        onError: (error: any) => {
+            alert(`Failed to save: ${error.message || 'Server error'}`);
+        }
     });
 
-    const { mutate: deleteProduct, isPending: isDeleting } = useMutation({
+    // Delete Mutation
+    const deleteMutation = useMutation({
         mutationFn: () => api.delete(`/products/${params.id}`),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['trader-products'] });
+            queryClient.invalidateQueries({ queryKey: ['my-products'] });
             router.push('/trader/products');
         },
     });
 
-    if (isLoading || !product) {
+    const onSubmit = (data: EditProductForm) => {
+        const formData = new FormData();
+        formData.append('name', data.name);
+        formData.append('category_id', data.category_id);
+        formData.append('price', data.price);
+        formData.append('unit', data.unit);
+        formData.append('description', data.description || '');
+        formData.append('is_active', data.is_active ? '1' : '0');
+        
+        if (data.image && data.image[0]) {
+            formData.append('image', data.image[0]);
+        }
+        
+        saveMutation.mutate(formData);
+    };
+
+    if (productLoading) {
         return (
-            <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-                {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-100 rounded-2xl animate-pulse" />)}
+            <div className="flex flex-col items-center justify-center min-h-[60vh]">
+                <Loader2 className="animate-spin text-brand-600" size={48} />
+                <p className="mt-4 text-text-secondary font-black uppercase tracking-widest text-xs">Loading product details...</p>
             </div>
         );
     }
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-6 space-y-5 pb-10">
-            {/* Header */}
-            {/* Header Back Button */}
-            <div className="flex items-center">
-                <button onClick={() => router.back()} className="p-2 rounded-xl hover:bg-white transition-colors bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm grow-0">
-                    <ArrowLeft className="w-5 h-5 text-text-secondary" />
+        <div className="flex flex-col min-h-screen bg-[#FAFAF8] pb-32 max-w-4xl mx-auto w-full pt-6">
+            <div className="p-6 flex items-center justify-between">
+                <button 
+                    onClick={() => router.back()} 
+                    className="p-3 bg-white border border-gray-100 rounded-2xl text-text-secondary hover:text-green-950 transition-all active:scale-95 shadow-sm"
+                >
+                    <ChevronLeft size={24} />
+                </button>
+
+                <button 
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="p-3 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-100 transition-all active:scale-95 border border-rose-100"
+                >
+                    <Trash2 size={20} />
                 </button>
             </div>
 
-            {/* Basic Info */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-                <h2 className="text-sm font-black text-text-primary uppercase tracking-wider">Product Info</h2>
-                <Field label="Product Name (English)" id="name">
-                    <input id="name" type="text" value={current.name ?? ''} onChange={e => set('name', e.target.value)}
-                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                </Field>
-                <Field label="Jina (Kiswahili) — optional" id="nameSw">
-                    <input id="nameSw" type="text" value={current.name_sw ?? ''} onChange={e => set('name_sw', e.target.value)}
-                        placeholder="Optional Swahili name"
-                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                </Field>
-                <Field label="Description" id="desc">
-                    <textarea id="desc" rows={3} value={current.description ?? ''} onChange={e => set('description', e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                </Field>
-                <Field label="Category" id="category">
-                    <select id="category" title="Product category" aria-label="Select product category"
-                        value={current.category_id ?? ''} onChange={e => set('category_id', parseInt(e.target.value))}
-                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                </Field>
-            </div>
-
-            {/* Pricing */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-                <h2 className="text-sm font-black text-text-primary uppercase tracking-wider">Pricing</h2>
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label="Price (KES)" id="price">
-                        <input id="price" type="number" min="0" value={current.price ?? ''} onChange={e => set('price', e.target.value)}
-                            className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                    </Field>
-                    <Field label="Unit" id="unit">
-                        <select id="unit" title="Unit of measurement" aria-label="Select unit of measurement"
-                            value={current.unit ?? 'piece'} onChange={e => set('unit', e.target.value)}
-                            className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                            {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                        </select>
-                    </Field>
-                </div>
-            </div>
-
-            {/* Stock */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-                <h2 className="text-sm font-black text-text-primary uppercase tracking-wider">Stock</h2>
-                <Field label="Stock Status" id="stockStatus">
-                    <div className="grid grid-cols-3 gap-2">
-                        {STOCK_STATUSES.map(s => (
-                            <button key={s.value} onClick={() => set('stock_status', s.value as Product['stock_status'])}
-                                className={`py-2.5 text-xs font-bold rounded-xl border-2 transition-all ${current.stock_status === s.value
-                                    ? s.value === 'available' ? 'border-green-500 bg-green-50 text-green-700'
-                                        : s.value === 'low' ? 'border-amber-500 bg-amber-50 text-amber-700'
-                                            : 'border-red-500 bg-red-50 text-red-700'
-                                    : 'border-gray-200 text-text-secondary hover:border-gray-300'
-                                    }`}>
-                                {s.label}
-                            </button>
-                        ))}
+            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-8">
+                {/* Photo Section */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-brand-50 rounded-xl text-brand-600">
+                            <Camera size={18} />
+                        </div>
+                        <label className="text-sm font-black text-green-950 uppercase tracking-wider">Product Photo</label>
                     </div>
-                </Field>
-                <Field label="Quantity (optional)" id="qty">
-                    <input id="qty" type="number" min="0" value={current.stock_quantity ?? ''} onChange={e => set('stock_quantity', e.target.value ? parseInt(e.target.value) : null)}
-                        placeholder="Leave blank if not tracking"
-                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                </Field>
-                <div className="flex items-center justify-between py-2">
-                    <div>
-                        <p className="text-sm font-semibold text-text-primary">Show on profile</p>
-                        <p className="text-xs text-text-muted">Hidden products won't appear to customers</p>
+                    
+                    <div className="relative aspect-video w-full rounded-[32px] border-2 border-dashed border-neutral-200 bg-white flex flex-col items-center justify-center overflow-hidden group hover:border-brand-500 transition-all shadow-sm">
+                        {imagePreview ? (
+                            <>
+                                <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="p-4 bg-white/20 backdrop-blur-md rounded-full border border-white/30">
+                                        <Camera size={32} className="text-white" />
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex flex-col items-center gap-3 text-neutral-400">
+                                <Camera size={40} />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Change Photo</span>
+                            </div>
+                        )}
+                        <input type="file" accept="image/*" {...register('image')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    </div>
+                </div>
+
+                {/* Name */}
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                        <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
+                            <Package size={18} />
+                        </div>
+                        <label className="text-sm font-black text-green-950 uppercase tracking-wider">Product Name</label>
+                    </div>
+                    <input 
+                        {...register('name', { required: 'Name is required' })}
+                        className="w-full h-14 px-6 bg-white border border-gray-100 rounded-2xl text-lg font-bold text-green-950 focus:ring-2 ring-brand-500 outline-none transition-all"
+                        placeholder="e.g. Fresh Tomatoes"
+                    />
+                    {errors.name && <p className="text-xs font-bold text-rose-500">{errors.name.message}</p>}
+                </div>
+
+                {/* Categories */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <div className="p-2 bg-purple-50 rounded-xl text-purple-600">
+                            <Layers size={18} />
+                        </div>
+                        <label className="text-sm font-black text-green-950 uppercase tracking-wider">Category</label>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {categoriesLoading ? (
+                            Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-12 bg-gray-50 rounded-2xl animate-pulse" />)
+                        ) : (
+                            categories.map((cat: Category) => (
+                                <label key={cat.id} className={cn(
+                                    "flex items-center justify-center p-4 border-2 rounded-2xl cursor-pointer transition-all",
+                                    watch('category_id') === String(cat.id) ? 'border-brand-600 bg-brand-50' : 'border-gray-50 bg-white hover:bg-gray-50'
+                                )}>
+                                    <input type="radio" value={cat.id} {...register('category_id', { required: true })} className="hidden" />
+                                    <span className={cn(
+                                        "text-[10px] font-black uppercase tracking-widest",
+                                        watch('category_id') === String(cat.id) ? 'text-brand-700' : 'text-text-muted'
+                                    )}>{cat.name}</span>
+                                </label>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                {/* Pricing & Units */}
+                <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
+                                <Coins size={18} />
+                            </div>
+                            <label className="text-sm font-black text-green-950 uppercase tracking-wider">Price (KES)</label>
+                        </div>
+                        <input 
+                            type="number"
+                            {...register('price', { required: true })}
+                            className="w-full h-14 px-6 bg-white border border-gray-100 rounded-2xl font-black text-lg text-green-950"
+                        />
+                    </div>
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
+                                <Tag size={18} />
+                            </div>
+                            <label className="text-sm font-black text-green-950 uppercase tracking-wider">Unit</label>
+                        </div>
+                        <input 
+                            {...register('unit', { required: true })}
+                            className="w-full h-14 px-6 bg-white border border-gray-100 rounded-2xl font-bold text-green-950"
+                            placeholder="kg, piece..."
+                        />
+                    </div>
+                </div>
+
+                {/* Visibility */}
+                <div className="p-6 bg-white rounded-[2rem] border border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className={cn(
+                            "p-3 rounded-2xl",
+                            watch('is_active') ? "bg-emerald-50 text-emerald-600" : "bg-neutral-50 text-neutral-400"
+                        )}>
+                            {watch('is_active') ? <Eye size={24} /> : <EyeOff size={24} />}
+                        </div>
+                        <div>
+                            <p className="font-black text-green-950">Show on profile</p>
+                            <p className="text-xs text-text-secondary font-medium">Toggle visibility for customers</p>
+                        </div>
                     </div>
                     <button
-                        onClick={() => set('is_active', !current.is_active)}
-                        className={`relative w-12 h-6 rounded-full transition-colors ${current.is_active ? 'bg-primary' : 'bg-gray-200'}`}
-                        aria-label="Toggle product visibility"
-                        role="switch"
-                        aria-checked={!!current.is_active}
+                        type="button"
+                        onClick={() => setValue('is_active', !watch('is_active'))}
+                        className={cn(
+                            "relative w-14 h-8 rounded-full transition-colors",
+                            watch('is_active') ? "bg-brand-600" : "bg-neutral-200"
+                        )}
                     >
-                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${current.is_active ? 'translate-x-6' : ''}`} />
+                        <motion.div 
+                            animate={{ x: watch('is_active') ? 24 : 4 }}
+                            className="absolute top-1 w-6 h-6 bg-white rounded-full shadow-sm"
+                        />
                     </button>
                 </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="space-y-3">
-                <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => saveProduct(form)}
-                    disabled={isSaving || Object.keys(form).length === 0}
-                    className="w-full flex items-center justify-center gap-2 py-4 bg-primary text-white rounded-2xl font-black text-base min-h-[56px] hover:bg-primary-light transition-colors disabled:opacity-50"
-                >
-                    <Save className="w-5 h-5" />
-                    {isSaving ? 'Saving...' : 'Save Changes'}
-                </motion.button>
+                {/* Fixed Bottom Actions */}
+                <div className="fixed bottom-0 left-0 right-0 lg:left-[280px] p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 z-20">
+                    <div className="max-w-4xl mx-auto flex gap-4">
+                        <button
+                            type="button"
+                            onClick={() => router.back()}
+                            className="flex-1 h-14 rounded-2xl border-2 border-gray-100 font-black uppercase text-xs tracking-widest text-text-secondary hover:bg-gray-50 transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            disabled={saveMutation.isPending}
+                            className="flex-[2] h-14 bg-brand-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-brand-900/10 disabled:opacity-50 hover:bg-brand-700 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                            type="submit"
+                        >
+                            {saveMutation.isPending ? <Loader2 className="animate-spin" /> : <><Save size={20} /> Save Changes</>}
+                        </button>
+                    </div>
+                </div>
+            </form>
 
-                <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="w-full py-3.5 border border-red-200 text-red-600 rounded-2xl font-bold text-sm hover:bg-red-50 transition-colors min-h-[48px]"
-                >
-                    Delete Product
-                </button>
-            </div>
-            {showDeleteConfirm && (
-                <motion.div
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center"
-                    onClick={e => e.target === e.currentTarget && setShowDeleteConfirm(false)}
-                >
-                    <motion.div
-                        initial={{ y: 100 }} animate={{ y: 0 }}
-                        className="w-full max-w-2xl bg-white rounded-t-3xl p-6"
-                    >
-                        <div className="w-10 h-10 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <AlertTriangle className="w-5 h-5 text-red-600" />
-                        </div>
-                        <h3 className="text-center font-black text-text-primary text-lg mb-2">Delete Product?</h3>
-                        <p className="text-center text-sm text-text-secondary mb-6">
-                            &quot;{product.name}&quot; will be permanently removed and can&apos;t be recovered.
-                        </p>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button onClick={() => setShowDeleteConfirm(false)}
-                                className="py-3.5 border border-gray-200 rounded-2xl font-bold text-sm hover:bg-gray-50 transition-colors">
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => { deleteProduct(); setShowDeleteConfirm(false); }}
-                                disabled={isDeleting}
-                                className="py-3.5 bg-red-600 text-white rounded-2xl font-bold text-sm hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                                {isDeleting ? 'Deleting...' : 'Delete'}
-                            </button>
-                        </div>
-                    </motion.div>
-                </motion.div>
-            )}
+            {/* Delete Confirm Bottom Sheet */}
+            <AnimatePresence>
+                {showDeleteConfirm && (
+                    <>
+                        <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setShowDeleteConfirm(false)}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                        />
+                        <motion.div 
+                            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[3rem] p-8 z-50 shadow-2xl border-t border-gray-100"
+                        >
+                            <div className="w-12 h-1.5 bg-neutral-100 rounded-full mx-auto mb-8" />
+                            <div className="flex flex-col items-center text-center mb-8">
+                                <div className="w-20 h-20 bg-rose-50 rounded-[2rem] flex items-center justify-center text-rose-600 mb-6">
+                                    <AlertTriangle size={40} />
+                                </div>
+                                <h3 className="text-2xl font-black text-green-950 tracking-tight">Delete Product?</h3>
+                                <p className="text-text-secondary font-medium mt-2 max-w-xs">
+                                    Are you sure you want to remove <span className="font-bold text-green-950">"{product?.name}"</span>? This action cannot be undone.
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={() => deleteMutation.mutate()}
+                                    disabled={deleteMutation.isPending}
+                                    className="w-full h-16 bg-rose-600 text-white rounded-2xl font-black uppercase text-sm tracking-widest shadow-lg shadow-rose-900/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+                                >
+                                    {deleteMutation.isPending ? <Loader2 className="animate-spin" /> : <><Trash2 size={20} /> Delete Product</>}
+                                </button>
+                                <button 
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="w-full h-14 bg-neutral-50 text-text-secondary rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-neutral-100 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

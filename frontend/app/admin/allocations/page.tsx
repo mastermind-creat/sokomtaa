@@ -45,11 +45,13 @@ export default function AdminAllocationsPage() {
             setIsModalOpen(false);
         },
         onError: (error: any) => {
-            alert(error?.message || 'Failed to allocate stall');
+            console.error('Allocation error:', error);
+            const message = error.message || (error.errors ? Object.values(error.errors)[0] : null) || 'Failed to allocate stall';
+            alert(`Hitilafu: ${Array.isArray(message) ? message[0] : message}`);
         }
     });
 
-    const allocations = allocationsRes?.data || [];
+    const allocations = Array.isArray(allocationsRes) ? allocationsRes : allocationsRes?.data || [];
 
     const stats = [
         { label: 'Occupied', count: allocations.filter((a: any) => a.status === 'active').length, color: 'text-brand-600' },

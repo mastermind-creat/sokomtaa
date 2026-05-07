@@ -32,7 +32,7 @@ export default function MarketMapPage() {
         queryFn: () => api.get('/markets'),
     });
 
-    const markets = marketData?.data || [];
+    const markets = Array.isArray(marketData) ? marketData : (marketData?.data || []);
 
     return (
         <div className="flex flex-col h-screen bg-surface-base w-full flex-1 relative overflow-hidden">

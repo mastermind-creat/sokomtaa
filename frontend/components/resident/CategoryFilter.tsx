@@ -39,7 +39,8 @@ export default function CategoryFilter({ onSelectCategory, selectedCategoryId }:
         queryFn: () => api.get('/categories'),
     });
 
-    const categories = catData?.data || [];
+    // Handle both wrapped and unwrapped data formats
+    const categories = Array.isArray(catData) ? catData : (catData?.data || []);
 
     if (isLoading) {
         const dummySkeletons = [

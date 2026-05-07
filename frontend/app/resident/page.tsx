@@ -20,8 +20,14 @@ import { ApiResponse } from '@/types';
 
 import RecommendationSection from '@/components/resident/RecommendationSection';
 import CategoryFilter from '@/components/resident/CategoryFilter';
-import NearbyMarketsMap from '@/components/resident/NearbyMarketsMap';
 import { motion, AnimatePresence } from 'framer-motion';
+import dynamic from 'next/dynamic';
+import { cn } from '@/lib/utils';
+
+const NearbyMarketsMap = dynamic(() => import('@/components/resident/NearbyMarketsMap'), { 
+    ssr: false,
+    loading: () => <div className="h-[600px] bg-gray-50 rounded-[3rem] animate-pulse flex items-center justify-center text-text-muted font-bold uppercase tracking-widest text-[10px]">Inapakia Ramani...</div>
+});
 
 interface Market {
     id: number;
@@ -39,12 +45,13 @@ export default function HomePage() {
     const [showNearbyMap, setShowNearbyMap] = React.useState(false);
 
     // Fetch Markets
-    const { data: marketData, isLoading: marketsLoading } = useQuery<ApiResponse<Market[]>>({
+    const { data: marketData, isLoading: marketsLoading } = useQuery<ApiResponse<Market[]> | any>({
         queryKey: ['markets'],
         queryFn: () => api.get('/markets'),
     });
 
-    const markets = marketData?.data || [];
+    // Handle both wrapped and unwrapped data formats
+    const markets = Array.isArray(marketData) ? marketData : (marketData?.data || []);
 
     return (
         <>

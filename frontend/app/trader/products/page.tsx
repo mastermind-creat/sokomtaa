@@ -1,36 +1,60 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { 
     Plus, 
+    Search, 
+    Filter, 
+    TrendingUp, 
     Package, 
-    MoreVertical, 
-    CheckCircle2, 
-    XCircle, 
-    AlertTriangle,
-    Loader2
+    AlertTriangle, 
+    XCircle,
+    ArrowRight,
+    LayoutGrid,
+    Inbox
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { ApiResponse, Product } from '@/types';
+import { ApiResponse, Product, Category } from '@/types';
 import { useUIStore } from '@/store/uiStore';
-import Image from 'next/image';
+import { StatCard } from '@/components/admin/StatCard';
+import TraderProductCard from '@/components/trader/TraderProductCard';
+import ProductSkeleton from '@/components/trader/ProductSkeleton';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export default function ProductListPage() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const { setPageTitle } = useUIStore();
 
+    // Filters State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [categoryFilter, setCategoryFilter] = useState('all');
+
     React.useEffect(() => {
-        setPageTitle('Bidhaa Zangu (My Products)');
+        setPageTitle('Inventory & Stock');
     }, [setPageTitle]);
 
-    const { data, isLoading } = useQuery<ApiResponse<{ data: Product[] }>>({
+    // Fetch Products
+    const { data: response, isLoading } = useQuery<ApiResponse<{ data: Product[] }>>({
         queryKey: ['my-products'],
         queryFn: () => api.get('/products'),
     });
 
+    // Fetch Categories for filtering
+    const { data: catResponse } = useQuery<ApiResponse<Category[]>>({
+        queryKey: ['categories'],
+        queryFn: () => api.get('/categories'),
+    });
+
+    // Handle both wrapped and unwrapped data formats
+    const rawProducts = Array.isArray(response) ? response : (response?.data?.data || response?.data || []);
+    const categories = Array.isArray(catResponse) ? catResponse : (catResponse?.data || []);
+
+    // Mutation: Toggle Status
     const toggleStatusMutation = useMutation({
         mutationFn: ({ id, status }: { id: number, status: string }) => 
             api.patch(`/products/${id}/status`, { stock_status: status }),
@@ -39,105 +63,202 @@ export default function ProductListPage() {
         }
     });
 
-    const products = data?.data?.data || [];
+    // Mutation: Delete
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => api.delete(`/products/${id}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['my-products'] });
+            alert('Product deleted successfully');
+        },
+        onError: (error: any) => {
+            alert(`Error: ${error.message || 'Failed to delete product'}`);
+        }
+    });
 
-    if (isLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen">
-                <Loader2 className="animate-spin text-brand-600" size={40} />
-            </div>
-        );
-    }
+    // Filtering Logic
+    const filteredProducts = useMemo(() => {
+        return rawProducts.filter((p: Product) => {
+            const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesStatus = statusFilter === 'all' || p.stock_status === statusFilter;
+            const matchesCategory = categoryFilter === 'all' || String(p.category_id) === categoryFilter;
+            return matchesSearch && matchesStatus && matchesCategory;
+        });
+    }, [rawProducts, searchTerm, statusFilter, categoryFilter]);
+
+    // Stats Logic
+    const stats = useMemo(() => {
+        return {
+            total: rawProducts.length,
+            low: rawProducts.filter((p: Product) => p.stock_status === 'low').length,
+            out: rawProducts.filter((p: Product) => p.stock_status === 'out_of_stock').length,
+        };
+    }, [rawProducts]);
 
     return (
-        <div className="flex flex-col min-h-screen bg-surface-base pb-32 max-w-7xl mx-auto w-full px-4 pt-6">
-            <div className="p-6 flex justify-end items-center">
-                <button 
-                    onClick={() => router.push('/trader/products/add')}
-                    className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center text-white shadow-brand-md active:scale-95 transition-all"
-                    aria-label="Ongeza bidhaa mpya (Add new product)"
-                    title="Ongeza bidhaa"
-                >
-                    <Plus size={24} />
-                </button>
+        <div className="flex flex-col min-h-screen bg-[#FAFAF8] pb-32 max-w-[1600px] mx-auto w-full px-4 md:px-8 pt-6">
+            
+            {/* Header Section */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 lg:mb-12">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <LayoutGrid className="text-brand-600" size={20} />
+                        <h1 className="text-3xl font-black text-green-950 tracking-tight">Inventory & Stock</h1>
+                    </div>
+                    <p className="text-text-secondary font-medium">Manage your products, prices, and inventory levels.</p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => router.push('/trader/products/add')}
+                        className="flex-1 lg:flex-none h-14 px-8 bg-brand-600 text-white font-black text-sm uppercase tracking-widest rounded-2xl hover:bg-brand-700 transition-all shadow-lg shadow-brand-900/10 active:scale-95 flex items-center justify-center gap-3"
+                    >
+                        <Plus size={20} strokeWidth={3} />
+                        Add Product
+                    </button>
+                </div>
             </div>
 
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-                {products.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                        <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center text-text-muted">
-                            <Package size={40} />
-                        </div>
-                        <div>
-                            <p className="font-bold text-green-950">Huna bidhaa zozote bado</p>
-                            <p className="text-sm text-text-muted mt-1">Gusa &quot;+&quot; hapo juu ili kuongeza bidhaa yako ya kwanza.</p>
-                        </div>
-                    </div>
-                ) : (
-                    products.map((product: Product) => (
-                        <div key={product.id} className="card p-3 flex gap-4 hover:shadow-brand-md transition-all">
-                            <div className="w-24 h-24 bg-neutral-100 rounded-xl overflow-hidden relative shadow-inner grow-0 shrink-0">
-                                {product.image_url ? (
-                                    <Image 
-                                        src={product.image_url} 
-                                        alt={product.name} 
-                                        fill
-                                        className="object-cover" 
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-text-muted">
-                                        <Package size={32} />
-                                    </div>
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+                <StatCard 
+                    title="Total Items" 
+                    value={stats.total} 
+                    icon={Package} 
+                    color="bg-brand-600" 
+                    variant="compact"
+                />
+                <StatCard 
+                    title="Low Stock" 
+                    value={stats.low} 
+                    icon={AlertTriangle} 
+                    color="bg-amber-500" 
+                    variant="compact"
+                />
+                <StatCard 
+                    title="Out of Stock" 
+                    value={stats.out} 
+                    icon={XCircle} 
+                    color="bg-rose-500" 
+                    variant="compact"
+                />
+                <div className="hidden lg:block">
+                    <StatCard 
+                        title="In Stock" 
+                        value={stats.total - stats.low - stats.out} 
+                        icon={TrendingUp} 
+                        color="bg-emerald-600" 
+                        variant="compact"
+                    />
+                </div>
+            </div>
+
+            {/* Filters Bar */}
+            <div className="bg-white rounded-3xl p-4 md:p-6 shadow-sm border border-neutral-100 mb-8 flex flex-col md:flex-row items-center gap-4">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
+                    <input 
+                        type="text"
+                        placeholder="Search products by name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full h-12 pl-12 pr-4 bg-neutral-50 border-none rounded-2xl text-sm font-bold text-green-950 placeholder:text-neutral-400 focus:ring-2 ring-brand-500 transition-all"
+                    />
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+                    <div className="flex items-center gap-2 bg-neutral-50 p-1 rounded-2xl border border-neutral-100 shrink-0">
+                        {['all', 'available', 'low', 'out_of_stock'].map((s) => (
+                            <button
+                                key={s}
+                                onClick={() => setStatusFilter(s)}
+                                className={cn(
+                                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                    statusFilter === s 
+                                        ? "bg-white text-brand-700 shadow-sm" 
+                                        : "text-text-muted hover:text-green-950"
                                 )}
-                                <div className="absolute top-1 left-1">
-                                    {product.stock_status === 'available' && <CheckCircle2 size={16} className="text-success fill-white" />}
-                                    {product.stock_status === 'low' && <AlertTriangle size={16} className="text-warning fill-white" />}
-                                    {product.stock_status === 'out_of_stock' && <XCircle size={16} className="text-error fill-white" />}
-                                </div>
-                            </div>
-                            
-                            <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
-                                <div>
-                                    <div className="flex justify-between items-start">
-                                        <h3 className="font-bold text-green-950 truncate pr-2">{product.name}</h3>
-                                        <button 
-                                            className="text-text-muted p-1 -mt-1"
-                                            aria-label="Chaguzi zaidi (More options)"
-                                            title="Chaguzi zaidi"
-                                        >
-                                            <MoreVertical size={18} />
-                                        </button>
-                                    </div>
-                                    <p className="text-xs text-brand-600 font-bold mt-0.5">{product.category?.name || 'Category'}</p>
-                                </div>
-                                
-                                <div className="flex justify-between items-end">
-                                    <div className="font-mono text-lg font-black text-green-900">
-                                        <span className="text-xs font-bold mr-0.5 text-text-muted">KES</span>
-                                        {product.price}
-                                        <span className="text-[10px] lowercase text-text-muted ml-1">/{product.unit}</span>
-                                    </div>
-                                    
-                                    <select 
-                                        defaultValue={product.stock_status}
-                                        onChange={(e) => toggleStatusMutation.mutate({ id: product.id, status: e.target.value })}
-                                        className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border-2 appearance-none transition-all cursor-pointer ${
-                                            product.stock_status === 'available' ? 'border-brand-500 bg-brand-50 text-brand-700' : 
-                                            product.stock_status === 'low' ? 'border-amber-500 bg-amber-50 text-amber-700' : 
-                                            'border-error bg-error-bg text-color-error-dark'
-                                        }`}
-                                        aria-label="Badilisha hali ya akiba (Change stock status)"
-                                        title="Hali ya akiba"
-                                    >
-                                        <option value="available">In Stock</option>
-                                        <option value="low">Low stock</option>
-                                        <option value="out_of_stock">Out</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
+                            >
+                                {s === 'out_of_stock' ? 'Out' : s}
+                            </button>
+                        ))}
+                    </div>
+
+                    <select 
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="h-12 px-4 bg-neutral-50 border-none rounded-2xl text-xs font-black uppercase tracking-widest text-text-secondary outline-none cursor-pointer hover:bg-neutral-100 transition-all shrink-0"
+                    >
+                        <option value="all">All Categories</option>
+                        {categories.map((cat: Category) => (
+                            <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Products Grid */}
+            {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <ProductSkeleton key={i} />
+                    ))}
+                </div>
+            ) : filteredProducts.length === 0 ? (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center py-32 text-center space-y-6 bg-white rounded-[3rem] border border-dashed border-neutral-200"
+                >
+                    <div className="w-24 h-24 bg-neutral-50 rounded-full flex items-center justify-center text-neutral-300">
+                        <Inbox size={48} strokeWidth={1} />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-black text-green-950">No products found</h3>
+                        <p className="text-sm text-text-muted mt-2 max-w-xs mx-auto font-medium">
+                            {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all' 
+                                ? "Try adjusting your filters or search terms." 
+                                : "You haven't added any products yet. Start by adding your first item!"}
+                        </p>
+                    </div>
+                    {!(searchTerm || statusFilter !== 'all' || categoryFilter !== 'all') && (
+                        <button 
+                            onClick={() => router.push('/trader/products/add')}
+                            className="px-8 py-4 bg-brand-600 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-lg shadow-brand-500/20 active:scale-95 transition-all flex items-center gap-2"
+                        >
+                            <Plus size={18} strokeWidth={3} />
+                            Add First Product
+                        </button>
+                    )}
+                </motion.div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <AnimatePresence mode="popLayout">
+                        {filteredProducts.map((product: Product) => (
+                            <TraderProductCard 
+                                key={product.id}
+                                product={product}
+                                onEdit={(p) => router.push(`/trader/products/${p.id}/edit`)}
+                                onDelete={(id) => {
+                                    if (confirm('Are you sure you want to delete this product?')) {
+                                        deleteMutation.mutate(id);
+                                    }
+                                }}
+                                onToggleStatus={(id, status) => toggleStatusMutation.mutate({ id, status })}
+                                isUpdating={toggleStatusMutation.isPending && toggleStatusMutation.variables?.id === product.id}
+                            />
+                        ))}
+                    </AnimatePresence>
+                </div>
+            )}
+
+            {/* Mobile Sticky Add Button */}
+            <div className="lg:hidden fixed bottom-24 right-6 z-30">
+                <button 
+                    onClick={() => router.push('/trader/products/add')}
+                    className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-brand-900/40 active:scale-90 transition-all"
+                >
+                    <Plus size={32} strokeWidth={3} />
+                </button>
             </div>
         </div>
     );

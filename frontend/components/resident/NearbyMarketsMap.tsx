@@ -79,7 +79,7 @@ export default function NearbyMarketsMap() {
         enabled: !!userLocation
     });
 
-    const markets = nearbyData || [];
+    const markets = Array.isArray(nearbyData) ? nearbyData : ((nearbyData as any)?.data || []);
 
     if (!mapReady) return null;
 

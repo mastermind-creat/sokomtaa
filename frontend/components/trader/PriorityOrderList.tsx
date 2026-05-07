@@ -24,12 +24,9 @@ interface Reservation {
 }
 
 export default function PriorityOrderList() {
-    const { data: resData, isLoading } = useQuery<ApiResponse<Reservation[]>>({
+    const { data: resData, isLoading } = useQuery<ApiResponse<Reservation[]> | Reservation[]>({
         queryKey: ['trader-priority-orders'],
-        queryFn: async () => {
-            const res = await api.get('/trader/reservations?status=paid,ready');
-            return res.data;
-        }
+        queryFn: () => api.get('/trader/reservations?status=paid,ready')
     });
 
     if (isLoading) {
@@ -45,7 +42,7 @@ export default function PriorityOrderList() {
         );
     }
 
-    const priorityOrders = resData?.data || [];
+    const priorityOrders = Array.isArray(resData) ? resData : resData?.data || [];
 
     return (
         <div className="bg-white rounded-[2.5rem] p-8 lg:p-10 shadow-sm border border-gray-50 h-full flex flex-col">

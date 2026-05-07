@@ -92,9 +92,9 @@ export const AllocationModal: React.FC<AllocationModalProps> = ({
         enabled: isOpen,
     });
 
-    const markets = marketsRes?.data || [];
-    const stalls = stallsRes?.data || [];
-    const traders = tradersRes?.data || [];
+    const markets = Array.isArray(marketsRes) ? marketsRes : marketsRes?.data || [];
+    const stalls = Array.isArray(stallsRes) ? stallsRes : stallsRes?.data || [];
+    const traders = Array.isArray(tradersRes) ? tradersRes : tradersRes?.data || [];
 
     if (!isOpen) return null;
 

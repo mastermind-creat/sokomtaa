@@ -43,8 +43,9 @@ export default function RecommendationSection() {
         queryFn: () => api.get('/recommendations'),
     });
 
-    const products = recommendationsData?.data?.popular_products || [];
-    const traders = recommendationsData?.data?.top_traders || [];
+    // Handle both wrapped and unwrapped data formats
+    const products = (recommendationsData as any)?.popular_products || recommendationsData?.data?.popular_products || [];
+    const traders = (recommendationsData as any)?.top_traders || recommendationsData?.data?.top_traders || [];
 
     if (isLoading) {
         return (

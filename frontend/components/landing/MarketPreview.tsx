@@ -21,13 +21,12 @@ interface Market {
 export const MarketPreview = () => {
   const [activeTab, setActiveTab] = useState('all');
 
-  const { data: markets, isLoading, error } = useQuery({
+  const { data: response, isLoading, error } = useQuery({
     queryKey: ['markets'],
-    queryFn: async () => {
-      const response = await api.get('/markets');
-      return response.data;
-    }
+    queryFn: () => api.get('/markets'),
   });
+
+  const markets = (response as any)?.data || [];
 
   const CATEGORIES = [
     { id: 'all', label: 'All Markets' },
