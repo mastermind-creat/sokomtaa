@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { 
-    User, 
+    User as UserIcon, 
     Mail, 
     Phone, 
     Globe, 
@@ -17,50 +17,50 @@ import {
     Shield,
     Languages,
     Bell,
-    CreditCard
+    CreditCard,
+    History,
+    Settings2,
+    ShieldCheck,
+    Palette
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ApiResponse } from '@/types';
+import { ApiResponse, User } from '@/types';
 import { useAuthStore } from '@/store/authStore';
-
-interface UserProfile {
-    id: number;
-    name: string;
-    phone: string;
-    email: string | null;
-    role: string;
-    preferred_language: 'en' | 'sw';
-    avatar_url: string | null;
-}
+import Image from 'next/image';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function ResidentProfilePage() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const { logout } = useAuthStore();
+    const { t, locale, toggleLocale } = useTranslation();
     
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [language, setLanguage] = useState<'en' | 'sw'>('sw');
+    const [isUpdating, setIsUpdating] = useState(false);
 
-    const { data: profileData, isLoading } = useQuery<ApiResponse<UserProfile>>({
+    const { data: profileData, isLoading } = useQuery<ApiResponse<User>>({
         queryKey: ['profile'],
-        queryFn: () => api.get('/profile'),
+        queryFn: () => api.get('/profile').then(res => res.data),
     });
 
     useEffect(() => {
         if (profileData?.data) {
             setName(profileData.data.name);
             setEmail(profileData.data.email || '');
-            setLanguage(profileData.data.preferred_language);
         }
     }, [profileData]);
 
     const updateProfileMutation = useMutation({
-        mutationFn: (data: Partial<UserProfile>) => api.patch('/profile', data),
+        mutationFn: (data: Partial<User>) => api.patch('/profile', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['profile'] });
+            setIsUpdating(false);
+        },
+        onError: () => {
+            setIsUpdating(false);
         }
     });
 
@@ -77,9 +77,12 @@ export default function ResidentProfilePage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-surface flex flex-col items-center justify-center">
-                <Loader2 className="animate-spin text-brand-600 mb-4" size={48} />
-                <p className="text-sm font-black text-brand-700 uppercase tracking-widest animate-pulse">Safisha Wasifu...</p>
+            <div className="min-h-screen bg-surface-base flex flex-col items-center justify-center">
+                <div className="relative">
+                    <Loader2 className="animate-spin text-brand-600 mb-4" size={48} />
+                    <div className="absolute inset-0 blur-xl bg-brand-400/20 animate-pulse" />
+                </div>
+                <p className="text-xs font-black text-brand-700 uppercase tracking-[0.3em] animate-pulse">Loading Profile...</p>
             </div>
         );
     }
@@ -87,157 +90,255 @@ export default function ResidentProfilePage() {
     const user = profileData?.data;
 
     return (
-        <DashboardLayout title="Wasifu Wangu (My Profile)">
-            <div className="space-y-6 pb-20">
+        <DashboardLayout title="My Account">
+            <div className="max-w-4xl mx-auto space-y-10 pb-32">
                 
-                {/* 1. Profile Header (Card Style) */}
-                <div className="bg-green-950 p-8 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24" />
-                    <div className="flex flex-col items-center text-center space-y-4">
-                        <div className="relative group">
-                            <div className="w-28 h-28 bg-brand-500 rounded-[2.5rem] flex items-center justify-center text-4xl font-black shadow-xl border-4 border-white/20">
-                                {user?.avatar_url ? <img src={user.avatar_url} className="w-full h-full object-cover rounded-[2.5rem]" /> : user?.name.charAt(0)}
+                {/* 1. Profile Hero Section */}
+                <section className="relative">
+                    <div className="bg-gradient-to-br from-green-950 via-green-900 to-brand-900 p-10 lg:p-12 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden">
+                        {/* Abstract background elements */}
+                        <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -mr-40 -mt-40 blur-3xl" />
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-brand-500/10 rounded-full -ml-32 -mb-32 blur-2xl" />
+                        
+                        <div className="relative flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+                            <div className="relative group">
+                                <motion.div 
+                                    whileHover={{ scale: 1.05 }}
+                                    className="w-32 h-32 lg:w-40 lg:h-40 bg-brand-500 rounded-[3rem] flex items-center justify-center text-5xl font-black shadow-2xl border-4 border-white/20 relative overflow-hidden"
+                                >
+                                    {user?.avatar_url ? (
+                                        <Image src={user.avatar_url} alt={user.name} fill className="object-cover" />
+                                    ) : (
+                                        <span className="text-white opacity-90">{user?.name?.charAt(0)}</span>
+                                    )}
+                                </motion.div>
+                                <button className="absolute bottom-2 right-2 w-12 h-12 bg-white text-green-950 rounded-2xl flex items-center justify-center shadow-2xl hover:bg-brand-50 active:scale-90 transition-all border border-gray-100">
+                                    <Camera size={20} />
+                                </button>
                             </div>
-                            <button className="absolute bottom-1 right-1 w-10 h-10 bg-white text-green-950 rounded-2xl flex items-center justify-center shadow-lg active:scale-95 transition-all">
-                                <Camera size={18} />
+
+                            <div className="text-center lg:text-left space-y-3">
+                                <div className="flex flex-wrap justify-center lg:justify-start gap-2">
+                                    <span className="px-3 py-1 bg-brand-500/20 backdrop-blur-md border border-brand-500/30 rounded-full text-[10px] font-black uppercase tracking-widest text-brand-300">
+                                        Resident Member
+                                    </span>
+                                    <span className="px-3 py-1 bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-300 flex items-center gap-1.5">
+                                        <CheckCircle2 size={12} /> Verified
+                                    </span>
+                                </div>
+                                <h2 className="text-3xl lg:text-5xl font-black tracking-tight leading-tight">{user?.name}</h2>
+                                <p className="text-brand-200/80 text-sm font-medium flex items-center justify-center lg:justify-start gap-2">
+                                    <Mail size={14} /> {user?.email || 'No email provided'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left Column: Personal Information */}
+                    <div className="lg:col-span-2 space-y-8">
+                        <div className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-gray-100 shadow-brand-sm space-y-8">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-green-950 flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600">
+                                        <UserIcon size={18} />
+                                    </div>
+                                    Personal Information
+                                </h3>
+                                {!isUpdating ? (
+                                    <button 
+                                        onClick={() => setIsUpdating(true)}
+                                        className="text-[10px] font-black uppercase tracking-widest text-brand-600 hover:text-brand-700"
+                                    >
+                                        Edit Details
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={() => setIsUpdating(false)}
+                                        className="text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-text-primary"
+                                    >
+                                        Cancel
+                                    </button>
+                                )}
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2.5">
+                                     <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] pl-1">Display Name</label>
+                                     <div className="relative group">
+                                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-600 transition-colors" size={18} />
+                                        <input 
+                                            value={name}
+                                            disabled={!isUpdating}
+                                            onChange={(e) => setName(e.target.value)}
+                                            className={`w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-2 transition-all font-bold text-sm outline-none ${
+                                                isUpdating ? 'border-brand-100 bg-white focus:border-brand-500 shadow-inner' : 'border-transparent'
+                                            }`}
+                                            placeholder="Your Name"
+                                        />
+                                     </div>
+                                </div>
+
+                                <div className="space-y-2.5">
+                                     <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] pl-1">Email Address</label>
+                                     <div className="relative group">
+                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-600 transition-colors" size={18} />
+                                        <input 
+                                            value={email}
+                                            disabled={!isUpdating}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className={`w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-2 transition-all font-bold text-sm outline-none ${
+                                                isUpdating ? 'border-brand-100 bg-white focus:border-brand-500 shadow-inner' : 'border-transparent'
+                                            }`}
+                                            placeholder="Your Email"
+                                        />
+                                     </div>
+                                </div>
+
+                                <div className="space-y-2.5 md:col-span-2">
+                                     <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] pl-1">Phone Number (Primary ID)</label>
+                                     <div className="relative opacity-60">
+                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+                                        <input 
+                                            value={user?.phone || ''}
+                                            disabled
+                                            className="w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-transparent font-black text-sm"
+                                        />
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 bg-green-50 text-green-600 px-3 py-1.5 rounded-xl border border-green-100">
+                                            <ShieldCheck size={14} />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Verified</span>
+                                        </div>
+                                     </div>
+                                </div>
+                            </div>
+
+                            <AnimatePresence>
+                                {isUpdating && (
+                                    <motion.button 
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 10 }}
+                                        onClick={() => updateProfileMutation.mutate({ name, email })}
+                                        disabled={updateProfileMutation.isPending}
+                                        className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-brand-200 active:scale-95 transition-all"
+                                    >
+                                        {updateProfileMutation.isPending ? <Loader2 className="animate-spin" /> : 'Save Changes'}
+                                    </motion.button>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
+                        {/* Order History Preview Card */}
+                        <div className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-gray-100 shadow-brand-sm flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+                            <div className="flex items-center gap-6 relative">
+                                <div className="w-16 h-16 bg-brand-50 rounded-[1.5rem] flex items-center justify-center text-brand-600 shadow-inner shrink-0">
+                                    <History size={32} />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="text-xl font-black text-green-950 tracking-tight">Activity & History</h4>
+                                    <p className="text-xs text-text-secondary font-medium">Track your recent reservations and market interactions.</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => router.push('/reservations')}
+                                className="px-8 h-14 bg-green-950 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-brand-600 transition-all active:scale-95 relative"
+                            >
+                                View All Orders
                             </button>
                         </div>
-                        <div>
-                            <h2 className="text-2xl font-black tracking-tight">{user?.name}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-300">Resident • Verified</p>
-                        </div>
                     </div>
-                </div>
 
-                {/* 2. Account Details */}
-                <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-brand-sm space-y-6">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-green-950 px-2 flex items-center gap-2">
-                        <Shield size={16} className="text-brand-600" />
-                        Account Details
-                    </h3>
-                    
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                             <label className="text-[10px] font-black text-text-muted uppercase tracking-widest pl-2">Full Name</label>
-                             <div className="relative">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
-                                <input 
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-none focus:ring-2 focus:ring-brand-500 transition-all font-bold text-sm"
-                                    placeholder="Your Name"
-                                />
-                             </div>
-                        </div>
-
-                        <div className="space-y-2">
-                             <label className="text-[10px] font-black text-text-muted uppercase tracking-widest pl-2">Email Address</label>
-                             <div className="relative">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
-                                <input 
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-none focus:ring-2 focus:ring-brand-500 transition-all font-bold text-sm"
-                                    placeholder="Your Email"
-                                />
-                             </div>
-                        </div>
-
-                        <div className="space-y-2">
-                             <label className="text-[10px] font-black text-text-muted uppercase tracking-widest pl-2">Phone Number</label>
-                             <div className="relative opacity-60">
-                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
-                                <input 
-                                    value={user?.phone || ''}
-                                    disabled
-                                    className="w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-none font-bold text-sm"
-                                />
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-green-100 text-green-600 p-1 rounded-lg">
-                                    <CheckCircle2 size={16} />
+                    {/* Right Column: Preferences & Security */}
+                    <div className="space-y-8">
+                        <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-gray-100 shadow-brand-sm space-y-8">
+                            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-green-950 px-1 flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                                    <Settings2 size={16} />
                                 </div>
-                             </div>
+                                Preferences
+                            </h3>
+
+                            <div className="space-y-6">
+                                {/* Language */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Globe size={16} className="text-text-muted" />
+                                            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Language</span>
+                                        </div>
+                                        <span className="text-[10px] font-black text-brand-600 uppercase">{locale === 'en' ? 'English' : 'Swahili'}</span>
+                                    </div>
+                                    <div className="flex bg-neutral-50 p-1.5 rounded-2xl border border-neutral-100 shadow-inner">
+                                        {(['en', 'sw'] as const).map((lang) => (
+                                            <button
+                                                key={lang}
+                                                onClick={() => {
+                                                    if (locale !== lang) toggleLocale();
+                                                    updateProfileMutation.mutate({ preferred_language: lang });
+                                                }}
+                                                className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all ${
+                                                    locale === lang ? 'bg-white text-green-950 shadow-md' : 'text-text-muted hover:text-text-primary'
+                                                }`}
+                                            >
+                                                {lang === 'en' ? 'ENG' : 'SW'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="h-[1px] bg-gray-50" />
+
+                                {/* Notifications Toggle Mock */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <Bell size={20} className="text-text-muted" />
+                                        <span className="text-sm font-bold text-green-950">Notifications</span>
+                                    </div>
+                                    <div className="w-12 h-6 bg-brand-600 rounded-full relative flex items-center px-1 shadow-inner">
+                                        <div className="w-4 h-4 bg-white rounded-full ml-auto" />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <button 
-                        onClick={() => updateProfileMutation.mutate({ name, email })}
-                        disabled={updateProfileMutation.isPending}
-                        className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 active:scale-95 transition-all"
-                    >
-                        {updateProfileMutation.isPending ? <Loader2 className="animate-spin" /> : 'Sasisha Habari (Save)'}
-                    </button>
-                </div>
+                        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-brand-sm space-y-6">
+                            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-green-950 px-1 flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                                    <Lock size={16} />
+                                </div>
+                                Security
+                            </h3>
 
-                {/* 3. Preferences */}
-                <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-brand-sm space-y-6">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-green-950 px-2 flex items-center gap-2">
-                        <Languages size={16} className="text-brand-600" />
-                        Preferences
-                    </h3>
-
-                    <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-2xl">
-                        <div className="flex items-center gap-3">
-                            <Globe size={20} className="text-text-muted" />
-                            <span className="text-sm font-black text-green-950">Lugha (Language)</span>
-                        </div>
-                        <div className="flex bg-white p-1 rounded-xl shadow-sm border border-gray-100">
-                            {(['en', 'sw'] as const).map((lang) => (
-                                <button
-                                    key={lang}
-                                    onClick={() => {
-                                        setLanguage(lang);
-                                        updateProfileMutation.mutate({ preferred_language: lang });
-                                    }}
-                                    className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${
-                                        language === lang ? 'bg-brand-600 text-white shadow-md' : 'text-text-muted'
-                                    }`}
-                                >
-                                    {lang === 'en' ? 'ENG' : 'SW'}
+                            <div className="space-y-4">
+                                <button className="w-full h-14 flex items-center justify-between px-4 bg-neutral-50 rounded-2xl hover:bg-neutral-100 transition-all border border-transparent hover:border-gray-100">
+                                    <span className="text-xs font-bold text-green-950">Change Password</span>
+                                    <ChevronRight size={16} className="text-text-muted" />
                                 </button>
-                            ))}
+                                <button className="w-full h-14 flex items-center justify-between px-4 bg-neutral-50 rounded-2xl hover:bg-neutral-100 transition-all border border-transparent hover:border-gray-100">
+                                    <span className="text-xs font-bold text-green-950">Two-Factor Auth</span>
+                                    <span className="text-[9px] font-black uppercase text-text-muted">Off</span>
+                                </button>
+                            </div>
                         </div>
+
+                        {/* Logout Button */}
+                        <button 
+                            onClick={handleLogout}
+                            className="w-full h-20 bg-rose-50 text-rose-600 rounded-[2.5rem] flex items-center justify-center gap-3 text-xs font-black uppercase tracking-[0.25em] active:scale-95 transition-all border border-rose-100 shadow-sm shadow-rose-900/5 hover:bg-rose-100"
+                        >
+                            <LogOut size={22} />
+                            Sign Out
+                        </button>
                     </div>
                 </div>
 
-                {/* 4. Quick Actions */}
-                <div className="grid grid-cols-2 gap-4">
-                    <button 
-                        onClick={() => router.push('/payments')}
-                        className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3 active:scale-95 transition-all"
-                    >
-                        <CreditCard size={24} className="text-amber-500" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-green-950">Payment History</span>
-                    </button>
-                    <button 
-                        onClick={() => router.push('/complaints')}
-                        className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col items-center text-center gap-3 active:scale-95 transition-all"
-                    >
-                        <Bell size={24} className="text-blue-500" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-green-950">My Alerts</span>
-                    </button>
-                </div>
-
-                {/* 5. Security & Logout */}
-                <div className="space-y-4 pt-4">
-                    <button className="w-full h-16 bg-white border-2 border-gray-100 rounded-2xl flex items-center justify-between px-6 active:scale-95 transition-all">
-                        <div className="flex items-center gap-3">
-                            <Lock size={20} className="text-text-muted" />
-                            <span className="text-sm font-black text-green-950">Badilisha Nenosiri</span>
-                        </div>
-                        <ChevronRight size={20} className="text-text-muted" />
-                    </button>
-                    
-                    <button 
-                        onClick={handleLogout}
-                        className="w-full h-20 bg-red-50 text-red-600 rounded-[2.5rem] flex items-center justify-center gap-3 text-sm font-black uppercase tracking-[0.2em] active:scale-95 transition-all"
-                    >
-                        <LogOut size={24} />
-                        Ondoka (Sign Out)
-                    </button>
-                </div>
-
-                <div className="text-center pb-8">
-                    <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">Soko Mtaa v1.2.0 • Phase 2</p>
+                <div className="text-center pt-10">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-50 rounded-full border border-gray-100">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                        <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">Soko Mtaa Ecosystem v2.1.0</p>
+                    </div>
                 </div>
             </div>
         </DashboardLayout>

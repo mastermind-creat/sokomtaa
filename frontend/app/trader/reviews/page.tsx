@@ -3,7 +3,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Star, ShoppingBag, Flag, MessageCircle } from 'lucide-react';
+import { Star, ShoppingBag, Flag } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 
@@ -108,12 +108,45 @@ export default function TraderReviewsPage() {
         },
     });
 
-    const reviews: ReviewItem[] = Array.isArray(reviewsData) ? reviewsData : (reviewsData as any)?.data ?? [];
+    const reviews: ReviewItem[] = Array.isArray(reviewsData) ? (reviewsData as ReviewItem[]) : ((reviewsData as { data?: ReviewItem[] })?.data ?? []);
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
             <h1 className="text-2xl font-black text-text-primary tracking-tight">Reviews Received</h1>
-            {/* ... rest of content ... */}
+            {summaryLoading ? (
+                <div className="h-32 bg-gray-100 rounded-2xl animate-pulse" />
+            ) : summary ? (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
+                    <div className="flex items-center gap-3">
+                        <span className="text-4xl font-black font-mono text-green-950">{summary.average_rating.toFixed(1)}</span>
+                        <div>
+                            <div className="flex items-center gap-0.5">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <Star key={i} className={`w-4 h-4 ${i < Math.round(summary.average_rating) ? 'fill-accent text-accent' : 'text-gray-200'}`} />
+                                ))}
+                            </div>
+                            <p className="text-xs text-text-muted mt-0.5">{summary.total_reviews} reviews</p>
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                        {([5,4,3,2,1] as const).map(r => (
+                            <StarRow key={r} rating={r} count={summary.breakdown[String(r) as '1'|'2'|'3'|'4'|'5'] ?? 0} total={summary.total_reviews} />
+                        ))}
+                    </div>
+                </div>
+            ) : null}
+            <div className="space-y-4">
+                {isLoading ? (
+                    [1,2,3].map(i => <div key={i} className="h-32 bg-gray-100 rounded-2xl animate-pulse" />)
+                ) : reviews.length === 0 ? (
+                    <div className="text-center py-16 text-text-muted">
+                        <Star className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                        <p className="font-bold text-sm uppercase tracking-widest">No reviews yet</p>
+                    </div>
+                ) : (
+                    reviews.map(review => <ReviewCard key={review.id} review={review} />)
+                )}
+            </div>
         </div>
     );
 }

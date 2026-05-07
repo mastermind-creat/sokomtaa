@@ -8,23 +8,12 @@ import {
     Clock, CheckCircle2, AlertCircle, XCircle, X
 } from 'lucide-react';
 import api from '@/lib/api';
-import { ApiResponse } from '@/types';
+import { ApiResponse, Complaint } from '@/types';
 
 import { useUIStore } from '@/store/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
 
-interface Complaint {
-    id: number;
-    subject: string;
-    description: string;
-    category: string;
-    status: 'open' | 'in_review' | 'resolved' | 'closed';
-    priority: number;
-    admin_response: string | null;
-    created_at: string;
-    resolved_at: string | null;
-    user?: { name: string };   // who filed it (for "against me" tab)
-}
+
 
 const STATUS_CFG = {
     open:      { label: 'Open',       color: 'text-amber-700', bg: 'bg-amber-50',  icon: <AlertCircle className="w-3.5 h-3.5" /> },
@@ -183,14 +172,14 @@ export default function TraderComplaintsPage() {
         setPageTitle('Complaints');
     }, [setPageTitle]);
 
-    const { data: rawData, isLoading } = useQuery({
+    const { data: rawData, isLoading } = useQuery<ApiResponse<{ data: Complaint[] }>>({
         queryKey: ['trader-complaints', activeTab],
         queryFn: async () => {
-            const res = await api.get<never, ApiResponse<{ data: Complaint[] }>>(`/trader/complaints?tab=${activeTab}`);
+            const res = await api.get(`/trader/complaints?tab=${activeTab}`);
             return res.data;
         },
     });
-    const complaints: Complaint[] = Array.isArray(rawData) ? rawData : (rawData as any)?.data ?? [];
+    const complaints = rawData?.data?.data || [];
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-6">

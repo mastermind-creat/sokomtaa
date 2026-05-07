@@ -6,14 +6,10 @@ import api from '@/lib/api';
 import { 
     Search, 
     MapPin, 
-    Loader2, 
     Sparkles, 
     ArrowRight,
-    ShoppingBag,
-    Star,
     ChevronRight,
     Map as MapIcon,
-    Flame,
     Zap,
     TrendingUp
 } from 'lucide-react';
@@ -25,6 +21,13 @@ import { ApiResponse } from '@/types';
 import RecommendationSection from '@/components/resident/RecommendationSection';
 import CategoryFilter from '@/components/resident/CategoryFilter';
 import { motion, AnimatePresence } from 'framer-motion';
+import dynamic from 'next/dynamic';
+import { cn } from '@/lib/utils';
+
+const NearbyMarketsMap = dynamic(() => import('@/components/resident/NearbyMarketsMap'), { 
+    ssr: false,
+    loading: () => <div className="h-[600px] bg-gray-50 rounded-[3rem] animate-pulse flex items-center justify-center text-text-muted font-bold uppercase tracking-widest text-[10px]">Inapakia Ramani...</div>
+});
 
 interface Market {
     id: number;
@@ -37,25 +40,18 @@ interface Market {
 export default function HomePage() {
     const { user } = useAuthStore();
     const router = useRouter();
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
+    const language = user?.preferred_language || locale;
+    const [showNearbyMap, setShowNearbyMap] = React.useState(false);
 
     // Fetch Markets
-    const { data: marketData, isLoading: marketsLoading } = useQuery<ApiResponse<Market[]>>({
+    const { data: marketData, isLoading: marketsLoading } = useQuery<ApiResponse<Market[]> | any>({
         queryKey: ['markets'],
         queryFn: () => api.get('/markets'),
     });
 
-    const markets = marketData?.data || [];
-
-    // Helper for localized greeting time
-    const getGreeting = () => {
-        const hour = new Date().getHours();
-        if (hour < 12) return language === 'sw' ? 'Habari za asubuhi' : 'Good Morning';
-        if (hour < 16) return language === 'sw' ? 'Habari za mchana' : 'Good Afternoon';
-        return language === 'sw' ? 'Habari za jioni' : 'Good Evening';
-    };
-
-    const language = user?.preferred_language || 'sw';
+    // Handle both wrapped and unwrapped data formats
+    const markets = Array.isArray(marketData) ? marketData : (marketData?.data || []);
 
     return (
         <>
@@ -82,7 +78,7 @@ export default function HomePage() {
                                             <span className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />
                                             Active Reservation
                                         </p>
-                                        <h4 className="text-green-950 font-black text-base lg:text-lg tracking-tight">Oda ipo tayari Pickup!</h4>
+                                        <h4 className="text-green-950 font-black text-base lg:text-lg tracking-tight">Order is ready for Pickup!</h4>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
@@ -134,11 +130,11 @@ export default function HomePage() {
                                     <Search size={28} />
                                 </div>
                                 <div className="flex-1 px-2">
-                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-1">Unatafuta nini Leo?</p>
+                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-1">What are you looking for today?</p>
                                     <p className="text-lg font-bold text-green-950/40">{t('common.search_placeholder')}</p>
                                 </div>
                                 <div className="h-16 px-8 bg-green-950 text-white rounded-2xl flex items-center justify-center font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-green-900/20 active:scale-95 transition-all">
-                                    TAFUTA
+                                    SEARCH
                                 </div>
                             </div>
                         </div>
@@ -165,11 +161,11 @@ export default function HomePage() {
                 {/* 4. RECOMMENDATIONS: Premium Glass Card */}
                 <section className="relative group">
                     <div className="absolute inset-0 bg-brand-50 rounded-[4rem] group-hover:rotate-1 transition-transform" />
-                    <div className="relative bg-white rounded-[4rem] p-8 lg:p-14 shadow-lg border border-gray-50 flex flex-col gap-8">
+                    <div className="relative bg-white rounded-[2.5rem] md:rounded-[4rem] p-6 md:p-14 shadow-lg border border-gray-50 flex flex-col gap-8">
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
-                                <h3 className="text-2xl lg:text-4xl text-green-950 font-black tracking-tighter">Boresha ununuzi wako</h3>
-                                <p className="text-text-secondary text-sm lg:text-lg font-medium opacity-80">Wafanyibiashara walio idhinishwa na Soko Mtaa.</p>
+                                <h3 className="text-2xl lg:text-4xl text-green-950 font-black tracking-tighter">Improve your shopping</h3>
+                                <p className="text-text-secondary text-sm lg:text-lg font-medium opacity-80">Verified traders by Soko Mtaa.</p>
                             </div>
                             <div className="flex items-center gap-2 bg-amber-100 text-amber-700 px-4 py-2 rounded-2xl border border-amber-200 shadow-sm">
                                 <TrendingUp size={18} />
@@ -185,16 +181,39 @@ export default function HomePage() {
                     <div className="flex items-center justify-between mb-10 px-2 text-center sm:text-left">
                         <div>
                             <h2 className="text-2xl lg:text-4xl text-green-950 font-black tracking-tighter">{t('home.markets_title')}</h2>
-                            <p className="text-text-secondary text-sm lg:text-lg font-medium mt-1">Gundua masoko yaliyo karibu nawe.</p>
+                            <p className="text-text-secondary text-sm lg:text-lg font-medium mt-1">Discover markets near you.</p>
                         </div>
-                        <button onClick={() => router.push('/market/map')} className="hidden sm:flex h-14 px-8 bg-brand-50 text-brand-700 rounded-2xl items-center justify-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-600 hover:text-white transition-all border border-brand-100 shadow-sm">
-                            <MapIcon size={18} /> MAP VIEW
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button 
+                                onClick={() => setShowNearbyMap(!showNearbyMap)}
+                                className={cn(
+                                    "flex h-14 px-8 rounded-2xl items-center justify-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all border shadow-sm",
+                                    showNearbyMap 
+                                        ? "bg-brand-600 text-white border-brand-600 shadow-brand-200" 
+                                        : "bg-brand-50 text-brand-700 border-brand-100 hover:bg-brand-100"
+                                )}
+                            >
+                                <MapIcon size={18} /> {showNearbyMap ? 'HIDE MAP' : 'NEARBY MAP'}
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {marketsLoading && Array(3).fill(0).map((_, i) => (
-                            <div key={i} className="h-48 bg-gray-50 animate-pulse rounded-[3rem]" />
+                    <AnimatePresence>
+                        {showNearbyMap && (
+                            <motion.div 
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="mb-12 overflow-hidden"
+                            >
+                                <NearbyMarketsMap />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+                        {marketsLoading && Array(4).fill(0).map((_, i) => (
+                            <div key={i} className="h-40 md:h-48 bg-gray-50 animate-pulse rounded-2xl md:rounded-[3rem]" />
                         ))}
                         
                         {markets.map((market, index) => (
@@ -204,29 +223,29 @@ export default function HomePage() {
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: index * 0.1 }}
                                 onClick={() => router.push(`/market/${market.id}`)}
-                                className="group relative bg-white rounded-[3rem] p-8 shadow-sm border border-gray-50 hover:shadow-2xl hover:shadow-brand-100/50 transition-all cursor-pointer overflow-hidden flex flex-col gap-6"
+                                className="group relative bg-white rounded-2xl md:rounded-[3rem] p-4 md:p-8 shadow-sm border border-gray-50 hover:shadow-2xl hover:shadow-brand-100/50 transition-all cursor-pointer overflow-hidden flex flex-col gap-4"
                             >
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700 opacity-50" />
+                                <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-brand-50 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700 opacity-50" />
                                 
                                 <div className="flex items-start justify-between">
-                                    <div className="w-16 h-16 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-all shadow-inner">
-                                        <MapPin size={32} />
+                                    <div className="w-10 h-10 md:w-16 md:h-16 bg-brand-50 text-brand-600 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-all shadow-inner">
+                                        <MapPin size={20} />
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-[10px] font-black text-brand-600 bg-brand-50 px-3 py-1.5 rounded-xl uppercase border border-brand-100">
+                                        <p className="text-[8px] md:text-[10px] font-black text-brand-600 bg-brand-50 px-2 md:px-3 py-1 rounded-lg md:rounded-xl uppercase border border-brand-100">
                                             {market.traders_count} Traders
                                         </p>
                                     </div>
                                 </div>
                                 <div className="relative z-10">
-                                    <h3 className="text-2xl font-black text-green-950 group-hover:text-brand-700 transition-colors leading-tight mb-1">{market.name}</h3>
-                                    <p className="text-[10px] text-text-muted font-black uppercase tracking-[0.2em] flex items-center gap-2">
-                                        <MapPin size={12} className="text-amber-500" />
+                                    <h3 className="text-sm md:text-2xl font-black text-green-950 group-hover:text-brand-700 transition-colors leading-tight mb-1 truncate uppercase">{market.name}</h3>
+                                    <p className="text-[8px] md:text-[10px] text-text-muted font-black uppercase tracking-widest flex items-center gap-1.5 truncate">
+                                        <MapPin size={10} className="text-amber-500" />
                                         {market.location}
                                     </p>
                                 </div>
-                                <div className="pt-4 flex items-center gap-2 text-brand-600 font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                                    View Schematic Map <ChevronRight size={14} />
+                                <div className="pt-2 md:pt-4 flex items-center gap-2 text-brand-600 font-black text-[8px] md:text-[10px] uppercase tracking-widest opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                    Map View <ChevronRight size={12} />
                                 </div>
                             </motion.div>
                         ))}

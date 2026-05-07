@@ -25,7 +25,13 @@
     "complaints": "Complaints",
     "fees": "Fees",
     "reports": "Reports",
-    "verification": "Verification"
+    "verification": "Verification",
+    "available": "Available",
+    "low_stock": "Low Stock",
+    "orders": "Orders",
+    "product": "Product",
+    "trader": "Trader",
+    "market": "Market"
   },
   "home": {
     "greeting": "Hello",
@@ -135,5 +141,35 @@
     "inactive": "Wallet Locked",
     "credits": "Credits",
     "debits": "Debits"
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search markets, traders, or products...",
+    "min_chars": "Type 2 or more characters to search.",
+    "results_count": "Results ({total})",
+    "no_results": "No results found for \"{query}\"",
+    "product": "Product",
+    "trader": "Trader",
+    "market": "Market"
+  },
+  "storefront": {
+    "products": "Products",
+    "about": "About",
+    "reviews": "Reviews",
+    "open_now": "Open Now",
+    "closed": "Closed",
+    "verified_trader": "Verified Trader",
+    "high_rated": "High Rated",
+    "reserves_accepted": "Reserves Accepted",
+    "business_desc_title": "Business Description",
+    "opened_since": "Opened Since",
+    "total_sales": "Total Sales",
+    "contact_info": "Contact & Service",
+    "phone": "Phone",
+    "location": "Location",
+    "customer_reviews": "Customer Reviews",
+    "no_reviews": "No reviews yet",
+    "reserve_item": "Reserve Item",
+    "call": "Call"
   }
 }

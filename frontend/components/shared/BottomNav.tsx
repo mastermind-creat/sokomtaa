@@ -33,23 +33,23 @@ export default function BottomNav() {
     const activeTabs = tabs.filter(tab => !tab.roles || tab.roles.includes(user?.role || 'resident'));
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 h-20 bg-white/90 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-2 z-50 safe-bottom shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
+        <nav className="fixed bottom-0 left-0 right-0 h-[72px] bg-white/90 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-1 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
             {activeTabs.map((tab) => {
                 const isActive = pathname === tab.path || (tab.path !== '/' && pathname.startsWith(tab.path));
                 return (
                     <button
                         key={tab.path}
                         onClick={() => router.push(tab.path)}
-                        className={`flex flex-col items-center justify-center gap-1 w-16 h-full transition-all active:scale-90 ${
+                        className={`flex-1 flex flex-col items-center justify-center gap-1 h-full transition-all active:scale-90 ${
                             isActive ? 'text-brand-600' : 'text-gray-400'
                         }`}
                     >
                         <tab.icon 
-                            size={22} 
+                            size={20} 
                             strokeWidth={isActive ? 2.5 : 2} 
                             className={`transition-all ${isActive ? 'scale-110' : ''}`} 
                         />
-                        <span className={`text-[10px] font-bold uppercase tracking-wider leading-none transition-all ${
+                        <span className={`text-[8px] font-black uppercase tracking-normal leading-none truncate w-full text-center px-0.5 transition-all ${
                             isActive ? 'opacity-100' : 'opacity-60'
                         }`}>
                             {tab.label}
@@ -61,5 +61,6 @@ export default function BottomNav() {
                 );
             })}
         </nav>
+
     );
 }

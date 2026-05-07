@@ -7,13 +7,8 @@ import { StatCard } from '@/components/admin/StatCard';
 import {
     Users,
     Home,
-    AlertCircle,
     TrendingUp,
     ArrowRight,
-    CheckCircle2,
-    Clock,
-    ShieldAlert,
-    BarChart3,
     Activity,
     Map as MapIcon,
     Filter
@@ -131,7 +126,7 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-3 xl:grid-cols-4 gap-2 md:gap-6">
                     <StatCard
                         title={`Fees`}
-                        value={`KES ${stats?.revenue.total >= 1000 ? (stats.revenue.total / 1000).toFixed(1) + 'k' : stats?.revenue.total}`}
+                        value={`KES ${stats?.revenue?.total !== undefined ? (stats.revenue.total >= 1000 ? (stats.revenue.total / 1000).toFixed(1) + 'k' : stats.revenue.total) : '0'}`}
                         icon={TrendingUp}
                         color="bg-brand-600"
                         variant="compact"

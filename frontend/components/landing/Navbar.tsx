@@ -3,10 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
+import { useAuthStore } from '@/store/authStore';
+import { User as UserIcon, LogOut, ChevronDown } from 'lucide-react';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const { user, isAuthenticated, logout } = useAuthStore();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -54,15 +58,36 @@ export const Navbar = () => {
               </a>
             ))}
             <div className="w-px h-6 bg-gray-200 mx-4" />
-            <Link href="/login" className="px-4 py-2 text-sm font-bold text-gray-700 hover:text-brand-600 transition-colors duration-200">
-              Sign in
-            </Link>
-            <Link 
-              href="/register" 
-              className="ml-4 px-6 py-2.5 bg-brand-600 text-white font-display font-bold text-sm rounded-full shadow-lg shadow-brand-600/25 hover:bg-brand-700 hover:scale-105 transition-all duration-300"
-            >
-              Get started free
-            </Link>
+            
+            {isAuthenticated && user ? (
+              <div className="flex items-center gap-4">
+                <Link href={user.role === 'admin' ? '/admin/dashboard' : user.role === 'trader' ? '/trader/dashboard' : '/profile'} className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-black">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-bold text-green-950">{user.name.split(' ')[0]}</span>
+                </Link>
+                <button 
+                  onClick={logout}
+                  className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Logout"
+                >
+                  <LogOut size={20} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link href="/login" className="px-4 py-2 text-sm font-bold text-gray-700 hover:text-brand-600 transition-colors duration-200">
+                  Sign in
+                </Link>
+                <Link 
+                  href="/register" 
+                  className="ml-4 px-6 py-2.5 bg-brand-600 text-white font-display font-bold text-sm rounded-full shadow-lg shadow-brand-600/25 hover:bg-brand-700 hover:scale-105 transition-all duration-300"
+                >
+                  Get started free
+                </Link>
+              </>
+            )}
           </div>
 
           <button 
@@ -91,14 +116,23 @@ export const Navbar = () => {
               {item}
             </a>
           ))}
-          <Link href="/login" className="text-2xl font-black text-gray-500" onClick={() => setMenuOpen(false)}>Sign in</Link>
-          <Link 
-            href="/register" 
-            className="w-full text-center py-5 bg-brand-600 text-white font-black text-xl rounded-2xl"
-            onClick={() => setMenuOpen(false)}
-          >
-            Get started free
-          </Link>
+          {isAuthenticated && user ? (
+            <>
+              <Link href={user.role === 'admin' ? '/admin/dashboard' : user.role === 'trader' ? '/trader/dashboard' : '/profile'} className="text-2xl font-black text-green-950" onClick={() => setMenuOpen(false)}>My Profile</Link>
+              <button onClick={() => { logout(); setMenuOpen(false); }} className="text-2xl font-black text-red-500">Logout</button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="text-2xl font-black text-gray-500" onClick={() => setMenuOpen(false)}>Sign in</Link>
+              <Link 
+                href="/register" 
+                className="w-full text-center py-5 bg-brand-600 text-white font-black text-xl rounded-2xl"
+                onClick={() => setMenuOpen(false)}
+              >
+                Get started free
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </>

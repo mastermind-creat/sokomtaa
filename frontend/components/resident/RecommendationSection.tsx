@@ -43,8 +43,9 @@ export default function RecommendationSection() {
         queryFn: () => api.get('/recommendations'),
     });
 
-    const products = recommendationsData?.data?.popular_products || [];
-    const traders = recommendationsData?.data?.top_traders || [];
+    // Handle both wrapped and unwrapped data formats
+    const products = (recommendationsData as any)?.popular_products || recommendationsData?.data?.popular_products || [];
+    const traders = (recommendationsData as any)?.top_traders || recommendationsData?.data?.top_traders || [];
 
     if (isLoading) {
         return (
@@ -71,32 +72,32 @@ export default function RecommendationSection() {
             {products.length > 0 && (
                 <div className="px-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-black text-green-950">Pendekezo Lako</h2>
-                        <Link href="/search" className="text-sm font-bold text-brand-600">Onesha Zote</Link>
+                        <h2 className="text-xl font-black text-green-950">Recommended</h2>
+                        <Link href="/search" className="text-xs font-black uppercase tracking-widest text-brand-600">View All</Link>
                     </div>
-                    <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6 snap-x snap-mandatory">
+                    <div className="flex gap-3 md:gap-6 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6 snap-x snap-mandatory">
                         {products.map(product => (
-                            <Link key={product.id} href={`/resident/market/${product.trader.market.id}/trader/${product.trader.id}`} className="min-w-[260px] max-w-[260px] snap-center rounded-3xl bg-surface-card border border-border-default overflow-hidden shadow-brand-sm group active:scale-[0.98] transition-all">
-                                <div className="h-44 bg-neutral-100 relative overflow-hidden">
+                            <Link key={product.id} href={`/resident/market/${product.trader.market.id}/trader/${product.trader.id}`} className="min-w-[180px] md:min-w-[260px] snap-center rounded-2xl md:rounded-3xl bg-white border border-gray-100 overflow-hidden shadow-brand-sm group active:scale-[0.98] transition-all flex flex-col">
+                                <div className="h-32 md:h-44 bg-neutral-100 relative overflow-hidden">
                                     {product.image_url ? (
                                         <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                     ) : (
                                         <div className="w-full h-full flex flex-col items-center justify-center text-neutral-300">
-                                            <Store size={48} />
+                                            <Store size={32} />
                                         </div>
                                     )}
-                                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold font-mono text-green-950 shadow-sm">
-                                        KES {parseFloat(product.price as string).toLocaleString()} <span className="text-text-muted">/ {product.unit}</span>
+                                    <div className="absolute top-2 left-2 md:top-3 md:left-3 bg-white/90 backdrop-blur-sm px-2 md:px-3 py-0.5 md:py-1 rounded-lg md:rounded-full text-[8px] md:text-xs font-black font-mono text-green-950 shadow-sm">
+                                        KES {Math.round(parseFloat(product.price as string))}
                                     </div>
                                 </div>
-                                <div className="p-4">
-                                    <h3 className="font-bold text-text-primary text-lg truncate mb-1">{product.name}</h3>
-                                    <div className="flex items-center gap-1.5 text-text-secondary text-sm mb-3">
-                                        <Store size={14} className="text-brand-500" />
-                                        <span className="truncate">{product.trader.business_name_sw || product.trader.business_name}</span>
+                                <div className="p-3 md:p-4 flex-1 flex flex-col">
+                                    <h3 className="font-black text-green-950 text-xs md:text-lg truncate mb-1 uppercase">{product.name}</h3>
+                                    <div className="flex items-center gap-1.5 text-text-secondary text-[8px] md:text-sm mb-3">
+                                        <Store size={12} className="text-brand-500" />
+                                        <span className="truncate">{product.trader.business_name}</span>
                                     </div>
-                                    <button className="btn btn-primary w-full h-10 rounded-xl text-sm font-bold shadow-sm">
-                                        Tazama
+                                    <button className="mt-auto w-full h-8 md:h-10 bg-brand-50 text-brand-700 rounded-lg md:rounded-xl text-[8px] md:text-sm font-black uppercase tracking-widest hover:bg-brand-600 hover:text-white transition-all">
+                                        View Item
                                     </button>
                                 </div>
                             </Link>
@@ -108,29 +109,29 @@ export default function RecommendationSection() {
             {/* Top Traders Highlights */}
             {traders.length > 0 && (
                 <div className="px-6">
-                    <h2 className="text-xl font-black text-green-950 mb-4">Wafanyabiashara Bora</h2>
-                    <div className="grid gap-4">
+                    <h2 className="text-xl font-black text-green-950 mb-4">Top Traders</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-1 gap-3 md:gap-4">
                         {traders.map(trader => (
-                            <Link key={trader.id} href={`/resident/market/${trader.market.id}/trader/${trader.id}`} className="flex items-center gap-4 bg-surface-card p-4 rounded-3xl border border-border-default shadow-sm active:scale-[0.98] transition-all group">
-                                <div className="w-16 h-16 rounded-2xl bg-brand-50 flex items-center justify-center shrink-0 overflow-hidden">
+                            <Link key={trader.id} href={`/resident/market/${trader.market.id}/trader/${trader.id}`} className="flex flex-col md:flex-row items-center md:items-center gap-3 bg-white p-3 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm active:scale-[0.98] transition-all group">
+                                <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-brand-50 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
                                     {trader.avatar_url ? (
                                         <img src={trader.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                     ) : (
-                                        <Store size={24} className="text-brand-400" />
+                                        <Store size={20} className="text-brand-400" />
                                     )}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-text-primary text-base truncate group-hover:text-brand-700 transition-colors">
-                                        {trader.business_name_sw || trader.business_name}
+                                <div className="flex-1 min-w-0 text-center md:text-left">
+                                    <h3 className="font-black text-green-950 text-xs md:text-base truncate group-hover:text-brand-700 transition-colors uppercase">
+                                        {trader.business_name}
                                     </h3>
-                                    <div className="flex items-center gap-3 text-xs text-text-secondary mt-1">
+                                    <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-[8px] md:text-xs text-text-secondary mt-1">
                                         <span className="flex items-center gap-1">
-                                            <Star size={12} className="text-amber-500 fill-amber-500" />
-                                            <span className="font-bold text-text-primary">{trader.average_rating}</span> 
-                                            ({trader.total_reviews})
+                                            <Star size={10} className="text-amber-500 fill-amber-500" />
+                                            <span className="font-black text-green-950">{trader.average_rating}</span> 
                                         </span>
-                                        <span className="flex items-center gap-1 truncate">
-                                            <MapPin size={12} />
+                                        <span className="hidden md:block w-1 h-1 rounded-full bg-gray-300" />
+                                        <span className="flex items-center gap-1 truncate opacity-70">
+                                            <MapPin size={10} />
                                             <span className="truncate">{trader.market.name}</span>
                                         </span>
                                     </div>

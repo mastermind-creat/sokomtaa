@@ -33,7 +33,7 @@ export const useAuthStore = create<AuthState>()(
                 try {
                     const response = await api.get<never, ApiResponse<User>>('/auth/me');
                     set({ user: response.data, isAuthenticated: true });
-                } catch (error) {
+                } catch {
                     get().logout();
                 }
             },

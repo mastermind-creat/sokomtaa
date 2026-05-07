@@ -20,6 +20,7 @@ class StallController extends Controller
     public function index(Request $request): JsonResponse
     {
         $marketId = $request->query('market_id');
+        $status = $request->query('status');
         
         if (!$marketId) {
             $marketId = Market::first()->id ?? null;
@@ -29,9 +30,13 @@ class StallController extends Controller
             return $this->error('No markets found.', 'NOT_FOUND', 404);
         }
 
-        $stalls = Stall::with(['currentTrader'])
-            ->where('market_id', $marketId)
-            ->get();
+        $query = Stall::with(['currentTrader'])->where('market_id', $marketId);
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $stalls = $query->get();
 
         return $this->success($stalls);
     }
@@ -160,5 +165,47 @@ class StallController extends Controller
             'maintenance' => $maintenance,
             'occupancy_rate' => $total > 0 ? round(($occupied / $total) * 100, 1) : 0
         ]);
+    }
+
+    /**
+     * Get the next sequential stall number for a block.
+     */
+    public function getNextNumber(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'market_id' => 'required|exists:markets,id',
+                'block' => 'required|string',
+                'zone' => 'nullable|string'
+            ]);
+
+            $lastStall = Stall::where('market_id', $request->market_id)
+                ->where('block', $request->block)
+                ->orderByRaw('LENGTH(stall_number) DESC')
+                ->orderBy('stall_number', 'DESC')
+                ->first();
+
+            if (!$lastStall) {
+                // Default based on zone if provided, else just "1"
+                $prefix = $request->zone ?: ($request->block ?: 'A');
+                $separator = is_numeric(substr($prefix, -1)) ? '-' : '';
+                return $this->success(['next_number' => $prefix . $separator . '1']);
+            }
+
+            // Try to increment the numeric part
+            $currentNumber = $lastStall->stall_number;
+            
+            // Find trailing digits
+            if (preg_match('/^(.*?)(\d+)$/', $currentNumber, $matches)) {
+                $prefix = $matches[1];
+                $number = (int)$matches[2] + 1;
+                return $this->success(['next_number' => $prefix . $number]);
+            }
+
+            // Fallback: append "1"
+            return $this->success(['next_number' => $currentNumber . '1']);
+        } catch (\Exception $e) {
+            return $this->error('Failed to generate number: ' . $e->getMessage(), 'GEN_ERROR', 500);
+        }
     }
 }

@@ -33,6 +33,7 @@ Route::post('/categories', [CategoryController::class, 'store'])->middleware('au
 // Market Discovery (Public)
 Route::prefix('markets')->group(function () {
     Route::get('/', [\App\Http\Controllers\Resident\MarketController::class, 'index']);
+    Route::get('/nearby', [\App\Http\Controllers\Resident\MarketController::class, 'nearby']);
     Route::get('/{market}', [\App\Http\Controllers\Resident\MarketController::class, 'show']);
 });
 
@@ -216,12 +217,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Stalls Management
         Route::get('/stalls', [\App\Http\Controllers\Admin\StallController::class, 'index']);
         Route::get('/stalls/summary', [\App\Http\Controllers\Admin\StallController::class, 'summary']);
+        Route::get('/stalls/next-number', [\App\Http\Controllers\Admin\StallController::class, 'getNextNumber']);
         Route::post('/stalls', [\App\Http\Controllers\Admin\StallController::class, 'store']);
         Route::patch('/stalls/{stall}', [\App\Http\Controllers\Admin\StallController::class, 'update']);
         Route::delete('/stalls/{stall}', [\App\Http\Controllers\Admin\StallController::class, 'destroy']);
         Route::post('/stalls/bulk', [\App\Http\Controllers\Admin\StallController::class, 'bulkGenerate']);
         Route::get('/map-data', [\App\Http\Controllers\Admin\StallMapController::class, 'getMapData']);
         Route::get('/allocations', [\App\Http\Controllers\Admin\StallAllocationController::class, 'index']);
+        Route::post('/allocations', [\App\Http\Controllers\Admin\StallAllocationController::class, 'store']);
 
         // Stall Application Review
         Route::get('/applications', [\App\Http\Controllers\Admin\ApplicationReviewController::class, 'index']);
@@ -238,6 +241,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         // Traders Management
         Route::get('/traders', [\App\Http\Controllers\Admin\TraderController::class, 'index']);
+
+        // Markets Management
+        Route::prefix('markets')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\MarketController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Admin\MarketController::class, 'store']);
+            Route::put('/{market}', [\App\Http\Controllers\Admin\MarketController::class, 'update']);
+            Route::delete('/{market}', [\App\Http\Controllers\Admin\MarketController::class, 'destroy']);
+            Route::patch('/{market}/toggle', [\App\Http\Controllers\Admin\MarketController::class, 'toggleStatus']);
+        });
 
         // Analytics & Ledgers
         Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'getAnalytics']);

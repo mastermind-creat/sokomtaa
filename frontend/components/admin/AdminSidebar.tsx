@@ -13,18 +13,40 @@ import {
     Settings,
     ChevronRight,
     ChevronDown,
-    Search,
     BarChart3,
     Map as MapIcon,
     CreditCard,
     ShoppingBag,
     Star,
     UsersRound,
-    SquareChartGantt,
-    ShieldCheck
+    ShieldCheck,
+    GanttChartSquare
 } from 'lucide-react';
+
+const Building2 = ({ size, className, strokeWidth }: { size?: number; className?: string; strokeWidth?: number }) => (
+    <svg 
+        width={size} 
+        height={size} 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth={strokeWidth} 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        className={className}
+    >
+        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+        <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+        <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+        <path d="M10 6h4" />
+        <path d="M10 10h4" />
+        <path d="M10 14h4" />
+        <path d="M10 18h4" />
+    </svg>
+);
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useAuthStore } from '@/store/authStore';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,7 +75,7 @@ export default function AdminSidebar() {
             items: [
                 { icon: MapPin, label: t('common.markets'), path: '/admin/markets' },
                 { icon: Store, label: t('common.stalls'), path: '/admin/stalls' },
-                { icon: SquareChartGantt, label: 'Allocations', path: '/admin/allocations' },
+                { icon: GanttChartSquare, label: 'Allocations', path: '/admin/allocations' },
             ]
         },
         {
@@ -116,7 +138,7 @@ export default function AdminSidebar() {
             {/* Logo Area */}
             <div className="p-8 pb-6">
                 <div 
-                    onClick={() => router.push('/admin/dashboard')} 
+                    onClick={() => router.push('/')} 
                     className="cursor-pointer active:scale-95 transition-transform"
                 >
                     <Logo variant="light" width={140} />
@@ -208,8 +230,12 @@ export default function AdminSidebar() {
                     </div>
                     
                     <button 
-                        onClick={() => router.push('/logout')}
-                        className="w-full flex items-center justify-center p-3 rounded-xl bg-red-50 text-red-600 font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-colors"
+                        onClick={() => {
+                            const { logout } = useAuthStore.getState();
+                            logout();
+                            router.push('/login');
+                        }}
+                        className="w-full h-14 flex items-center justify-center p-3 rounded-2xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-100 active:scale-95 transition-all"
                     >
                         Sign Out
                     </button>
@@ -219,24 +245,4 @@ export default function AdminSidebar() {
     );
 }
 
-const Building2 = ({ size, className, strokeWidth }: any) => (
-    <svg 
-        width={size} 
-        height={size} 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth={strokeWidth} 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-        className={className}
-    >
-        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
-        <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
-        <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
-        <path d="M10 6h4" />
-        <path d="M10 10h4" />
-        <path d="M10 14h4" />
-        <path d="M10 18h4" />
-    </svg>
-);
+

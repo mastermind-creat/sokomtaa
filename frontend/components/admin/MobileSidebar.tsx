@@ -7,19 +7,13 @@ import {
     Store, 
     Users, 
     MapPin, 
-    Ticket, 
-    MessageSquare, 
     FileText, 
-    Bell,
     Settings,
     ChevronRight,
     BarChart3,
     Map as MapIcon,
-    CreditCard,
-    ShoppingBag,
-    Star,
     UsersRound,
-    SquareChartGantt,
+    GanttChartSquare,
     ShieldCheck,
     LogOut
 } from 'lucide-react';
@@ -28,6 +22,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
 import { Logo } from '../shared/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 interface MobileSidebarProps {
     isOpen: boolean;
@@ -54,7 +49,7 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             items: [
                 { icon: MapPin, label: 'Markets', path: '/admin/markets' },
                 { icon: Store, label: 'Stalls', path: '/admin/stalls' },
-                { icon: SquareChartGantt, label: 'Allocations', path: '/admin/allocations' },
+                { icon: GanttChartSquare, label: 'Allocations', path: '/admin/allocations' },
             ]
         },
         {
@@ -81,27 +76,32 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
 
     return (
         <AnimatePresence>
+            {/* Backdrop */}
             {isOpen && (
-                <>
-                    {/* Backdrop */}
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm lg:hidden"
-                    />
+                <motion.div 
+                    key="mobile-sidebar-backdrop"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={onClose}
+                    className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm lg:hidden"
+                />
+            )}
 
-                    {/* Drawer Content */}
-                    <motion.div 
-                        initial={{ x: '-100%' }}
-                        animate={{ x: 0 }}
-                        exit={{ x: '-100%' }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed top-0 left-0 bottom-0 w-[280px] bg-white z-[70] flex flex-col shadow-2xl lg:hidden"
-                    >
+            {/* Drawer Content */}
+            {isOpen && (
+                <motion.div 
+                    key="mobile-sidebar-drawer"
+                    initial={{ x: '-100%' }}
+                    animate={{ x: 0 }}
+                    exit={{ x: '-100%' }}
+                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                    className="fixed top-0 left-0 bottom-0 w-[280px] bg-white z-[70] flex flex-col shadow-2xl lg:hidden"
+                >
                         <div className="p-6 flex items-center justify-between border-b border-neutral-100">
-                            <Logo variant="light" width={110} />
+                            <Link href="/" onClick={onClose} className="active:scale-95 transition-transform">
+                                <Logo variant="light" width={110} />
+                            </Link>
                             <button 
                                 onClick={onClose}
                                 className="w-10 h-10 rounded-xl bg-neutral-50 text-neutral-400 flex items-center justify-center active:scale-90 transition-transform"
@@ -142,14 +142,16 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
 
                         <div className="p-4 border-t border-neutral-100 bg-neutral-50/50">
                              <button 
-                                onClick={() => logout()}
-                                className="w-full flex items-center gap-4 p-4 rounded-2xl text-red-600 bg-white border border-red-100 shadow-sm font-black text-[10px] uppercase tracking-[0.2em] transition-all active:scale-95"
+                                onClick={() => {
+                                    logout();
+                                    router.push('/login');
+                                }}
+                                className="w-full flex items-center gap-4 p-4 rounded-2xl text-rose-600 bg-white border border-rose-100 shadow-sm font-black text-[10px] uppercase tracking-[0.2em] transition-all active:scale-95"
                              >
                                 <LogOut size={16} /> Sign Out
                              </button>
                         </div>
                     </motion.div>
-                </>
             )}
         </AnimatePresence>
     );

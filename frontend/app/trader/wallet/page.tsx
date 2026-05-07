@@ -1,16 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
-    CreditCard, 
     Plus, 
     ArrowUpRight, 
     ArrowDownLeft, 
     History, 
     Calendar,
     Info,
-    ChevronRight,
     Wallet as WalletIcon,
     RefreshCcw,
     CheckCircle2,
@@ -18,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useWallet, WalletTransaction } from '@/hooks/useWallet';
 import { useTranslation } from '@/hooks/useTranslation';
-import { useMpesa } from '@/hooks/useMpesa';
+
 import { useUIStore } from '@/store/uiStore';
 import MpesaPaymentSheet from '@/components/shared/MpesaPaymentSheet';
 // import { format } from 'date-fns';
@@ -45,7 +43,7 @@ export default function TraderWalletPage() {
                 minute: 'numeric',
                 hour12: true
             }).format(date);
-        } catch (e) {
+        } catch (_e) {
             return date.toLocaleDateString();
         }
     };

@@ -5,23 +5,18 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUIStore } from '@/store/uiStore';
 import { 
-    AlertCircle, 
-    MessageCircle, 
-    CheckCircle2, 
     Clock, 
-    Filter, 
-    Search, 
     ChevronRight,
     Gavel,
     ShieldAlert,
     MoreHorizontal,
     Store,
     UserCheck,
-    ArrowRightCircle,
-    Activity
+    ArrowRightCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
+import { ApiResponse, Complaint } from '@/types';
 
 export default function AdminComplaintsPage() {
     const { setPageTitle } = useUIStore();
@@ -31,15 +26,12 @@ export default function AdminComplaintsPage() {
         setPageTitle('Crisis Intelligence (Malalamiko)');
     }, [setPageTitle]);
 
-    const { data: complaintsRaw, isLoading } = useQuery({
+    const { data: complaintsRaw, isLoading } = useQuery<ApiResponse<Complaint[]>>({
         queryKey: ['admin-complaints'],
-        queryFn: () => api.get('/admin/complaints').catch(() => ({ data: [] })),
+        queryFn: () => api.get('/complaints').then(res => res.data),
     });
 
-    const complaints = (complaintsRaw as any)?.data || [
-        { id: 1, category: 'Payment Dispute', subject: 'Double Charging on M-Pesa', status: 'open', priority: 'high', trader: { business_name: 'Mama Mboga' }, created_at: '2025-04-20 10:30' },
-        { id: 2, category: 'Sanitation', subject: 'Water leakage in Block B', status: 'in_review', priority: 'medium', market: { name: 'Gikomba Sector A' }, created_at: '2025-04-21 08:15' },
-    ];
+    const complaints = complaintsRaw?.data || [];
 
     const vitalityStats = [
         { label: 'Unresolved', value: '14', color: 'text-rose-600', bg: 'bg-rose-50' },
@@ -79,7 +71,7 @@ export default function AdminComplaintsPage() {
                     </div>
                 ) : (
                     <AnimatePresence>
-                        {complaints.map((complaint: any) => (
+                        {complaints.map((complaint: Complaint) => (
                             <motion.div
                                 key={complaint.id}
                                 layout

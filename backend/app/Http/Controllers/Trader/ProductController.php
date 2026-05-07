@@ -42,6 +42,16 @@ class ProductController extends Controller
     }
 
     /**
+     * Display a single product.
+     */
+    public function show(Product $product): JsonResponse
+    {
+        $this->authorizeProduct($product);
+        $product->load('category');
+        return $this->success($product);
+    }
+
+    /**
      * Store a new product.
      */
     public function store(ProductRequest $request): JsonResponse

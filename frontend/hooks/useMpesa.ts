@@ -74,8 +74,9 @@ export const useMpesa = () => {
             const checkoutId = response.data.data.checkout_request_id;
             pollStatus(checkoutId);
             return checkoutId;
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Imeshindwa kutuma ombi (Request failed)');
+        } catch (err: unknown) {
+            const apiError = err as { response?: { data?: { message?: string } } };
+            setError(apiError.response?.data?.message || 'Imeshindwa kutuma ombi (Request failed)');
             setIsPolling(false);
             throw err;
         }

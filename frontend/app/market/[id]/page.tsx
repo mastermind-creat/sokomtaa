@@ -14,7 +14,7 @@ import {
     Search
 } from 'lucide-react';
 import { ApiResponse } from '@/types';
-import BottomNav from '@/components/shared/BottomNav';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface MarketCategory {
     id: number;
@@ -38,6 +38,7 @@ interface Market {
 export default function MarketDetailPage() {
     const { id } = useParams();
     const router = useRouter();
+    const { t } = useTranslation();
     const [selectedCategory, setSelectedCategory] = React.useState<number | null>(null);
 
     const { data: detailData, isLoading } = useQuery<ApiResponse<{
@@ -168,7 +169,6 @@ export default function MarketDetailPage() {
                 ))}
             </section>
 
-            <BottomNav />
         </div>
     );
 }

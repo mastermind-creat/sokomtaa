@@ -32,9 +32,15 @@ export default function LoginPage() {
 
             setAuth(user, token);
 
-            if (user.role === 'admin') router.push('/admin/dashboard');
-            else if (user.role === 'trader') router.push('/trader/dashboard');
-            else router.push('/');
+            if (!user.phone_verified) {
+                router.push('/verify');
+            } else if (user.role === 'admin') {
+                router.push('/admin/dashboard');
+            } else if (user.role === 'trader') {
+                router.push('/trader/dashboard');
+            } else {
+                router.push('/');
+            }
         } catch (err: unknown) {
             // api interceptor rejects with response.data (already unwrapped) or string
             const errObj = err as { message?: string } | string;

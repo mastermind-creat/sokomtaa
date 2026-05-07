@@ -2,8 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useAuthStore } from '@/store/authStore';
 
 export const CallToAction = () => {
+  const { isAuthenticated } = useAuthStore();
   return (
     <section className="py-24 px-6 bg-brand-600 relative overflow-hidden">
       {/* Decorative Light Effects */}
@@ -17,15 +19,21 @@ export const CallToAction = () => {
           Join thousands of local traders and residents in building a smarter, digital market ecosystem for Kisumu.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
-          <Link 
-            href="/register" 
-            className="w-full sm:w-auto px-12 py-5 bg-white text-green-950 font-display font-[1000] text-xl rounded-2xl shadow-2xl hover:bg-green-50 hover:scale-105 transition-all duration-300"
-          >
-            Create Free Account
-          </Link>
+          {!isAuthenticated && (
+            <Link 
+              href="/register" 
+              className="w-full sm:w-auto px-12 py-5 bg-white text-green-950 font-display font-[1000] text-xl rounded-2xl shadow-2xl hover:bg-green-50 hover:scale-105 transition-all duration-300"
+            >
+              Create Free Account
+            </Link>
+          )}
           <a 
             href="#market-preview" 
-            className="w-full sm:w-auto px-12 py-5 bg-transparent border-2 border-white/20 text-white font-display font-[1000] text-xl rounded-2xl hover:border-white transition-all duration-300"
+            className={`w-full sm:w-auto px-12 py-5 font-display font-[1000] text-xl rounded-2xl transition-all duration-300 ${
+              isAuthenticated 
+                ? 'bg-white text-green-950 shadow-2xl hover:bg-green-50 hover:scale-105' 
+                : 'bg-transparent border-2 border-white/20 text-white hover:border-white'
+            }`}
           >
             Browse Market
           </a>

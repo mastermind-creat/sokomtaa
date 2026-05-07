@@ -15,32 +15,18 @@ import {
     ArrowUpRight,
     Loader2,
     Calendar,
-    Wallet
+    Wallet,
+    ArrowLeft,
+    ChevronDown,
+    History as HistoryIcon
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ApiResponse } from '@/types';
+import { ApiResponse, Reservation } from '@/types';
+import Image from 'next/image';
 
-interface Reservation {
-    id: number;
-    reservation_code: string;
-    quantity: number;
-    total_amount: string;
-    status: 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled' | 'expired';
-    pickup_deadline: string;
-    product: {
-        name: string;
-        image_url?: string;
-    };
-    trader: {
-        business_name: string;
-        stall_number?: string;
-    };
-    created_at: string;
-}
-
-type StatusFilter = 'all' | 'pending' | 'active' | 'completed';
+type StatusFilter = 'all' | 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled';
 
 export default function ResidentReservationsPage() {
     const router = useRouter();
@@ -49,166 +35,200 @@ export default function ResidentReservationsPage() {
 
     const { data: reservationsData, isLoading } = useQuery<ApiResponse<Reservation[]>>({
         queryKey: ['reservations', activeTab],
-        queryFn: () => api.get('/reservations', { params: { status: activeTab !== 'all' ? activeTab : undefined } }),
+        queryFn: () => api.get('/reservations', { params: { status: activeTab !== 'all' ? activeTab : undefined } }).then(res => res.data),
     });
 
     const reservations = reservationsData?.data || [];
 
     const filteredReservations = useMemo(() => {
-        if (!searchQuery) return reservations;
-        return reservations.filter(r => 
-            r.reservation_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            r.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            r.trader.business_name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+        let filtered = reservations;
+        if (searchQuery) {
+            filtered = filtered.filter(r => 
+                r.reservation_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                r.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                r.trader.business_name.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+        return filtered;
     }, [reservations, searchQuery]);
 
     const stats = useMemo(() => {
-        const active = reservations.filter(r => ['paid', 'ready'].includes(r.status)).length;
+        const active = reservations.filter(r => ['pending', 'paid', 'ready'].includes(r.status)).length;
         const totalSpent = reservations
             .filter(r => ['paid', 'ready', 'completed'].includes(r.status))
             .reduce((sum, r) => sum + parseFloat(r.total_amount), 0);
         return { active, totalSpent };
     }, [reservations]);
 
-    const getStatusColor = (status: string) => {
+    const getStatusStyles = (status: string) => {
         switch (status) {
-            case 'pending': return 'bg-amber-100 text-amber-700 border-amber-200';
-            case 'paid': return 'bg-blue-100 text-blue-700 border-blue-200';
-            case 'ready': return 'bg-brand-100 text-brand-700 border-brand-200';
-            case 'completed': return 'bg-green-100 text-green-700 border-green-200';
-            case 'cancelled': return 'bg-red-100 text-red-700 border-red-200';
-            case 'expired': return 'bg-neutral-100 text-neutral-700 border-neutral-200';
-            default: return 'bg-gray-100 text-gray-700 border-gray-200';
+            case 'pending': return 'bg-amber-50 text-amber-600 border-amber-100';
+            case 'paid': return 'bg-blue-50 text-blue-600 border-blue-100';
+            case 'ready': return 'bg-brand-50 text-brand-600 border-brand-100';
+            case 'completed': return 'bg-green-50 text-green-600 border-green-100';
+            case 'cancelled': return 'bg-rose-50 text-rose-600 border-rose-100';
+            case 'expired': return 'bg-neutral-50 text-neutral-600 border-neutral-100';
+            default: return 'bg-gray-50 text-gray-600 border-gray-100';
         }
     };
 
     const getStatusLabel = (status: string) => {
         switch (status) {
             case 'pending': return 'Pending Payment';
-            case 'paid': return 'Paid (Awaiting Trader)';
+            case 'paid': return 'Paid & Processing';
             case 'ready': return 'Ready for Pickup';
             case 'completed': return 'Completed';
             case 'cancelled': return 'Cancelled';
             case 'expired': return 'Expired';
-            default: return status;
+            default: return status.charAt(0).toUpperCase() + status.slice(1);
         }
     };
 
     return (
-        <DashboardLayout title="Oda Zangu (My Orders)">
-            <div className="space-y-6 pb-20">
+        <DashboardLayout title="My Reservations">
+            <div className="max-w-5xl mx-auto space-y-10 pb-32">
                 
-                {/* 1. Summary Header */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-green-950 p-6 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -mr-10 -mt-10" />
-                        <Clock size={24} className="text-brand-400 mb-3" />
-                        <h4 className="text-3xl font-black font-mono tracking-tighter">{stats.active}</h4>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-brand-200">Active Orders</p>
-                    </div>
-                    <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                        <Wallet size={24} className="text-brand-600 mb-3" />
-                        <h4 className="text-xl font-black text-green-950 font-mono tracking-tighter">KES {stats.totalSpent.toLocaleString()}</h4>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">Total Spent</p>
-                    </div>
-                </div>
-
-                {/* 2. Controls & Search */}
-                <div className="space-y-4">
-                    <div className="flex bg-neutral-100 p-1 rounded-2xl">
-                        {(['all', 'pending', 'active', 'completed'] as StatusFilter[]).map((tab) => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${
-                                    activeTab === tab ? 'bg-white text-green-950 shadow-sm' : 'text-text-muted'
-                                }`}
+                {/* Header Section */}
+                <section className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={() => router.back()}
+                                className="w-10 h-10 bg-white rounded-xl border border-gray-100 flex items-center justify-center text-text-muted hover:text-brand-600 hover:border-brand-100 transition-all shadow-sm"
                             >
-                                {tab}
+                                <ArrowLeft size={18} />
                             </button>
-                        ))}
+                            <span className="bg-brand-100 text-brand-700 text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full border border-brand-200">
+                                Orders & History
+                            </span>
+                        </div>
+                        <h1 className="text-4xl lg:text-5xl font-black text-green-950 tracking-tight">Your Reservations</h1>
                     </div>
 
-                    <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-600 transition-colors" size={18} />
-                        <input 
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full h-14 pl-12 pr-4 bg-white rounded-2xl border border-gray-100 shadow-sm focus:border-brand-500 transition-all outline-none font-medium placeholder:text-text-muted"
-                            placeholder="Tafuta kwa namba ya oda au bidhaa..."
-                        />
+                    <div className="flex gap-4">
+                        <div className="bg-green-950 px-6 py-4 rounded-[2rem] text-white shadow-xl flex items-center gap-4 border border-white/5 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-125 transition-transform">
+                                <ShoppingBag size={48} />
+                            </div>
+                            <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center text-brand-400 border border-white/10 shrink-0">
+                                <Clock size={20} />
+                            </div>
+                            <div>
+                                <h4 className="text-2xl font-black font-mono leading-none">{stats.active}</h4>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-brand-300 mt-1">Active Orders</p>
+                            </div>
+                        </div>
+                        <div className="bg-white px-6 py-4 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4 group">
+                            <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center text-brand-600 shrink-0 group-hover:scale-110 transition-transform">
+                                <Wallet size={20} />
+                            </div>
+                            <div>
+                                <h4 className="text-xl font-black text-green-950 font-mono leading-none">KES {stats.totalSpent.toLocaleString()}</h4>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-text-muted mt-1">Total Spent</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Filters & Search */}
+                <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-brand-sm space-y-6">
+                    <div className="flex flex-col lg:flex-row gap-6">
+                        <div className="flex bg-neutral-100 p-1.5 rounded-2xl flex-1 lg:max-w-md">
+                            {(['all', 'pending', 'paid', 'ready', 'completed'] as StatusFilter[]).map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
+                                        activeTab === tab ? 'bg-white text-brand-700 shadow-md' : 'text-text-muted hover:text-text-primary'
+                                    }`}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="relative flex-1 group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-600 transition-colors" size={20} />
+                            <input 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-2 border-transparent focus:border-brand-500 focus:bg-white transition-all outline-none font-bold text-sm placeholder:text-text-muted shadow-inner focus:shadow-none"
+                                placeholder="Search by order code, product or trader..."
+                            />
+                        </div>
                     </div>
                 </div>
 
-                {/* 3. Reservation List */}
-                <div className="space-y-4">
+                {/* Reservation Cards List */}
+                <div className="space-y-6">
                     {isLoading ? (
-                        <div className="py-20 flex flex-col items-center gap-3">
-                            <Loader2 className="animate-spin text-brand-600" size={32} />
-                            <p className="text-[10px] font-black text-brand-700 uppercase tracking-widest animate-pulse">Checking Orders...</p>
+                        <div className="py-32 flex flex-col items-center gap-6">
+                            <div className="relative">
+                                <Loader2 className="animate-spin text-brand-600" size={56} />
+                                <div className="absolute inset-0 blur-2xl bg-brand-400/20 animate-pulse" />
+                            </div>
+                            <p className="text-[10px] font-black text-brand-700 uppercase tracking-[0.4em] animate-pulse">Syncing with Market...</p>
                         </div>
                     ) : filteredReservations.length > 0 ? (
-                        filteredReservations.map((res) => (
-                            <motion.div 
-                                key={res.id}
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                className="bg-white p-5 rounded-[2.5rem] border border-gray-100 shadow-brand-sm group active:scale-[0.98] transition-all"
-                                onClick={() => router.push(`/reservations/${res.id}`)}
-                            >
-                                <div className="flex gap-4">
-                                    <div className="w-20 h-20 bg-neutral-50 rounded-2xl overflow-hidden border border-gray-100 shrink-0">
-                                        {res.product.image_url ? (
-                                            <img src={res.product.image_url} alt={res.product.name} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-text-muted"><ShoppingBag size={24} /></div>
-                                        )}
-                                    </div>
-                                    <div className="flex-1 space-y-1 py-1">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getStatusColor(res.status)}`}>
+                        <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 md:gap-6">
+                            {filteredReservations.map((res, index) => (
+                                <motion.div 
+                                    key={res.id}
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    className="bg-white p-3 md:p-6 rounded-2xl md:rounded-[3rem] border border-gray-100 shadow-brand-sm group hover:shadow-2xl hover:shadow-gray-200/50 transition-all cursor-pointer relative overflow-hidden flex flex-col gap-3"
+                                    onClick={() => router.push(`/reservations/${res.id}`)}
+                                >
+                                    <div className="relative">
+                                        <div className="w-full aspect-square bg-neutral-50 rounded-xl md:rounded-[2rem] overflow-hidden border border-gray-100 relative shadow-inner group-hover:scale-105 transition-transform duration-500">
+                                            {res.product?.image_url ? (
+                                                <Image src={res.product.image_url} alt={res.product.name} fill className="object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-neutral-200"><ShoppingBag size={24} /></div>
+                                            )}
+                                        </div>
+                                        <div className="absolute top-2 left-2">
+                                            <span className={`px-2 py-0.5 rounded-lg text-[7px] font-black uppercase tracking-wider border shadow-sm ${getStatusStyles(res.status)}`}>
                                                 {getStatusLabel(res.status)}
                                             </span>
-                                            <span className="text-[10px] font-mono font-black text-text-muted">#{res.reservation_code}</span>
                                         </div>
-                                        <h4 className="font-black text-green-950 text-sm">{res.product.name}</h4>
-                                        <p className="text-[10px] font-bold text-text-muted uppercase tracking-tight">
-                                            {res.trader.business_name} • Quantity: {res.quantity}
-                                        </p>
                                     </div>
-                                </div>
+                                    
+                                    <div className="flex-1 min-w-0 space-y-1">
+                                        <p className="text-[7px] font-mono font-black text-text-muted">#{res.reservation_code}</p>
+                                        <h4 className="font-black text-green-950 text-[10px] md:text-lg truncate group-hover:text-brand-700 transition-colors uppercase leading-tight">{res.product?.name}</h4>
+                                        <p className="text-[8px] font-bold text-text-secondary truncate">{res.trader?.business_name}</p>
+                                    </div>
 
-                                <div className="mt-4 pt-4 border-t border-dashed border-gray-100 flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 text-text-muted">
-                                        <Calendar size={14} />
-                                        <span className="text-[10px] font-black uppercase tracking-tight">
-                                            {new Date(res.created_at).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <p className="text-sm font-black text-green-950">KES {parseFloat(res.total_amount).toLocaleString()}</p>
-                                        <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors">
-                                            {['ready', 'paid'].includes(res.status) ? <QrCode size={18} /> : <ChevronRight size={18} />}
+                                    <div className="pt-2 border-t border-dashed border-gray-100 flex items-center justify-between">
+                                        <p className="text-xs md:text-xl font-black text-green-950">KES {Math.round(res.total_amount)}</p>
+                                        <div className="w-6 h-6 md:w-12 md:h-12 bg-brand-50 rounded-lg md:rounded-2xl flex items-center justify-center text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-all">
+                                            <ChevronRight size={14} />
                                         </div>
                                     </div>
-                                </div>
-                            </motion.div>
-                        ))
+                                </motion.div>
+                            ))}
+                        </div>
                     ) : (
-                        <div className="py-20 text-center space-y-4">
-                            <div className="w-20 h-20 bg-neutral-50 rounded-[2rem] flex items-center justify-center text-neutral-200 mx-auto">
-                                <ShoppingBag size={40} />
+                        <div className="py-32 text-center space-y-8 bg-white rounded-[4rem] border-2 border-dashed border-gray-100">
+                            <div className="relative inline-block">
+                                <div className="w-28 h-28 bg-neutral-50 rounded-[3rem] flex items-center justify-center text-neutral-200 mx-auto transition-transform hover:rotate-12">
+                                    <ShoppingBag size={56} />
+                                </div>
+                                <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-text-muted">
+                                    <HistoryIcon size={24} />
+                                </div>
                             </div>
-                            <div className="space-y-1">
-                                <h3 className="text-lg font-black text-green-950">Huna oda zozote hivi sasa</h3>
-                                <p className="text-xs text-text-secondary font-medium px-10">Anza kufanya miamala na wafanyibiashara wetu ili kuona oda zako hapa.</p>
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-black text-green-950 tracking-tight">No matching reservations</h3>
+                                <p className="text-sm text-text-secondary font-medium px-10 max-w-md mx-auto">Try adjusting your filters or start exploring the market for fresh deals.</p>
                             </div>
                             <button 
                                 onClick={() => router.push('/')}
-                                className="px-8 py-4 bg-brand-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-brand-100"
+                                className="h-16 px-12 bg-brand-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-[0.25em] shadow-2xl shadow-brand-200 hover:bg-brand-700 active:scale-95 transition-all"
                             >
-                                Anza Kununua (Shop Now)
+                                Start Shopping
                             </button>
                         </div>
                     )}

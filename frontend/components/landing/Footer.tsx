@@ -25,7 +25,7 @@ export const Footer = () => {
               </span>
             </Link>
             <p className="max-w-xs text-gray-500 font-medium leading-relaxed mb-8">
-              Connecting traders, residents, and administrators in Kenya's urban markets. Built with ❤️ for Kisumu County.
+              Connecting traders, residents, and administrators in Kenya&apos;s urban markets. Built with ❤️ for Kisumu County.
             </p>
             <div className="flex gap-4">
               <span className="px-3 py-1 bg-brand-50 text-brand-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-brand-100/50">M-Pesa API</span>
@@ -85,7 +85,7 @@ export const Footer = () => {
             © 2026 Soko Mtaa Platform.
           </p>
           <p className="text-xs font-black text-gray-200 uppercase tracking-[0.5em] italic">
-            Africa's Market Hub
+            Africa&apos;s Market Hub
           </p>
         </div>
       </div>

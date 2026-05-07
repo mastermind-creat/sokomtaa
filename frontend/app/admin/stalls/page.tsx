@@ -5,54 +5,28 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUIStore } from '@/store/uiStore';
 import { 
-    LayoutGrid, 
     List, 
     Map as MapIcon, 
     Plus, 
     Zap, 
     Search, 
-    Filter,
-    ChevronRight,
-    Store,
-    MapPin,
-    AlertCircle,
     Loader2,
-    Settings,
     Layers,
-    ArrowRight,
     Edit3,
-    Trash2,
-    Check
+    Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ApiResponse } from '@/types';
+import { ApiResponse, Stall, Market } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
+import { StallModal } from '@/components/admin/StallModal';
 
 // Dynamic import for Leaflet map
 const StallMapPreview = dynamic(() => import('../../../components/admin/StallMapPreview'), {
     ssr: false,
-    loading: () => <div className="h-[500px] w-full bg-gray-50 animate-pulse rounded-[3rem] flex items-center justify-center font-black uppercase text-text-muted tracking-widest text-xs">Loading Market Schematic...</div>
+    loading: () => <div className="h-[600px] w-full bg-gray-50 animate-pulse rounded-[3rem] flex items-center justify-center font-black uppercase text-text-muted tracking-widest text-xs">Loading Market Schematic...</div>
 });
-
-interface Stall {
-    id: number;
-    stall_number: string;
-    zone: 'A' | 'B' | 'C';
-    block: string;
-    status: 'available' | 'occupied' | 'maintenance';
-    monthly_fee: number;
-    current_trader?: {
-        business_name: string;
-    };
-}
-
-interface Market {
-    id: number;
-    name: string;
-    location: string;
-}
 
 export default function AdminStallsPage() {
     const { t } = useTranslation();
@@ -66,6 +40,10 @@ export default function AdminStallsPage() {
     const [view, setView] = useState<'list' | 'map' | 'bulk'>('list');
     const [selectedMarketId, setSelectedMarketId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    
+    // Modal state
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedStall, setSelectedStall] = useState<Stall | null>(null);
 
     // Bulk Form State
     const [bulkForm, setBulkForm] = useState({
@@ -80,7 +58,7 @@ export default function AdminStallsPage() {
     // Fetch Markets
     const { data: marketsData } = useQuery<ApiResponse<Market[]>>({
         queryKey: ['markets'],
-        queryFn: () => api.get('/markets'),
+        queryFn: () => api.get('/admin/markets'),
     });
     const markets = marketsData?.data || [];
 
@@ -99,6 +77,31 @@ export default function AdminStallsPage() {
     });
     const stalls = stallsData?.data || [];
 
+    // Mutations
+    const createMutation = useMutation({
+        mutationFn: (data: any) => api.post('/admin/stalls', { ...data, market_id: selectedMarketId }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-stalls'] });
+            setIsModalOpen(false);
+        }
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: number, data: any }) => api.patch(`/admin/stalls/${id}`, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-stalls'] });
+            setIsModalOpen(false);
+            setSelectedStall(null);
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => api.delete(`/admin/stalls/${id}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-stalls'] });
+        }
+    });
+
     // Bulk Generate Mutation
     const bulkMutation = useMutation({
         mutationFn: (data: typeof bulkForm) => api.post('/admin/stalls/bulk', { ...data, market_id: selectedMarketId }),
@@ -108,6 +111,25 @@ export default function AdminStallsPage() {
             alert('Stalls generated successfully!');
         }
     });
+
+    const handleFormSubmit = (data: any) => {
+        if (selectedStall) {
+            updateMutation.mutate({ id: selectedStall.id, data });
+        } else {
+            createMutation.mutate(data);
+        }
+    };
+
+    const handleEdit = (stall: Stall) => {
+        setSelectedStall(stall);
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = (id: number) => {
+        if (window.confirm('Are you sure you want to delete this stall? This action cannot be undone.')) {
+            deleteMutation.mutate(id);
+        }
+    };
 
     const filteredStalls = stalls.filter(s => 
         s.stall_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -176,23 +198,29 @@ export default function AdminStallsPage() {
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                     />
                                 </div>
-                                <button className="h-14 px-8 bg-brand-600 text-white rounded-[1.25rem] shadow-lg shadow-brand-900/10 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
+                                <button 
+                                    onClick={() => {
+                                        setSelectedStall(null);
+                                        setIsModalOpen(true);
+                                    }}
+                                    className="h-14 px-8 bg-brand-600 text-white rounded-[1.25rem] shadow-lg shadow-brand-900/10 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                >
                                     <Plus size={18} /> New Stall
                                 </button>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                 {stallsLoading ? (
-                                    Array(8).fill(0).map((_, i) => <div key={i} className="h-32 bg-white rounded-[2rem] animate-pulse" />)
+                                    Array(8).fill(0).map((_, i) => <div key={i} className="h-40 bg-white rounded-[2rem] animate-pulse" />)
                                 ) : filteredStalls.map((stall) => (
-                                    <div key={stall.id} className="group bg-white border border-gray-50 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:border-brand-200 transition-all cursor-pointer relative overflow-hidden">
+                                    <div key={stall.id} className="group bg-white border border-gray-50 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:border-brand-200 transition-all cursor-pointer relative overflow-hidden flex flex-col min-h-[160px]">
                                         <div className="flex items-start justify-between relative z-10">
                                             <div className="space-y-1">
                                                 <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Zone {stall.zone} • Block {stall.block}</p>
-                                                <h3 className="text-2xl font-black text-green-950 uppercase">{stall.stall_number}</h3>
+                                                <h3 className="text-2xl font-black text-green-950 uppercase leading-none">{stall.stall_number}</h3>
                                             </div>
                                             <div className={cn(
-                                                "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border",
+                                                "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border shrink-0",
                                                 stall.status === 'occupied' ? "bg-brand-50 text-brand-700 border-brand-100" :
                                                 stall.status === 'available' ? "bg-blue-50 text-blue-700 border-blue-100" :
                                                 "bg-rose-50 text-rose-700 border-rose-100"
@@ -201,22 +229,38 @@ export default function AdminStallsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="mt-6 flex items-end justify-between relative z-10">
-                                            <div>
-                                                <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Owner</p>
-                                                <p className="text-sm font-bold text-green-950 truncate max-w-[120px]">
-                                                    {stall.current_trader?.business_name || 'No Owner'}
+                                        <div className="mt-auto flex items-end justify-between relative z-10 pt-4">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Current Trader</p>
+                                                <p className="text-sm font-bold text-green-950 truncate pr-2">
+                                                    {stall.current_trader?.business_name || 'Unassigned'}
                                                 </p>
                                             </div>
-                                            <div className="text-right">
+                                            <div className="text-right shrink-0">
                                                 <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Levy/Mo</p>
                                                 <p className="text-sm font-black text-brand-600">KES {stall.monthly_fee}</p>
                                             </div>
                                         </div>
 
-                                        <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2">
-                                            <button className="w-8 h-8 rounded-lg bg-white border border-gray-100 text-text-muted hover:text-brand-600 shadow-sm flex items-center justify-center transition-all"><Edit3 size={14} /></button>
-                                            <button className="w-8 h-8 rounded-lg bg-white border border-gray-100 text-text-muted hover:text-rose-500 shadow-sm flex items-center justify-center transition-all"><Trash2 size={14} /></button>
+                                        <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2 z-20">
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleEdit(stall);
+                                                }}
+                                                className="w-10 h-10 rounded-xl bg-white border border-gray-100 text-text-muted hover:text-brand-600 shadow-sm flex items-center justify-center transition-all active:scale-90"
+                                            >
+                                                <Edit3 size={16} />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDelete(stall.id);
+                                                }}
+                                                className="w-10 h-10 rounded-xl bg-white border border-gray-100 text-text-muted hover:text-rose-500 shadow-sm flex items-center justify-center transition-all active:scale-90"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
                                         </div>
 
                                         <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-brand-50 rounded-full opacity-20 group-hover:scale-125 transition-transform" />
@@ -238,15 +282,7 @@ export default function AdminStallsPage() {
                             <div className="flex items-center justify-between mb-8">
                                 <div>
                                     <h3 className="text-xl font-black text-green-950 tracking-tight">Market Visual Editor</h3>
-                                    <p className="text-text-secondary text-sm font-medium">Drag and drop stalls to update their map coordinates.</p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-[10px] font-black uppercase text-text-muted rounded-xl border border-gray-100">
-                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" /> Available
-                                    </span>
-                                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-[10px] font-black uppercase text-text-muted rounded-xl border border-gray-100">
-                                        <div className="w-1.5 h-1.5 bg-brand-600 rounded-full" /> Occupied
-                                    </span>
+                                    <p className="text-text-secondary text-sm font-medium">Interactive spatial layout of market units.</p>
                                 </div>
                             </div>
                             <div className="relative rounded-[2rem] overflow-hidden border border-gray-50 shadow-inner">
@@ -351,6 +387,19 @@ export default function AdminStallsPage() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* Stall Modal */}
+                <StallModal 
+                    isOpen={isModalOpen}
+                    onClose={() => {
+                        setIsModalOpen(false);
+                        setSelectedStall(null);
+                    }}
+                    onSubmit={handleFormSubmit}
+                    initialData={selectedStall}
+                    marketId={selectedMarketId}
+                    isLoading={createMutation.isPending || updateMutation.isPending}
+                />
             </div>
     );
 }

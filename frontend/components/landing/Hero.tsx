@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
 
 export const Hero = () => {
   const { data: stats } = useQuery({
@@ -13,6 +14,8 @@ export const Hero = () => {
       return response.data;
     }
   });
+
+  const { isAuthenticated } = useAuthStore();
 
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
@@ -51,13 +54,24 @@ export const Hero = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
-          <Link 
-            href="/register" 
-            className="w-full sm:w-auto px-10 py-5 bg-brand-600 text-white font-display font-black text-xl rounded-2xl shadow-2xl shadow-brand-600/30 hover:bg-brand-700 hover:scale-105 transition-all duration-300 group"
-          >
-            Start Shopping
-            <svg className="inline-block ml-3 group-hover:translate-x-1 transition-transform" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          </Link>
+          {isAuthenticated ? (
+            <a 
+              href="#market-preview" 
+              onClick={(e) => handleScrollTo(e, '#market-preview')}
+              className="w-full sm:w-auto px-10 py-5 bg-brand-600 text-white font-display font-black text-xl rounded-2xl shadow-2xl shadow-brand-600/30 hover:bg-brand-700 hover:scale-105 transition-all duration-300 group"
+            >
+              Start Shopping
+              <svg className="inline-block ml-3 group-hover:translate-x-1 transition-transform" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
+          ) : (
+            <Link 
+              href="/register" 
+              className="w-full sm:w-auto px-10 py-5 bg-brand-600 text-white font-display font-black text-xl rounded-2xl shadow-2xl shadow-brand-600/30 hover:bg-brand-700 hover:scale-105 transition-all duration-300 group"
+            >
+              Start Shopping
+              <svg className="inline-block ml-3 group-hover:translate-x-1 transition-transform" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </Link>
+          )}
           <a 
             href="#market-preview" 
             onClick={(e) => handleScrollTo(e, '#market-preview')}

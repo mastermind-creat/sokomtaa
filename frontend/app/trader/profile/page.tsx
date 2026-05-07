@@ -5,13 +5,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
     Camera, Store, Clock, Phone, Upload, User,
-    Mail, Globe, Key, AlertTriangle, Save, Eye, EyeOff
+    Key, Save, Eye, EyeOff
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 
 import { useUIStore } from '@/store/uiStore';
-import { useTranslation } from '@/hooks/useTranslation';
+
+import Image from 'next/image';
 
 interface TraderProfile {
     business_name: string;
@@ -39,7 +40,6 @@ function FormField({ label, id, children }: { label: string; id: string; childre
 export default function TraderProfilePage() {
     const queryClient = useQueryClient();
     const [saved, setSaved] = useState(false);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
     const [showPw, setShowPw] = useState({ current: false, newPw: false, confirm: false });
@@ -108,7 +108,12 @@ export default function TraderProfilePage() {
                 <div className="relative rounded-3xl overflow-hidden">
                     <div className="h-36 bg-gradient-to-r from-primary to-primary-light">
                         {current.banner_url && (
-                            <img src={current.banner_url} alt="Banner" className="w-full h-full object-cover" />
+                            <Image 
+                                src={current.banner_url} 
+                                alt="Banner" 
+                                fill
+                                className="object-cover" 
+                            />
                         )}
                         <button className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-2 bg-black/40 text-white rounded-xl text-xs font-bold hover:bg-black/60 transition-colors backdrop-blur-sm">
                             <Camera className="w-3.5 h-3.5" /> Change Banner
@@ -117,7 +122,12 @@ export default function TraderProfilePage() {
                     <div className="absolute -bottom-6 left-5">
                         <div className="relative w-20 h-20 rounded-2xl border-4 border-white bg-primary/10 overflow-hidden shadow-lg group">
                             {current.avatar_url ? (
-                                <img src={current.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                <Image 
+                                    src={current.avatar_url} 
+                                    alt="Avatar" 
+                                    fill
+                                    className="object-cover" 
+                                />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-3xl font-black text-primary">
                                     {current.business_name?.charAt(0) ?? '?'}

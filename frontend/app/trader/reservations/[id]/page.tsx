@@ -3,14 +3,12 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
-    ArrowLeft, Phone, Package, CheckCircle2, Clock,
-    AlertTriangle, Copy, MapPin, User, CreditCard, MessageSquare
+    ArrowLeft, Phone, Package, Clock,
+    Copy, User, MessageSquare
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
-import Link from 'next/link';
 
 import { useUIStore } from '@/store/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';

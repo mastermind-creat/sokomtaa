@@ -66,58 +66,76 @@ export default function NotificationBell() {
                 {isOpen && (
                     <>
                         <div 
+                            key="notif-backdrop"
                             className="fixed inset-0 z-[80]" 
                             onClick={() => setIsOpen(false)} 
                         />
                         <motion.div 
-                            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                            key="notif-dropdown"
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                            className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-2xl border border-border-disabled z-[90] overflow-hidden"
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            className="fixed md:absolute bottom-0 md:bottom-auto md:right-0 md:mt-3 w-full md:w-96 bg-white rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border border-gray-100 z-[90] overflow-hidden"
                         >
-                            <div className="p-4 bg-brand-600 text-white flex justify-between items-center">
-                                <h3 className="font-black tracking-tight">Taarifa (Notifications)</h3>
+                            <div className="p-6 bg-brand-600 text-white flex justify-between items-center">
+                                <h3 className="font-black tracking-tight text-lg">Notifications</h3>
                                 <button 
                                     onClick={() => setIsOpen(false)}
-                                    className="p-1 hover:bg-white/20 rounded-lg transition-colors"
-                                    aria-label="Funga (Close)"
-                                    title="Funga"
+                                    className="w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                                    aria-label="Close"
                                 >
                                     <X size={20} />
                                 </button>
                             </div>
                             
-                            <div className="max-h-[70vh] overflow-y-auto">
+                            <div className="max-h-[60vh] md:max-h-[450px] overflow-y-auto no-scrollbar">
                                 {notifications.length === 0 ? (
-                                    <div className="p-12 text-center text-text-muted">
-                                        <Bell className="mx-auto mb-2 opacity-20" size={40} />
-                                        <p className="text-xs font-bold uppercase tracking-widest">Huna taarifa mpya</p>
+                                    <div className="p-16 text-center text-text-muted">
+                                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Bell className="opacity-20" size={32} />
+                                        </div>
+                                        <p className="text-xs font-black uppercase tracking-[0.2em]">No new notifications</p>
                                     </div>
                                 ) : (
-                                    notifications.map((n: Notification) => (
-                                        <div 
-                                            key={n.id}
-                                            onClick={() => !n.is_read && markReadMutation.mutate(n.id)}
-                                            className={`p-4 border-b border-border-default flex gap-3 transition-colors cursor-pointer ${n.is_read ? 'bg-white opacity-60' : 'bg-brand-50 hover:bg-brand-100'}`}
-                                        >
-                                            <div className="shrink-0 mt-1">
-                                                {getIcon(n.type)}
+                                    <div className="divide-y divide-gray-50">
+                                        {notifications.map((n: Notification) => (
+                                            <div 
+                                                key={n.id} 
+                                                className={`p-5 flex gap-4 hover:bg-gray-50 transition-colors cursor-pointer ${!n.is_read ? 'bg-brand-50/30' : ''}`}
+                                                onClick={() => !n.is_read && markReadMutation.mutate(n.id)}
+                                            >
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
+                                                    !n.is_read ? 'bg-white border border-brand-100' : 'bg-gray-50'
+                                                }`}>
+                                                    {getIcon(n.type)}
+                                                </div>
+                                                <div className="flex-1 space-y-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className={`text-sm tracking-tight ${!n.is_read ? 'font-black text-green-950' : 'font-bold text-gray-700'}`}>
+                                                            {n.title}
+                                                        </p>
+                                                        {!n.is_read && <div className="w-2 h-2 bg-brand-600 rounded-full" />}
+                                                    </div>
+                                                    <p className="text-xs text-text-secondary leading-relaxed line-clamp-2">
+                                                        {n.body}
+                                                    </p>
+                                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest pt-1">
+                                                        {new Date(n.created_at).toLocaleDateString()}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-black text-green-950 truncate">{n.title}</p>
-                                                <p className="text-xs text-text-secondary leading-relaxed mt-0.5">{n.body}</p>
-                                                <p className="text-[10px] text-text-muted font-bold mt-2 uppercase">
-                                                    {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))
+                                        ))}
+                                    </div>
                                 )}
                             </div>
-
-                            <button className="w-full p-3 bg-neutral-50 text-[10px] font-black text-brand-700 uppercase tracking-widest border-t border-border-default hover:bg-neutral-100">
-                                Angalia Zote (View All)
-                            </button>
+                            
+                            {notifications.length > 0 && (
+                                <div className="p-4 bg-gray-50 border-t border-gray-100">
+                                    <button className="w-full h-12 bg-white text-green-950 border border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-sm hover:bg-brand-50 transition-all">
+                                        View All Activity
+                                    </button>
+                                </div>
+                            )}
                         </motion.div>
                     </>
                 )}

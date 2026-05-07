@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import OfflineBanner from "@/components/shared/OfflineBanner";
+import GlobalLoader from "@/components/shared/GlobalLoader";
 import NextTopLoader from 'nextjs-toploader';
 
 // Bypass Google Fonts due to build environment network restrictions
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="en" className={`${plusJakarta.variable} ${dmSans.variable} ${jetbrainsMono.variable} h-full antialiased transition-colors duration-500`}>
       <body className="bg-surface-base text-text-primary min-h-full flex flex-col selection:bg-brand-100 selection:text-brand-900 overflow-x-hidden">
         <Providers>
+          <GlobalLoader />
           <React.Suspense fallback={null}>
             <NextTopLoader 
               color="#2D9653"

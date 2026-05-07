@@ -6,17 +6,25 @@ import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 import MarketSchematicMap, { Stall } from '../map/MarketSchematicMap';
 
-export default function StallMapPreview() {
+interface StallMapPreviewProps {
+    marketId?: number | null;
+    isAdmin?: boolean;
+}
+
+export default function StallMapPreview({ marketId, isAdmin }: StallMapPreviewProps) {
     const { data: stalls } = useQuery<Stall[]>({
-        queryKey: ['admin-stalls-preview'],
+        queryKey: ['admin-stalls-preview', marketId],
         queryFn: async () => {
-            const res = await api.get<any, ApiResponse<Stall[]>>('/admin/stalls');
+            const res = await api.get<never, ApiResponse<Stall[]>>('/admin/stalls', {
+                params: { market_id: marketId }
+            });
             return res.data ?? [];
-        }
+        },
+        enabled: !isAdmin || !!marketId
     });
 
     return (
-        <div className="h-[500px] w-full">
+        <div className="h-[600px] w-full">
             <MarketSchematicMap
                 stalls={stalls ?? []}
                 onStallClick={() => {}} // No-op in preview mode; full interaction on /admin/map
