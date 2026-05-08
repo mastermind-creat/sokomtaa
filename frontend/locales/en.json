@@ -31,7 +31,8 @@
     "orders": "Orders",
     "product": "Product",
     "trader": "Trader",
-    "market": "Market"
+    "market": "Market",
+    "reserve": "Reserve"
   },
   "home": {
     "greeting": "Hello",
@@ -170,6 +171,8 @@
     "customer_reviews": "Customer Reviews",
     "no_reviews": "No reviews yet",
     "reserve_item": "Reserve Item",
-    "call": "Call"
+    "call": "Call",
+    "default_description": "Welcome to our neighborhood stall. We provide the freshest local produce and high-quality market goods to our community.",
+    "no_products": "No products available at the moment. Please check back later!"
   }
 }

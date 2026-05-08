@@ -98,7 +98,7 @@ export default function TraderStorefrontPage() {
             </div>
 
             {/* 2. Hero Section */}
-            <div className="relative h-64 w-full bg-green-950 overflow-hidden">
+            <div className="relative h-48 w-full bg-green-950 overflow-hidden">
                 {trader.banner_url ? (
                     <Image 
                         src={trader.banner_url} 
@@ -190,7 +190,7 @@ export default function TraderStorefrontPage() {
             </div>
 
             {/* 5. Tab Content */}
-            <div className="px-6 py-6">
+            <div className="max-w-7xl mx-auto px-6 py-6">
                 <AnimatePresence mode="wait">
                     {selectedTab === 'products' && (
                         <motion.div 
@@ -198,14 +198,15 @@ export default function TraderStorefrontPage() {
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: -20, opacity: 0 }}
-                            className="grid grid-cols-2 gap-4"
+                            className="grid gap-4"
+                            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))' }}
                         >
                             {products.length > 0 ? products.map((product) => (
                                 <motion.div 
                                     key={product.id}
-                                    whileTap={{ scale: 0.96 }}
+                                    whileTap={{ scale: 0.98 }}
                                     onClick={() => setSelectedProduct(product)}
-                                    className="bg-white rounded-[2rem] border border-gray-100 shadow-brand-sm overflow-hidden group"
+                                    className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group cursor-pointer hover:shadow-md transition-all duration-300 flex flex-col"
                                 >
                                     <div className="aspect-square bg-neutral-50 relative overflow-hidden">
                                         {product.image_url ? (
@@ -213,27 +214,32 @@ export default function TraderStorefrontPage() {
                                                 src={product.image_url} 
                                                 alt={product.name} 
                                                 fill
-                                                className="object-cover group-hover:scale-110 transition-transform duration-700" 
+                                                className="object-cover group-hover:scale-105 transition-transform duration-500" 
                                             />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-text-muted"><ShoppingBag size={32} /></div>
+                                            <div className="w-full h-full flex items-center justify-center text-text-muted"><ShoppingBag size={20} /></div>
                                         )}
-                                        <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded-xl shadow-md border border-white">
-                                            <p className="text-[9px] font-black text-brand-600 uppercase tracking-wider">
+                                        {/* Availability badge - Pinned top-left */}
+                                        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg shadow-sm border border-white/50 z-10">
+                                            <p className="text-[8px] font-black text-brand-600 uppercase tracking-tighter">
                                                 {product.stock_status === 'available' ? t('common.available') : t('common.low_stock')}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="p-4 space-y-1">
-                                        <h4 className="font-bold text-green-950 text-xs truncate leading-tight">{product.name}</h4>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-[9px] font-bold text-text-muted">KES</span>
-                                            <span className="text-lg font-black text-green-950 font-mono tracking-tighter">{product.price}</span>
-                                            <span className="text-[8px] text-text-muted lowercase font-bold">/{product.unit}</span>
+                                    <div className="p-3 flex-1 flex flex-col gap-2">
+                                        <div className="space-y-0.5">
+                                            <h4 className="font-bold text-green-950 text-[11px] truncate leading-tight group-hover:text-brand-600 transition-colors">{product.name}</h4>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-baseline gap-0.5">
+                                                    <span className="text-[7px] font-bold text-text-muted uppercase tracking-tighter">KES</span>
+                                                    <span className="text-sm font-black text-green-950 font-mono tracking-tighter">{product.price}</span>
+                                                </div>
+                                                <span className="text-[7px] text-text-muted lowercase font-bold">/{product.unit}</span>
+                                            </div>
                                         </div>
-                                        <div className="pt-2">
-                                            <button className="w-full h-10 bg-neutral-50 text-green-950 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 group-hover:bg-brand-600 group-hover:text-white transition-all">
-                                                <Plus size={14} /> {t('storefront.reserve_item')}
+                                        <div className="mt-auto">
+                                            <button className="w-full h-9 border-2 border-brand-600 text-brand-600 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-brand-600 hover:text-white transition-all active:scale-95">
+                                                <Plus size={12} /> {t('common.reserve')}
                                             </button>
                                         </div>
                                     </div>

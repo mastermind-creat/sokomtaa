@@ -38,7 +38,7 @@ class ReservationController extends Controller
 
         // Security check: Only the trader who owns the product can update status
         if ($reservation->trader_id !== $user->trader?->id) {
-            return $this->error('Huruhusiwi kubadilisha hali ya uhifadhi huu. (Unauthorized.)', 'UNAUTHORIZED', 403);
+            return $this->error('Unauthorized. (Huruhusiwi kubadilisha hali ya uhifadhi huu.)', 'UNAUTHORIZED', 403);
         }
 
         $reservation->update(['status' => $request->status]);
@@ -50,7 +50,7 @@ class ReservationController extends Controller
             $request->status
         );
 
-        return $this->success($reservation, 'Hali ya uhifadhi imesasishwa. (Status updated.)');
+        return $this->success($reservation, 'Status updated. (Hali ya uhifadhi imesasishwa.)');
     }
 
     /**
@@ -82,11 +82,11 @@ class ReservationController extends Controller
 
         // 1. Check Product availability
         if (!$product->is_active || $product->stock_status === 'out_of_stock') {
-            return $this->error('Bidhaa hii haipatikani kwa sasa. (Product not currently available.)', 'NOT_AVAILABLE', 422);
+            return $this->error('Product not currently available. (Bidhaa hii haipatikani kwa sasa.)', 'NOT_AVAILABLE', 422);
         }
 
         if ($product->stock_quantity !== null && $product->stock_quantity < $request->quantity) {
-            return $this->error('Bidhaa haitoshi. (Insufficient stock available.)', 'INSUFFICIENT_STOCK', 422);
+            return $this->error('Insufficient stock available. (Bidhaa haitoshi.)', 'INSUFFICIENT_STOCK', 422);
         }
 
         return DB::transaction(function () use ($request, $product) {
@@ -129,7 +129,7 @@ class ReservationController extends Controller
             // 5. Update Product Lifetime Reservations
             $product->increment('total_reservations');
 
-            return $this->success($reservation, 'Bidhaa imehifadhiwa. (Reservation created successfully.)', 201);
+            return $this->success($reservation, 'Reservation created successfully. (Bidhaa imehifadhiwa.)', 201);
         });
     }
 
@@ -141,7 +141,7 @@ class ReservationController extends Controller
         $user = Auth::user();
         
         if ($reservation->resident_id !== $user->id && $reservation->trader_id !== $user->trader?->id) {
-            return $this->error('Huruhusiwi kuona hii. (Unauthorized access.)', 'UNAUTHORIZED', 403);
+            return $this->error('Unauthorized access. (Huruhusiwi kuona hii.)', 'UNAUTHORIZED', 403);
         }
 
         $reservation->load(['trader', 'product', 'resident']);

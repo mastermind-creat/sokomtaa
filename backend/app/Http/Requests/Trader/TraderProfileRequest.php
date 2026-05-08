@@ -18,7 +18,7 @@ class TraderProfileRequest extends FormRequest
             'business_name' => 'required|string|max:255',
             'business_name_sw' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'stall_number' => 'required|string|exists:stalls,stall_number',
+            'stall_number' => 'nullable|string|exists:stalls,stall_number',
             'mpesa_number' => 'nullable|string|max:20',
             'permit_number' => 'nullable|string|max:255',
             'opening_time' => 'nullable|string|regex:/^[0-2][0-9]:[0-5][0-9]$/',

@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
 
 interface Market {
   id: number;
@@ -20,6 +21,12 @@ interface Market {
 
 export const MarketPreview = () => {
   const [activeTab, setActiveTab] = useState('all');
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const { isAuthenticated, user } = useAuthStore();
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   const { data: response, isLoading, error } = useQuery({
     queryKey: ['markets'],
@@ -143,7 +150,7 @@ export const MarketPreview = () => {
                             <span className="text-brand-600">{market.traders_count || 0}</span> Verified Traders
                           </div>
                           <Link 
-                            href="/login" 
+                            href={hasHydrated && isAuthenticated ? `/market/${market.id}` : "/login"} 
                             className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 text-white font-black text-sm rounded-xl shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition-all"
                           >
                             Enter Market
@@ -155,12 +162,21 @@ export const MarketPreview = () => {
                   ))}
                   
                   {/* "View All" placeholder card as requested */}
-                  <Link href="/login" className="group p-8 border-4 border-dashed border-gray-200 rounded-[40px] flex flex-col items-center justify-center text-center hover:border-brand-600 transition-all gap-4 min-h-[400px]">
+                  <Link 
+                    href={
+                      hasHydrated && isAuthenticated 
+                        ? (user?.role === 'admin' ? '/admin/dashboard' : user?.role === 'trader' ? '/trader/dashboard' : '/resident/dashboard')
+                        : "/login"
+                    } 
+                    className="group p-8 border-4 border-dashed border-gray-200 rounded-[40px] flex flex-col items-center justify-center text-center hover:border-brand-600 transition-all gap-4 min-h-[400px]"
+                  >
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </div>
                     <div className="font-black text-xl text-green-950">View all {markets?.length || 'available'} markets</div>
-                    <p className="text-sm font-medium text-gray-400">Login to browse the full directory of Kenyan markets</p>
+                    <p className="text-sm font-medium text-gray-400">
+                      {isAuthenticated ? "Go to your dashboard to see more" : "Login to browse the full directory of Kenyan markets"}
+                    </p>
                   </Link>
                 </div>
               )}

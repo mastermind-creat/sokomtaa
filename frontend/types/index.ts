@@ -8,6 +8,7 @@ export interface User {
     phone_verified: boolean;
     avatar_url?: string;
     national_id?: string;
+    trader?: Trader;
 }
 
 export interface ApiResponse<T> {

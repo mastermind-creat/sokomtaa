@@ -15,7 +15,12 @@ export const Hero = () => {
     }
   });
 
+  const [hasHydrated, setHasHydrated] = React.useState(false);
   const { isAuthenticated } = useAuthStore();
+
+  React.useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
@@ -54,7 +59,7 @@ export const Hero = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
-          {isAuthenticated ? (
+          {hasHydrated && isAuthenticated ? (
             <a 
               href="#market-preview" 
               onClick={(e) => handleScrollTo(e, '#market-preview')}

@@ -39,7 +39,7 @@ class ProfileController extends Controller
 
         $user->update($validated);
 
-        return $this->success($user, 'Wasifu imesasishwa. (Profile updated.)');
+        return $this->success($user, 'Profile updated. (Wasifu imesasishwa.)');
     }
 
     /**
@@ -55,13 +55,13 @@ class ProfileController extends Controller
         $user = Auth::user();
 
         if (!Hash::check($request->current_password, $user->password)) {
-            return $this->error('Nenosiri la sasa si sahihi. (Current password is incorrect.)', 422);
+            return $this->error('Current password is incorrect. (Nenosiri la sasa si sahihi.)', 422);
         }
 
         $user->update([
             'password' => Hash::make($request->password)
         ]);
 
-        return $this->success(null, 'Nenosiri imebadilishwa. (Password changed successfully.)');
+        return $this->success(null, 'Password changed successfully. (Nenosiri imebadilishwa.)');
     }
 }

@@ -18,10 +18,19 @@ import { Navbar } from '@/components/landing/Navbar';
 
 export default function LoginPage() {
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>();
-    const setAuth = useAuthStore((state) => state.setAuth);
+    const { user, isAuthenticated, setAuth } = useAuthStore();
     const router = useRouter();
     const [error, setError] = React.useState<string | null>(null);
     const [showPassword, setShowPassword] = React.useState(false);
+
+    React.useEffect(() => {
+        if (isAuthenticated && user) {
+            if (user.role === 'admin') router.push('/admin/dashboard');
+            else if (user.role === 'trader') router.push('/trader/dashboard');
+            else if (user.role === 'resident') router.push('/resident/dashboard');
+            else router.push('/');
+        }
+    }, [isAuthenticated, user, router]);
 
     const onSubmit = async (data: LoginFormData) => {
         try {

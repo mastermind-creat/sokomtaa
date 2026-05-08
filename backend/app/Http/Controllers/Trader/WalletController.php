@@ -31,7 +31,7 @@ class WalletController extends Controller
         $trader = $user->trader;
 
         if (!$trader) {
-            return $this->error('Mtumiaji huyu si mfanyabiashara. (User is not a trader.)', 'REQUIRED_TRADER', 403);
+            return $this->error('User is not a trader. (Mtumiaji huyu si mfanyabiashara.)', 'REQUIRED_TRADER', 403);
         }
 
         $wallet = $this->walletService->getOrCreateForTrader($trader->id);
@@ -87,6 +87,6 @@ class WalletController extends Controller
             'fee_payment_frequency' => $request->frequency
         ]);
 
-        return $this->success(null, 'Upendeleo wa malipo umebadilishwa. (Payment preference updated.)');
+        return $this->success(null, 'Payment preference updated. (Upendeleo wa malipo umebadilishwa.)');
     }
 }

@@ -4,15 +4,17 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
 import { useAuthStore } from '@/store/authStore';
-import { User as UserIcon, LogOut, ChevronDown } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const { user, isAuthenticated, logout } = useAuthStore();
+  const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
+    setHasHydrated(true);
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -29,12 +31,11 @@ export const Navbar = () => {
 
   return (
     <>
-      <nav 
-        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 border-b ${
-          isScrolled 
-            ? 'bg-white/80 backdrop-blur-xl border-gray-100 py-3 shadow-sm' 
-            : 'bg-transparent border-transparent py-5'
-        }`}
+      <nav
+        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 border-b ${isScrolled
+          ? 'bg-white/80 backdrop-blur-xl border-gray-100 py-3 shadow-sm'
+          : 'bg-transparent border-transparent py-5'
+          }`}
       >
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
@@ -48,7 +49,7 @@ export const Navbar = () => {
 
           <div className="hidden md:flex items-center gap-1">
             {['How it works', 'Features', 'For traders'].map((item) => (
-              <a 
+              <a
                 key={item}
                 href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
                 onClick={(e) => handleScrollTo(e, `#${item.toLowerCase().replace(/\s+/g, '-')}`)}
@@ -58,7 +59,7 @@ export const Navbar = () => {
               </a>
             ))}
             <div className="w-px h-6 bg-gray-200 mx-4" />
-            
+
             {isAuthenticated && user ? (
               <div className="flex items-center gap-4">
                 <Link href={user.role === 'admin' ? '/admin/dashboard' : user.role === 'trader' ? '/trader/dashboard' : '/profile'} className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors">
@@ -67,7 +68,7 @@ export const Navbar = () => {
                   </div>
                   <span className="text-sm font-bold text-green-950">{user.name.split(' ')[0]}</span>
                 </Link>
-                <button 
+                <button
                   onClick={logout}
                   className="p-2 text-gray-400 hover:text-red-500 transition-colors"
                   title="Logout"
@@ -80,8 +81,8 @@ export const Navbar = () => {
                 <Link href="/login" className="px-4 py-2 text-sm font-bold text-gray-700 hover:text-brand-600 transition-colors duration-200">
                   Sign in
                 </Link>
-                <Link 
-                  href="/register" 
+                <Link
+                  href="/register"
                   className="ml-4 px-6 py-2.5 bg-brand-600 text-white font-display font-bold text-sm rounded-full shadow-lg shadow-brand-600/25 hover:bg-brand-700 hover:scale-105 transition-all duration-300"
                 >
                   Get started free
@@ -90,24 +91,24 @@ export const Navbar = () => {
             )}
           </div>
 
-          <button 
+          <button
             className="md:hidden p-2 text-green-950"
             onClick={() => setMenuOpen(!menuOpen)}
           >
             {menuOpen ? (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
             ) : (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
             )}
           </button>
         </div>
       </nav>
-      
+
       {/* Mobile Menu */}
       <div className={`fixed inset-0 z-[90] md:hidden transition-all duration-500 ${menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <div className="absolute inset-0 bg-white/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 gap-8">
           {['How it works', 'Features', 'For traders'].map((item) => (
-            <a 
+            <a
               key={item}
               href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
               onClick={(e) => handleScrollTo(e, `#${item.toLowerCase().replace(/\s+/g, '-')}`)}
@@ -124,8 +125,8 @@ export const Navbar = () => {
           ) : (
             <>
               <Link href="/login" className="text-2xl font-black text-gray-500" onClick={() => setMenuOpen(false)}>Sign in</Link>
-              <Link 
-                href="/register" 
+              <Link
+                href="/register"
                 className="w-full text-center py-5 bg-brand-600 text-white font-black text-xl rounded-2xl"
                 onClick={() => setMenuOpen(false)}
               >

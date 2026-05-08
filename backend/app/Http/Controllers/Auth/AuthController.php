@@ -83,7 +83,11 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        return $this->success($request->user(), 'User profile retrieved.');
+        $user = $request->user();
+        if ($user->role === 'trader') {
+            $user->load('trader');
+        }
+        return $this->success($user, 'User profile retrieved.');
     }
 
     public function verifyPhone(Request $request): JsonResponse
