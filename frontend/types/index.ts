@@ -164,6 +164,7 @@ export interface Reservation {
     product_id: number;
     quantity: number;
     unit_price: string | number;
+    service_fee: string | number;
     total_amount: string | number;
     status: 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled' | 'expired';
     notes?: string | null;

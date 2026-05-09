@@ -98,6 +98,10 @@ class ReservationController extends Controller
                 $code = 'SM-' . strtoupper(Str::random(6));
             }
 
+            $serviceFee = 10.00; // Resident Convenience Fee
+            $subtotal = $product->price * $request->quantity;
+            $totalAmount = $subtotal + $serviceFee;
+
             // 3. Create Reservation
             $reservation = Reservation::create([
                 'reservation_code' => $code,
@@ -106,7 +110,8 @@ class ReservationController extends Controller
                 'product_id' => $product->id,
                 'quantity' => $request->quantity,
                 'unit_price' => $product->price,
-                'total_amount' => $product->price * $request->quantity,
+                'service_fee' => $serviceFee,
+                'total_amount' => $totalAmount,
                 'status' => 'pending',
                 'notes' => $request->notes,
                 'pickup_deadline' => now()->addHours(24), // Default 24h pickup window

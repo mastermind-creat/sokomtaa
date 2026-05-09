@@ -18,6 +18,7 @@ class Reservation extends Model
         'product_id',
         'quantity',
         'unit_price',
+        'service_fee',
         'total_amount',
         'status',
         'notes',
@@ -27,6 +28,7 @@ class Reservation extends Model
 
     protected $casts = [
         'unit_price' => 'decimal:2',
+        'service_fee' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'pickup_deadline' => 'datetime',
         'picked_up_at' => 'datetime',

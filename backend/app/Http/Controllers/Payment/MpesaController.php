@@ -34,9 +34,9 @@ class MpesaController extends Controller
     public function initiateSTK(Request $request): JsonResponse
     {
         $request->validate([
-            'phone_number' => 'required|string|regex:/^(?:254|\+254|0)?(7|1)[0-9]{8}$/',
-            'type' => 'required|in:reservation,market_fee,wallet_topup',
-            'target_id' => 'required_if:type,reservation,market_fee|integer',
+            'phone_number' => ['required', 'string', 'regex:/^(?:254|\+254|0)?(7|1)[0-9]{8}$/'],
+            'type' => 'required|in:reservation,market_fee,wallet_topup,product_boost',
+            'target_id' => 'required_if:type,reservation,market_fee,product_boost|integer',
             'amount' => 'required_if:type,wallet_topup|numeric|min:1',
         ]);
 
@@ -57,17 +57,21 @@ class MpesaController extends Controller
         if ($request->type === 'reservation') {
             $reservation = Reservation::findOrFail($request->target_id);
             if ($reservation->status !== 'pending') {
-                return $this->error('Uhifadhi huu tayari umeshalipiwa au ulighairiwa. (Already paid or cancelled.)', 'INVALID_STATUS', 422);
+                return $this->error('This reservation has already been paid or was cancelled.', 'INVALID_STATUS', 422);
             }
             $amount = $reservation->total_amount;
             $ref = $reservation->reservation_code;
         } elseif ($request->type === 'market_fee') {
             $fee = MarketFee::findOrFail($request->target_id);
             if ($fee->status === 'paid') {
-                return $this->error('Ada hii tayari imeshalipiwa. (Fee already paid.)', 'ALREADY_PAID', 422);
+                return $this->error('This fee has already been paid.', 'ALREADY_PAID', 422);
             }
             $amount = $fee->amount;
             $ref = 'FEE-' . $fee->id;
+        } elseif ($request->type === 'product_boost') {
+            $product = \App\Models\Product::findOrFail($request->target_id);
+            $amount = 20.00; // Micro-Ad fee (e.g., 24hr boost)
+            $ref = 'BOOST-' . $product->id;
         } else {
             // Wallet Top-up
             $amount = $request->amount;
@@ -82,12 +86,13 @@ class MpesaController extends Controller
         );
 
         if (!$stkResponse || $stkResponse['ResponseCode'] != '0') {
-            return $this->error('M-Pesa imeshindwa kuanza. Jaribu tena. (M-Pesa STK failed to initiate.)', 'MPESA_INIT_FAILED', 500);
+            return $this->error('M-Pesa initiation failed. Please try again.', 'MPESA_INIT_FAILED', 500);
         }
 
         // Create initial payment record
         Payment::create([
             'reservation_id' => $request->type === 'reservation' ? $request->target_id : null,
+            'product_id' => $request->type === 'product_boost' ? $request->target_id : null,
             'user_id' => $user->id,
             'mpesa_checkout_request_id' => $stkResponse['CheckoutRequestID'],
             'amount' => $amount,
@@ -99,7 +104,7 @@ class MpesaController extends Controller
         return $this->success([
             'checkout_request_id' => $stkResponse['CheckoutRequestID'],
             'customer_message' => $stkResponse['CustomerMessage']
-        ], 'Ombi limetumwa kwa simu yako. (STK Push sent to your phone.)');
+        ], 'Payment request sent to your phone. Please enter your M-Pesa PIN.');
     }
 
     /**
@@ -143,6 +148,21 @@ class MpesaController extends Controller
                     $payment->reservation, 
                     'paid'
                 );
+            } elseif ($payment->type === 'product_boost' && $payment->product_id) {
+                $payment->product->update([
+                    'is_boosted' => true,
+                    'boosted_until' => now()->addHours(24),
+                ]);
+
+                // Notify Trader
+                $this->notificationService->send(
+                    $payment->user,
+                    'Product Boosted!',
+                    "Your product '{$payment->product->name}' is now appearing at the top of search results for the next 24 hours.",
+                    'promotion',
+                    ['product_id' => $payment->product_id],
+                    true
+                );
             } elseif ($payment->type === 'market_fee' || $payment->type === 'wallet_topup') {
                 $walletService = app(WalletService::class);
                 $wallet = $walletService->getOrCreateForTrader($payment->user->trader?->id);
@@ -159,8 +179,8 @@ class MpesaController extends Controller
                 // Notify Trader
                 $this->notificationService->send(
                     $payment->user,
-                    'Salio Limeongezwa (Wallet Topped Up)',
-                    "Salio lako la KES {$payment->amount} limeongezwa kwenye wallet yako. Asante.",
+                    'Wallet Topped Up',
+                    "Your wallet balance has been credited with KES {$payment->amount}. Thank you.",
                     'payment',
                     ['transaction_id' => $transactionId],
                     true
@@ -196,5 +216,68 @@ class MpesaController extends Controller
             'amount' => $payment->amount,
             'paid_at' => $payment->paid_at,
         ]);
+    }
+
+    /**
+     * Simulate a successful callback for development purposes.
+     */
+    public function simulateSuccess(string $checkoutRequestId): JsonResponse
+    {
+        // Only allow in local environment
+        if (app()->environment('production')) {
+            return $this->error('Simulation not allowed in production.', 'FORBIDDEN', 403);
+        }
+
+        $payment = Payment::where('mpesa_checkout_request_id', $checkoutRequestId)->first();
+        
+        if (!$payment) {
+            return $this->error('Payment record not found.', 'NOT_FOUND', 404);
+        }
+
+        if ($payment->status === 'completed') {
+            return $this->success(null, 'Payment already completed.');
+        }
+
+        // Generate a mock M-Pesa receipt number
+        $transactionId = 'MOCK' . strtoupper(bin2hex(random_bytes(4)));
+
+        $payment->update([
+            'status' => 'completed',
+            'mpesa_transaction_id' => $transactionId,
+            'mpesa_response' => ['simulated' => true],
+            'paid_at' => now(),
+        ]);
+
+        // Update associated entities (Mirroring callback logic)
+        if ($payment->type === 'reservation' && $payment->reservation_id) {
+            $payment->reservation->update(['status' => 'paid']);
+            
+            $this->notificationService->notifyReservationUpdate(
+                $payment->user, 
+                $payment->reservation, 
+                'paid'
+            );
+        } elseif ($payment->type === 'product_boost' && $payment->product_id) {
+            $payment->product->update([
+                'is_boosted' => true,
+                'boosted_until' => now()->addHours(24),
+            ]);
+        } elseif ($payment->type === 'market_fee' || $payment->type === 'wallet_topup') {
+            $walletService = app(WalletService::class);
+            $wallet = $walletService->getOrCreateForTrader($payment->user->trader?->id);
+            
+            $walletService->credit(
+                $wallet, 
+                $payment->amount, 
+                "Simulated M-Pesa Top-up: {$transactionId}",
+                'mpesa',
+                $transactionId
+            );
+        }
+
+        return $this->success([
+            'status' => 'completed',
+            'mpesa_transaction_id' => $transactionId
+        ], 'Payment simulation successful.');
     }
 }

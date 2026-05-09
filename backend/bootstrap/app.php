@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->append(\App\Http\Middleware\LocaleMiddleware::class);
+
+        $middleware->validateCsrfTokens(except: [
+            'api/payments/mpesa/callback'
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(fn ($request, $e) => $request->is('api/*'));

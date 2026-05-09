@@ -26,6 +26,11 @@ class SearchService
                 
                 $score = ($ratingWeight * 0.7) + ($popularityWeight * 0.3);
                 
+                // MICRO-ADS: Massively boost products that paid for a spot
+                if ($product->is_boosted && $product->boosted_until && $product->boosted_until->isFuture()) {
+                    $score += 100; 
+                }
+
                 // Stock Availability Intelligence
                 if ($product->stock_status === 'out_of_stock') {
                     $score *= 0.1; // Sink to the bottom
@@ -41,7 +46,6 @@ class SearchService
         $traders = Trader::with(['market', 'stall'])
             ->where('business_name', 'LIKE', "%{$query}%")
             ->orWhere('description', 'LIKE', "%{$query}%")
-            ->where('verification_status', 'verified')
             ->get()
             ->map(function ($trader) {
                 $popularityWeight = min($trader->profile_views / 100, 5);
@@ -99,13 +103,22 @@ class SearchService
             ->get();
 
         $topTraders = Trader::with(['market'])
-            ->where('verification_status', 'verified')
             ->where('is_open', true)
             ->orderByDesc('average_rating')
             ->take(6)
             ->get();
 
+        $boostedProducts = Product::with(['trader', 'category'])
+            ->where('is_active', true)
+            ->where('is_boosted', true)
+            ->where('boosted_until', '>=', now())
+            ->where('stock_status', 'available')
+            ->inRandomOrder()
+            ->take(6)
+            ->get();
+
         return [
+            'boosted_products' => $boostedProducts,
             'popular_products' => $popularProducts,
             'top_traders' => $topTraders,
         ];

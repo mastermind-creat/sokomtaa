@@ -12,6 +12,7 @@ class Payment extends Model
 
     protected $fillable = [
         'reservation_id',
+        'product_id',
         'user_id',
         'mpesa_transaction_id',
         'mpesa_checkout_request_id',
@@ -37,5 +38,10 @@ class Payment extends Model
     public function reservation(): BelongsTo
     {
         return $this->belongsTo(Reservation::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 }
