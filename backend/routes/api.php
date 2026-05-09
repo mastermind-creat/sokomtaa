@@ -264,6 +264,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/reservations', [\App\Http\Controllers\Admin\ReservationController::class, 'index']);
         Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index']);
         Route::get('/audit-logs', [\App\Http\Controllers\Admin\AuditLogController::class, 'index']);
+
+        // System Maintenance
+        Route::prefix('maintenance')->group(function () {
+            Route::get('/status', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'status']);
+            Route::post('/migrate', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'migrate']);
+            Route::post('/clear-cache', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'clearCache']);
+            Route::post('/optimize', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'optimize']);
+            Route::post('/storage-link', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'storageLink']);
+            Route::post('/seed', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'seed']);
+        });
     });
 });
 

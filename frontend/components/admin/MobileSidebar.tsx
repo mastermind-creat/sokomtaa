@@ -15,7 +15,8 @@ import {
     UsersRound,
     GanttChartSquare,
     ShieldCheck,
-    LogOut
+    LogOut,
+    Terminal
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -64,6 +65,7 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             title: 'Audit & System',
             items: [
                 { icon: ShieldCheck, label: 'Audit Log', path: '/admin/audit-log' },
+                { icon: Settings, label: 'Maintenance', path: '/admin/maintenance' },
                 { icon: Settings, label: 'Settings', path: '/admin/settings' },
             ]
         }

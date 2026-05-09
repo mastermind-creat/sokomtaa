@@ -20,7 +20,8 @@ import {
     Star,
     UsersRound,
     ShieldCheck,
-    GanttChartSquare
+    GanttChartSquare,
+    Terminal
 } from 'lucide-react';
 
 const Building2 = ({ size, className, strokeWidth }: { size?: number; className?: string; strokeWidth?: number }) => (
@@ -110,6 +111,7 @@ export default function AdminSidebar() {
             icon: Settings,
             items: [
                 { icon: ShieldCheck, label: 'Audit Log', path: '/admin/audit-log' },
+                { icon: Terminal, label: 'Maintenance', path: '/admin/maintenance' },
                 { icon: Settings, label: t('common.settings'), path: '/admin/settings' },
             ]
         }
