@@ -111,4 +111,29 @@ class AuthController extends Controller
 
         return $this->success($user, 'Phone number verified successfully.');
     }
+
+    public function resendOtp(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        // Generate a new 6-digit OTP
+        $otp = rand(100000, 999999);
+        
+        // Store OTP in cache for 10 minutes
+        Cache::put("otp_{$user->id}", $otp, now()->addMinutes(config('otp.expiry_minutes', 10)));
+
+        // Send OTP via Talk Sasa
+        $smsService = app(TalkSasaService::class);
+        $message = "Soko Mtaa: Your verification code is {$otp}. Please do not share it with anyone.";
+        $smsService->sendSms($user->phone, $message);
+        
+        Log::info("OTP resent to {$user->phone}");
+
+        $data = [];
+        if (config('app.debug')) {
+            $data['debug_otp'] = $otp;
+        }
+
+        return $this->success($data, 'A new verification code has been sent to your phone.');
+    }
 }

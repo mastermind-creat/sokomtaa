@@ -19,7 +19,7 @@ import { useMpesa } from '@/hooks/useMpesa';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { ApiResponse } from '@/types';
+import { ApiResponse, Reservation } from '@/types';
 import api from '@/lib/api';
 
 interface Product {
@@ -48,10 +48,11 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
     const [reservationId, setReservationId] = useState<number | null>(null);
     const [reservationCode, setReservationCode] = useState<string>('');
     const [localError, setLocalError] = useState<string | null>(null);
+    const [checkoutId, setCheckoutId] = useState<string | null>(null);
     
     const { user } = useAuthStore();
     const router = useRouter();
-    const { initiateStk, isPolling, status, error } = useMpesa();
+    const { initiateStk, isPolling, status, error, stopPolling } = useMpesa();
 
     useEffect(() => {
         if (user?.phone) {
@@ -64,8 +65,6 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
         let timer: NodeJS.Timeout;
         if (step === 'processing' && secondsLeft > 0) {
             timer = setInterval(() => setSecondsLeft(prev => prev - 1), 1000);
-        } else if (secondsLeft === 0) {
-            // Handled by hook error state usually, but good to have here
         }
         return () => clearInterval(timer);
     }, [step, secondsLeft]);
@@ -85,23 +84,34 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
         setLocalError(null);
         try {
             // 1. Create the reservation first in 'pending' status
-            const response = await api.post<ApiResponse<any>>('/reservations', {
+            const response = await api.post<ApiResponse<Reservation>>('/reservations', {
                 product_id: product.id,
                 quantity: quantity,
                 trader_id: traderId
             });
             
-            const resData = response.data;
-            setReservationId(resData.id);
-            setReservationCode(resData.reservation_code);
+            const reservation = response.data;
+            setReservationId(reservation.id);
+            setReservationCode(reservation.reservation_code);
             
             // 2. Initiate STK
-            await initiateStk(phoneNumber, 'reservation', resData.id);
+            const id = await initiateStk(phoneNumber, 'reservation', reservation.id);
+            setCheckoutId(id);
             setStep('processing');
             setSecondsLeft(60);
         } catch (err: any) {
             console.error('Reservation creation failed', err);
             setLocalError(err.message || 'Failed to complete reservation. Please try again.');
+        }
+    };
+
+    const handleSimulateSuccess = async () => {
+        if (!checkoutId) return;
+        try {
+            await api.post(`/payments/mpesa/simulate-success/${checkoutId}`);
+            // Polling should pick it up, but we can also manually check
+        } catch (err) {
+            console.error('Simulation failed', err);
         }
     };
 
@@ -183,10 +193,26 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                 </div>
                             </div>
  
-                            <div className="space-y-4 pt-4">
+                            <div className="space-y-4 pt-4 border-t border-neutral-100">
                                 <div className="flex items-center justify-between px-4">
-                                    <span className="text-sm font-bold text-text-muted">Total Amount</span>
-                                    <span className="text-2xl font-black text-green-950 font-mono">KES {parseFloat(product.price) * quantity}</span>
+                                    <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Subtotal</span>
+                                    <span className="text-sm font-black text-green-950 font-mono">KES {parseFloat(product.price) * quantity}</span>
+                                </div>
+                                <div className="flex items-center justify-between px-4">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Service Fee</span>
+                                        <div className="group relative">
+                                            <AlertCircle size={10} className="text-text-muted" />
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-32 p-2 bg-green-950 text-white text-[8px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                Convenience fee for securing your items online.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span className="text-sm font-black text-brand-600 font-mono">KES 10.00</span>
+                                </div>
+                                <div className="flex items-center justify-between px-4 pt-2">
+                                    <span className="text-sm font-black text-green-950 uppercase tracking-widest">Total Amount</span>
+                                    <span className="text-2xl font-black text-green-950 font-mono">KES {parseFloat(product.price) * quantity + 10}</span>
                                 </div>
                                 <button 
                                     onClick={handleNextToPayment}
@@ -250,7 +276,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 active:scale-95 transition-all"
                                 >
                                     {isPolling ? <Loader2 className="animate-spin" /> : <ShieldCheck size={20} />}
-                                    Confirm Order (Pay KES {parseFloat(product.price) * quantity})
+                                    Confirm Order (Pay KES {parseFloat(product.price) * quantity + 10})
                                 </button>
                                 <button 
                                     onClick={() => setStep('review')}
@@ -295,13 +321,23 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     {error}
                                 </div>
                             )}
- 
-                            <button 
-                                onClick={onClose}
-                                className="text-[10px] font-black text-text-muted uppercase tracking-widest mt-8 block mx-auto underline"
-                            >
-                                Cancel Payment
-                            </button>
+
+                            {/* Simulation Button for Dev */}
+                            <div className="pt-4 space-y-4">
+                                <button 
+                                    onClick={handleSimulateSuccess}
+                                    className="w-full py-3 bg-amber-50 text-amber-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-200 hover:bg-amber-100 transition-colors"
+                                >
+                                    I have paid (Simulate Success)
+                                </button>
+                                
+                                <button 
+                                    onClick={onClose}
+                                    className="text-[10px] font-black text-text-muted uppercase tracking-widest block mx-auto underline"
+                                >
+                                    Cancel Payment
+                                </button>
+                            </div>
                         </motion.div>
                     )}
  

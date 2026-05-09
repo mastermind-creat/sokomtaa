@@ -116,12 +116,13 @@ export default function TraderDashboard() {
                                 className="bg-amber-50 border border-amber-100 rounded-3xl p-5 flex items-center gap-4 shadow-sm"
                             >
                                 <div className="w-10 h-10 bg-amber-600 rounded-xl flex items-center justify-center text-white shrink-0">
-                                    <Clock size={20} />
+                                    <Phone size={20} />
                                 </div>
                                 <div className="flex-1">
-                                    <h4 className="text-amber-950 font-black text-xs uppercase tracking-tight">Access Restricted</h4>
-                                    <p className="text-amber-700 text-[10px] font-bold">Document verification in progress...</p>
+                                    <h4 className="text-amber-950 font-black text-xs uppercase tracking-tight">Phone Not Verified</h4>
+                                    <p className="text-amber-700 text-[10px] font-bold">Please verify your phone number to access all features.</p>
                                 </div>
+                                <Link href="/verify" className="px-4 py-2 bg-amber-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg transition-colors hover:bg-amber-700">Verify Now</Link>
                             </motion.div>
                         )}
                         {hasOverdueFees && (

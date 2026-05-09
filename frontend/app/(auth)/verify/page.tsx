@@ -20,6 +20,9 @@ export default function VerifyPage() {
     const { user, refreshUser } = useAuthStore();
     const router = useRouter();
     const [error, setError] = React.useState<string | null>(null);
+    const [resendLoading, setResendLoading] = React.useState(false);
+    const [resendMessage, setResendMessage] = React.useState<string | null>(null);
+    const [cooldown, setCooldown] = React.useState(0);
 
     React.useEffect(() => {
         if (!user) {
@@ -31,10 +34,22 @@ export default function VerifyPage() {
         }
     }, [user, router]);
 
+    // Handle Cooldown Timer
+    React.useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (cooldown > 0) {
+            timer = setInterval(() => {
+                setCooldown((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [cooldown]);
+
     const onSubmit = async (data: VerifyFormData) => {
         try {
             setError(null);
-            await api.post<never, ApiResponse<void>>('/auth/verify-phone', data);
+            setResendMessage(null);
+            await api.post<ApiResponse<void>>('/auth/verify-phone', data);
             await refreshUser();
             
             // Get updated user from store
@@ -42,9 +57,26 @@ export default function VerifyPage() {
             if (updatedUser?.role === 'admin') router.push('/admin/dashboard');
             else if (updatedUser?.role === 'trader') router.push('/trader/dashboard');
             else router.push('/');
-        } catch (err: unknown) {
-            const errorObj = err as { response?: { data?: { message?: string } }, message?: string };
-            setError(errorObj.response?.data?.message || errorObj.message || 'Verification failed. Try again.');
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || 'Verification failed. Try again.');
+        }
+    };
+
+    const handleResend = async () => {
+        if (cooldown > 0) return;
+        
+        try {
+            setResendLoading(true);
+            setError(null);
+            setResendMessage(null);
+            
+            const response = await api.post<ApiResponse<any>>('/auth/resend-otp');
+            setResendMessage(response.message || 'Verification code resent successfully.');
+            setCooldown(60); // 1 minute cooldown
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Failed to resend code. Please try again.');
+        } finally {
+            setResendLoading(false);
         }
     };
 
@@ -145,6 +177,17 @@ export default function VerifyPage() {
                             </motion.div>
                         )}
 
+                        {resendMessage && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: -8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-green-50 text-green-700 p-4 rounded-xl text-sm border border-green-100 font-medium flex gap-3"
+                            >
+                                <CheckCircle2 size={18} className="text-green-500 shrink-0" />
+                                {resendMessage}
+                            </motion.div>
+                        )}
+
                         <button
                             disabled={isSubmitting}
                             className="w-full h-[58px] bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-black text-lg rounded-xl shadow-lg shadow-brand-600/20 transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -163,9 +206,21 @@ export default function VerifyPage() {
 
                     <div className="mt-10 text-center">
                         <p className="text-text-secondary text-sm mb-2">Didn&lsquo;t receive the code?</p>
-                        <button className="text-brand-600 font-black text-sm hover:underline hover:text-brand-700 transition-colors inline-flex items-center gap-1 group">
-                            Resend New SMS Code
-                            <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                        <button 
+                            onClick={handleResend}
+                            disabled={resendLoading || cooldown > 0}
+                            className="text-brand-600 font-black text-sm hover:underline hover:text-brand-700 transition-colors inline-flex items-center gap-1 group disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {resendLoading ? (
+                                <Loader2 className="animate-spin" size={16} />
+                            ) : cooldown > 0 ? (
+                                `Resend in ${cooldown}s`
+                            ) : (
+                                <>
+                                    Resend New SMS Code
+                                    <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>

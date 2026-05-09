@@ -27,7 +27,7 @@ export default function TraderWalletPage() {
     const { setPageTitle } = useUIStore();
 
     React.useEffect(() => {
-        setPageTitle(t('wallet.title') || 'Wallet Yangu');
+        setPageTitle(t('wallet.title') || 'My Wallet');
     }, [setPageTitle, t]);
 
     const { wallet, transactions, walletLoading, updateFrequency } = useWallet();
@@ -83,7 +83,7 @@ export default function TraderWalletPage() {
                     
                     <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
                         <div className="space-y-2">
-                            <span className="text-xs font-black uppercase tracking-[0.2em] text-brand-100/80">Salio la Sasa (Current Balance)</span>
+                            <span className="text-xs font-black uppercase tracking-[0.2em] text-brand-100/80">Current Balance</span>
                             <div className="flex items-baseline gap-2">
                                 <span className="text-xl font-bold opacity-70">KES</span>
                                 <h2 className="text-5xl font-black tracking-tighter">
@@ -97,7 +97,7 @@ export default function TraderWalletPage() {
                             className="bg-white text-brand-700 px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-3 shadow-xl shadow-black/10 active:scale-95 transition-all hover:bg-brand-50"
                         >
                             <Plus size={18} strokeWidth={3} />
-                            {t('wallet.top_up') || 'Ongeza Salio'}
+                            {t('wallet.top_up') || 'Top Up Balance'}
                         </button>
                     </div>
 
@@ -107,7 +107,7 @@ export default function TraderWalletPage() {
                                 <RefreshCcw size={14} className="text-brand-200" />
                             </div>
                             <span className="text-xs font-bold text-brand-100">
-                                {t('wallet.last_deduction') || 'Deduction ya mwisho'}: {wallet?.last_deduction ? formatDate(new Date(wallet.last_deduction)) : 'Bado'}
+                                {t('wallet.last_deduction') || 'Last Deduction'}: {wallet?.last_deduction ? formatDate(new Date(wallet.last_deduction)) : 'None'}
                             </span>
                         </div>
                     </div>
@@ -123,8 +123,8 @@ export default function TraderWalletPage() {
                                     <Calendar size={20} />
                                 </div>
                                 <div>
-                                    <h3 className="font-black text-green-950 tracking-tight">{t('wallet.frequency') || 'Mfumo wa Malipo'}</h3>
-                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">{t('wallet.deduction_choice') || 'Chagua kila lini ukatwe ada'}</p>
+                                    <h3 className="font-black text-green-950 tracking-tight">{t('wallet.frequency') || 'Payment System'}</h3>
+                                    <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">{t('wallet.deduction_choice') || 'Choose how often fees are deducted'}</p>
                                 </div>
                             </div>
                         </div>
@@ -138,8 +138,8 @@ export default function TraderWalletPage() {
                                         : 'border-gray-50 hover:bg-gray-50'
                                 }`}
                             >
-                                <span className="text-sm font-black text-green-950">{t('wallet.daily') || 'Daily (Kila Siku)'}</span>
-                                <span className="text-[10px] font-medium text-text-secondary leading-tight">Ada itakatwa kila asubuhi kwenye salio lako.</span>
+                                <span className="text-sm font-black text-green-950">{t('wallet.daily') || 'Daily'}</span>
+                                <span className="text-[10px] font-medium text-text-secondary leading-tight">Fees will be deducted every morning from your balance.</span>
                             </button>
 
                             <button 
@@ -150,15 +150,17 @@ export default function TraderWalletPage() {
                                         : 'border-gray-50 hover:bg-gray-50'
                                 }`}
                             >
-                                <span className="text-sm font-black text-green-950">{t('wallet.weekly') || 'Weekly (Kila Wiki)'}</span>
-                                <span className="text-[10px] font-medium text-text-secondary leading-tight">Ada itakatwa mara moja kila mwisho wa wiki.</span>
+                                <span className="text-sm font-black text-green-950">{t('wallet.weekly') || 'Weekly'}</span>
+                                <span className="text-[10px] font-medium text-text-secondary leading-tight">Fees will be deducted once at the end of every week.</span>
                             </button>
                         </div>
 
                         <div className="mt-6 flex items-start gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                            <Info size={16} className="text-amber-600 mt-0.5 shrink-0" />
+                            <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                                <Info size={12} />
+                            </div>
                             <p className="text-[11px] font-medium text-amber-900/80 leading-relaxed italic">
-                                <strong>Kumbuka:</strong> Ada ya mwezi imegawanywa kulingana na chaguo lako. Hakikisha wallet yako ina salio kila wakati kuzuia faini ya ucheleweshaji baada ya siku 14.
+                                <strong>Note:</strong> Your monthly fee is distributed based on your choice. Ensure your wallet has sufficient balance at all times to avoid late penalties.
                             </p>
                         </div>
                     </motion.div>
@@ -166,14 +168,14 @@ export default function TraderWalletPage() {
                     {/* Quick Stats/Status */}
                     <motion.div variants={itemVariants} className="bg-white rounded-[32px] border border-gray-100 p-6 shadow-sm flex flex-col justify-between">
                          <div>
-                            <h3 className="font-black text-green-950 tracking-tight mb-4">{t('wallet.status') || 'Hali ya Wallet'}</h3>
+                            <h3 className="font-black text-green-950 tracking-tight mb-4">{t('wallet.status') || 'Wallet Status'}</h3>
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold text-text-secondary">Uingizaji (Credits)</span>
+                                    <span className="text-xs font-bold text-text-secondary">Credits</span>
                                     <span className="text-xs font-black text-brand-600">+ KES 0</span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold text-text-secondary">Utoaji (Debits)</span>
+                                    <span className="text-xs font-bold text-text-secondary">Debits</span>
                                     <span className="text-xs font-black text-red-600">- KES 0</span>
                                 </div>
                             </div>
@@ -183,7 +185,7 @@ export default function TraderWalletPage() {
                             <div className={`flex items-center gap-3 p-3 rounded-2xl ${wallet?.is_active ? 'bg-green-50' : 'bg-red-50'}`}>
                                 {wallet?.is_active ? <CheckCircle2 size={18} className="text-green-600" /> : <AlertCircle size={18} className="text-red-600" />}
                                 <span className={`text-[10px] font-black uppercase tracking-wider ${wallet?.is_active ? 'text-green-700' : 'text-red-700'}`}>
-                                    {wallet?.is_active ? 'Wallet Iko Sawa' : 'Wallet Imefungwa'}
+                                    {wallet?.is_active ? 'Wallet Active' : 'Wallet Suspended'}
                                 </span>
                             </div>
                          </div>
@@ -194,7 +196,7 @@ export default function TraderWalletPage() {
                 <motion.div variants={itemVariants} className="space-y-4">
                     <div className="flex items-center gap-2 px-2">
                         <History size={20} className="text-brand-600" />
-                        <h3 className="text-lg font-black text-green-950">{t('wallet.history') || 'Historia ya Wallet'}</h3>
+                        <h3 className="text-lg font-black text-green-950">{t('wallet.history') || 'Wallet History'}</h3>
                     </div>
 
                     <div className="space-y-3">
@@ -231,7 +233,7 @@ export default function TraderWalletPage() {
                         ) : (
                             <div className="bg-gray-50 rounded-[32px] p-12 text-center border-2 border-dashed border-gray-200">
                                 <WalletIcon size={48} className="mx-auto text-gray-300 mb-4" />
-                                <p className="text-sm font-bold text-text-secondary">{t('wallet.no_transactions') || 'Hakuna historia ya malipo bado.'}</p>
+                                <p className="text-sm font-bold text-text-secondary">{t('wallet.no_transactions') || 'No transaction history found.'}</p>
                             </div>
                         )}
                     </div>
@@ -243,8 +245,8 @@ export default function TraderWalletPage() {
                 isOpen={isTopUpOpen}
                 onClose={() => setIsTopUpOpen(false)}
                 type="wallet_topup"
-                title={t('wallet.top_up_mpesa') || 'Ongeza Salio na M-Pesa'}
-                description={t('wallet.top_up_desc') || 'Salio litaongezwa kwenye wallet yako mara moja baada ya kulipa.'}
+                title={t('wallet.top_up_mpesa') || 'Top Up with M-Pesa'}
+                description={t('wallet.top_up_desc') || 'Funds will be added to your wallet immediately after payment confirmation.'}
                 onSuccess={() => {
                    // Refresh wallet data
                    setIsTopUpOpen(false);

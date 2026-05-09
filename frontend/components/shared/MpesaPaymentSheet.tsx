@@ -30,14 +30,14 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
 
     const handlePayment = async () => {
         if (!phone.match(/^2547[0-9]{8}$/)) {
-            setMessage('Namba ya simu si sahihi (Use 2547XXXXXXXX)');
+            setMessage('Invalid phone number. Use 2547XXXXXXXX');
             setStatus('error');
             return;
         }
 
         setIsProcessing(true);
         setStatus('pending');
-        setMessage('Tafadhali kamilisha malipo kwenye simu yako...');
+        setMessage('Please complete the payment on your phone...');
 
         try {
             await api.post<ApiResponse<MpesaStkResponse>>('/payments/mpesa/stkpush', {
@@ -48,7 +48,7 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
             });
             
             setStatus('success');
-            setMessage('Ombi la malipo limetumwa! (Payment request sent!)');
+            setMessage('Payment request sent successfully!');
             
             setTimeout(() => {
                 onSuccess?.();
@@ -56,7 +56,7 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
             }, 3000);
         } catch (err: unknown) {
             setStatus('error');
-            let errorMsg = 'Hitilafu imetokea. (An error occurred.)';
+            let errorMsg = 'An error occurred during payment.';
             
             if (err && typeof err === 'object') {
                 const axiosError = err as { response?: { data?: { message?: string } }; message?: string };
@@ -91,12 +91,12 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
                     className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] p-8 z-[70] shadow-2xl safe-bottom"
                 >
                     <div className="flex justify-between items-center mb-1">
-                        <h2 className="text-2xl font-bold text-green-950">{title || 'Lipa na M-Pesa'}</h2>
+                        <h2 className="text-2xl font-bold text-green-950">{title || 'Pay with M-Pesa'}</h2>
                         <button 
                             onClick={onClose} 
                             className="p-2 bg-slate-100 rounded-full active:scale-90 transition-all"
-                            aria-label="Funga (Close)"
-                            title="Funga (Close)"
+                            aria-label="Close"
+                            title="Close"
                         >
                             <X size={20} />
                         </button>
@@ -113,13 +113,13 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
                                 <span className="font-bold">KES</span>
                             </div>
                             <div>
-                                <p className="text-sm text-green-800">Kiasi cha Kulipa (Amount to Pay)</p>
+                                <p className="text-sm text-green-800">Amount to Pay</p>
                                 <p className="text-3xl font-bold text-green-900">{amount?.toLocaleString()}</p>
                             </div>
                         </div>
                     ) : (
                         <div className="mb-8 space-y-2">
-                            <label className="input-label mb-2 block tracking-tight font-black text-green-950 uppercase text-[10px]">Kiasi unachoongeza (Top-up Amount)</label>
+                            <label className="input-label mb-2 block tracking-tight font-black text-green-950 uppercase text-[10px]">Top-up Amount</label>
                             <div className="flex items-center gap-3">
                                 <div className="h-16 px-5 bg-brand-50 border border-brand-100 rounded-xl flex shrink-0 items-center justify-center font-black text-brand-600">KES</div>
                                 <input
@@ -137,7 +137,7 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
                     {status === 'idle' || status === 'pending' || status === 'error' ? (
                         <div className="space-y-6">
                             <div>
-                                <label className="input-label mb-2 block">Namba ya Simu (M-Pesa Number)</label>
+                                <label className="input-label mb-2 block">M-Pesa Number</label>
                                 <div className="flex items-center gap-3">
                                     <div className="h-14 w-14 bg-gray-50 border border-gray-100 rounded-xl flex shrink-0 items-center justify-center text-text-muted">
                                         <Phone size={20} />
@@ -166,15 +166,15 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
                                 {isProcessing ? (
                                     <div className="flex items-center gap-3">
                                         <Loader2 className="animate-spin" />
-                                        Inachakata... (Processing...)
+                                        Processing...
                                     </div>
                                 ) : (
-                                    'Lipa Sasa / Pay Now'
+                                    'Pay Now'
                                 )}
                             </button>
                             
                             <p className="text-center text-xs text-text-muted">
-                                Tafadhali kamilisha malipo kwenye simu yako baada ya kugusa &quot;Lipa Sasa&quot;.
+                                Please complete the payment on your phone after clicking &quot;Pay Now&quot;.
                             </p>
                         </div>
                     ) : (
@@ -186,7 +186,7 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
                             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
                                 <CheckCircle size={48} className="text-green-600" />
                             </div>
-                            <h3 className="text-xl font-bold text-green-900 mb-2">Ombi Limetumwa!</h3>
+                            <h3 className="text-xl font-bold text-green-900 mb-2">Request Sent!</h3>
                             <p className="text-green-800 px-6">{message}</p>
                         </motion.div>
                     )}

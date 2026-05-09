@@ -13,7 +13,9 @@ import {
     XCircle,
     ArrowRight,
     LayoutGrid,
-    Inbox
+    Inbox,
+    Zap,
+    Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ApiResponse, Product, Category } from '@/types';
@@ -23,6 +25,8 @@ import TraderProductCard from '@/components/trader/TraderProductCard';
 import ProductSkeleton from '@/components/trader/ProductSkeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useMpesa } from '@/hooks/useMpesa';
+import { useAuthStore } from '@/store/authStore';
 
 export default function ProductListPage() {
     const router = useRouter();
@@ -33,6 +37,9 @@ export default function ProductListPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [categoryFilter, setCategoryFilter] = useState('all');
+    const [boostingId, setBoostingId] = useState<number | null>(null);
+    const { user } = useAuthStore();
+    const { initiateStk, isPolling, status } = useMpesa();
 
     React.useEffect(() => {
         setPageTitle('Inventory & Stock');
@@ -74,6 +81,31 @@ export default function ProductListPage() {
             alert(`Error: ${error.message || 'Failed to delete product'}`);
         }
     });
+
+    // Mutation: Boost Product
+    const handleBoost = async (id: number) => {
+        if (!user?.phone) {
+            alert('Please verify your phone number first');
+            return;
+        }
+        
+        setBoostingId(id);
+        try {
+            await initiateStk(user.phone, 'product_boost', id);
+        } catch (err: any) {
+            alert(err.message || 'Failed to initiate boost payment');
+            setBoostingId(null);
+        }
+    };
+
+    // Watch for boost success
+    React.useEffect(() => {
+        if (status === 'completed' && boostingId) {
+            queryClient.invalidateQueries({ queryKey: ['my-products'] });
+            alert('Product boosted successfully! It will now appear at the top for the next 24 hours.');
+            setBoostingId(null);
+        }
+    }, [status, boostingId, queryClient]);
 
     // Filtering Logic
     const filteredProducts = useMemo(() => {
@@ -244,7 +276,9 @@ export default function ProductListPage() {
                                     }
                                 }}
                                 onToggleStatus={(id, status) => toggleStatusMutation.mutate({ id, status })}
+                                onBoost={handleBoost}
                                 isUpdating={toggleStatusMutation.isPending && toggleStatusMutation.variables?.id === product.id}
+                                isBoosting={boostingId === product.id && isPolling}
                             />
                         ))}
                     </AnimatePresence>

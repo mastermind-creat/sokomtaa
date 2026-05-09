@@ -39,7 +39,12 @@ class Stall extends Model
 
     public function currentTrader(): HasOne
     {
-        return $this->hasOne(Trader::class)->where('verification_status', 'verified');
+        return $this->hasOne(Trader::class);
+    }
+
+    public function trader(): HasOne
+    {
+        return $this->hasOne(Trader::class);
     }
 
     public function allocations(): HasMany

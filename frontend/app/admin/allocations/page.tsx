@@ -116,75 +116,74 @@ export default function AdminAllocationsPage() {
                 </div>
             </div>
 
-            {/* ── Allocation Card List ── */}
-            <div className="space-y-4 px-4">
+            {/* ── Allocation Grid ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
                 {isLoading ? (
-                    [1, 2, 3].map(i => <div key={i} className="h-40 bg-gray-100 rounded-[2.5rem] animate-pulse" />)
+                    [1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-64 bg-gray-100 rounded-[2.5rem] animate-pulse" />)
                 ) : (
                     <AnimatePresence mode="popLayout">
                         {filteredAllocations.length === 0 ? (
-                            <div className="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
+                            <div className="col-span-full text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
                                 <Building2 className="mx-auto text-gray-200 mb-4" size={48} />
                                 <p className="text-sm font-black text-text-muted uppercase tracking-widest">No Allocations Found</p>
                             </div>
                         ) : (
                             filteredAllocations.map((item: any) => (
                             <motion.div 
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
                                 key={item.id}
-                                className="bg-white rounded-[2.5rem] border border-gray-50 shadow-sm overflow-hidden"
+                                className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col"
                             >
-                                <div className="p-6">
-                                    <div className="flex items-start justify-between mb-6">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center border border-brand-100">
-                                                <Building2 size={28} />
+                                <div className="p-6 flex-1 flex flex-col">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center border border-brand-100 shrink-0">
+                                                <Building2 size={24} />
                                             </div>
                                             <div>
-                                                <h3 className="text-base font-black text-green-950 uppercase tracking-tight">Stall {item.stall}</h3>
-                                                <p className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-1.5 mt-1">
+                                                <h3 className="text-sm font-black text-green-950 uppercase tracking-tight">Stall {item.stall}</h3>
+                                                <p className="text-[9px] font-black text-text-muted uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
                                                     <MapPin size={10} /> Block {item.block}
                                                 </p>
                                             </div>
                                         </div>
                                         <div className={cn(
-                                            "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                                            "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border",
                                             item.status === 'active' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
                                         )}>
                                             {item.status}
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4">
-                                        <div className="bg-gray-50 p-4 rounded-2xl flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden">
+                                    <div className="flex-1 space-y-4">
+                                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 flex items-center justify-between">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
                                                     <User size={14} className="text-text-muted" />
                                                 </div>
-                                                <span className="text-xs font-black text-green-950 truncate max-w-[120px]">{item.trader?.business_name || item.trader}</span>
+                                                <span className="text-[11px] font-black text-green-950 truncate pr-2">
+                                                    {item.trader?.business_name || item.trader}
+                                                </span>
                                             </div>
-                                            <button className="text-brand-600 p-1">
-                                                <ArrowUpRight size={16} />
-                                            </button>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <div className="flex justify-between text-[9px] font-black text-text-muted uppercase tracking-widest px-1">
+                                            <div className="flex justify-between text-[8px] font-black text-text-muted uppercase tracking-widest px-1">
                                                 <span>Lease Progress</span>
-                                                <span>65%</span>
+                                                <span className="text-brand-600">65%</span>
                                             </div>
-                                            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                                                <div className="h-full bg-brand-500 w-[65%]" />
+                                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-brand-500 w-[65%] rounded-full shadow-lg shadow-brand-500/20" />
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                <button className="w-full h-12 bg-gray-950 hover:bg-black flex items-center justify-between px-6 active:scale-[0.98] transition-all">
-                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Manage Allocation Workflow</span>
-                                    <ChevronRight size={16} className="text-white/40" />
-                                </button>
+                                
+                                <div className="px-6 py-3 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
+                                    <span className="text-[9px] font-black text-text-muted uppercase tracking-widest">Lease ID: #{item.id}</span>
+                                    <span className="text-[9px] font-black text-brand-600 uppercase tracking-widest">Active Status</span>
+                                </div>
                             </motion.div>
                         ))
                     )}

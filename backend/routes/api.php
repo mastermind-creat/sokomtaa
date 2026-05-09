@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
+use App\Http\Controllers\Public\GlobalStatsController;
+
+Route::get('/stats', [GlobalStatsController::class, 'index']);
+
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
@@ -20,6 +24,7 @@ Route::prefix('auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/verify-phone', [AuthController::class, 'verifyPhone']);
+        Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
     });
 });
 
@@ -112,6 +117,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('payments/mpesa')->group(function () {
         Route::post('/stkpush', [\App\Http\Controllers\Payment\MpesaController::class, 'initiateSTK']);
         Route::get('/status/{checkoutRequestId}', [\App\Http\Controllers\Payment\MpesaController::class, 'checkStatus']);
+        Route::post('/simulate-success/{checkoutRequestId}', [\App\Http\Controllers\Payment\MpesaController::class, 'simulateSuccess']);
     });
 
     // ── Market Fees & Wallet (Traders Only) ──────────────────────────────────

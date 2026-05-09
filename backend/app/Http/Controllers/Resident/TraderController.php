@@ -18,10 +18,7 @@ class TraderController extends Controller
      */
     public function show(Trader $trader): JsonResponse
     {
-        // Only show verified traders
-        if ($trader->verification_status !== 'verified') {
-            return $this->error('This trader is not yet verified. (Mfanyabiashara huyu bado hakuhakikiwa.)', 'NOT_VERIFIED', 403);
-        }
+        // Show all traders (removed verification check as per request)
 
         $trader->load(['stall', 'market']);
 
@@ -47,7 +44,7 @@ class TraderController extends Controller
         $categoryId = $request->input('category_id');
         $marketId = $request->input('market_id');
 
-        $traders = Trader::where('verification_status', 'verified')
+        $traders = Trader::query()
             ->when($query, function ($q) use ($query) {
                 $q->where('business_name', 'like', "%{$query}%")
                   ->orWhere('business_name_sw', 'like', "%{$query}%");

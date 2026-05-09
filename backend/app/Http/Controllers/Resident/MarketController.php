@@ -19,9 +19,7 @@ class MarketController extends Controller
     public function index(): JsonResponse
     {
         $markets = Market::where('is_active', true)
-            ->withCount(['traders' => function ($query) {
-                $query->where('verification_status', 'verified');
-            }])
+            ->withCount('traders')
             ->get();
 
         return $this->success($markets);
@@ -47,9 +45,7 @@ class MarketController extends Controller
             ->selectRaw("*, ( 6371 * acos( cos( radians(?) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitude ) ) ) ) AS distance", [$lat, $lng, $lat])
             ->having('distance', '<=', $radius)
             ->orderBy('distance')
-            ->withCount(['traders' => function ($query) {
-                $query->where('verification_status', 'verified');
-            }])
+            ->withCount('traders')
             ->get();
 
         return $this->success($markets);
@@ -60,15 +56,17 @@ class MarketController extends Controller
      */
     public function show(Market $market): JsonResponse
     {
-        $market->loadCount(['traders' => function ($query) {
-            $query->where('verification_status', 'verified');
-        }]);
+        $market->loadCount('traders');
 
         // Get traders in this market
         $traders = $market->traders()
-            ->where('verification_status', 'verified')
             ->with(['stall', 'user'])
-            ->paginate(15);
+            ->get(); // Using get() instead of paginate for the grid view
+
+        // Get all stalls in this market
+        $stalls = $market->stalls()
+            ->with('trader')
+            ->get();
 
         // Get categories that have products in this market
         $categories = Category::whereHas('products', function ($query) use ($market) {
@@ -80,6 +78,7 @@ class MarketController extends Controller
         return $this->success([
             'market' => $market,
             'traders' => $traders,
+            'stalls' => $stalls,
             'categories' => $categories
         ]);
     }

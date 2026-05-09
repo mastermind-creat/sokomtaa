@@ -122,9 +122,15 @@ export default function ResidentProfilePage() {
                                     <span className="px-3 py-1 bg-brand-500/20 backdrop-blur-md border border-brand-500/30 rounded-full text-[10px] font-black uppercase tracking-widest text-brand-300">
                                         Resident Member
                                     </span>
-                                    <span className="px-3 py-1 bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-300 flex items-center gap-1.5">
-                                        <CheckCircle2 size={12} /> Verified
-                                    </span>
+                                    {user?.phone_verified ? (
+                                        <span className="px-3 py-1 bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-300 flex items-center gap-1.5">
+                                            <CheckCircle2 size={12} /> Verified
+                                        </span>
+                                    ) : (
+                                        <span className="px-3 py-1 bg-amber-500/20 backdrop-blur-md border border-amber-500/30 rounded-full text-[10px] font-black uppercase tracking-widest text-amber-300 flex items-center gap-1.5">
+                                            <Shield size={12} /> Pending Verification
+                                        </span>
+                                    )}
                                 </div>
                                 <h2 className="text-3xl lg:text-5xl font-black tracking-tight leading-tight">{user?.name}</h2>
                                 <p className="text-brand-200/80 text-sm font-medium flex items-center justify-center lg:justify-start gap-2">
@@ -198,16 +204,27 @@ export default function ResidentProfilePage() {
 
                                 <div className="space-y-2.5 md:col-span-2">
                                      <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] pl-1">Phone Number (Primary ID)</label>
-                                     <div className="relative opacity-60">
+                                     <div className="relative">
                                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
                                         <input 
                                             value={user?.phone || ''}
                                             disabled
-                                            className="w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-transparent font-black text-sm"
+                                            className="w-full h-14 pl-12 pr-32 bg-neutral-50 rounded-2xl border-transparent font-black text-sm opacity-60"
                                         />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 bg-green-50 text-green-600 px-3 py-1.5 rounded-xl border border-green-100">
-                                            <ShieldCheck size={14} />
-                                            <span className="text-[9px] font-black uppercase tracking-widest">Verified</span>
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                            {user?.phone_verified ? (
+                                                <div className="flex items-center gap-2 bg-green-50 text-green-600 px-3 py-1.5 rounded-xl border border-green-100">
+                                                    <ShieldCheck size={14} />
+                                                    <span className="text-[9px] font-black uppercase tracking-widest">Verified</span>
+                                                </div>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => router.push('/verify')}
+                                                    className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+                                                >
+                                                    Verify Now
+                                                </button>
+                                            )}
                                         </div>
                                      </div>
                                 </div>

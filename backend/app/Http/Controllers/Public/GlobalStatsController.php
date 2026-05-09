@@ -21,7 +21,7 @@ class GlobalStatsController extends Controller
     {
         $stats = [
             'total_markets' => Market::where('is_active', true)->count(),
-            'total_traders' => Trader::where('verification_status', 'verified')->count(),
+            'total_traders' => Trader::count(),
             'total_products' => Product::where('is_active', true)->count(),
             'total_reservations' => Reservation::where('status', 'completed')->count() + 150, // Added base for social proof
             'active_locations' => Market::distinct('county')->count(),

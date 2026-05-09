@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
     Camera, Store, Clock, Phone, Upload, User,
-    Key, Save, Eye, EyeOff, Loader2
+    Key, Save, Eye, EyeOff, Loader2, ShieldCheck
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
@@ -244,7 +244,7 @@ export default function TraderProfilePage() {
                         className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium"
                     />
                 </FormField>
-                <FormField label="Jina la Biashara (Kiswahili)" id="bizNameSw">
+                <FormField label="Business Name (Swahili)" id="bizNameSw">
                     <input
                         id="bizNameSw"
                         type="text"
@@ -334,8 +334,25 @@ export default function TraderProfilePage() {
                         className="w-full h-12 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium text-text-secondary cursor-not-allowed" />
                 </FormField>
                 <FormField label="Phone Number" id="phone">
-                    <input id="phone" type="tel" value={current.user?.phone ?? authUser?.phone ?? ''} readOnly
-                        className="w-full h-12 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm font-mono text-text-secondary cursor-not-allowed" />
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                            <input id="phone" type="tel" value={current.user?.phone ?? authUser?.phone ?? ''} readOnly
+                                className="w-full h-12 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm font-mono text-text-secondary cursor-not-allowed" />
+                            {authUser?.phone_verified && (
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600">
+                                    <ShieldCheck className="w-4 h-4" />
+                                </div>
+                            )}
+                        </div>
+                        {!authUser?.phone_verified && (
+                            <button
+                                onClick={() => router.push('/verify')}
+                                className="px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-amber-500/20 whitespace-nowrap"
+                            >
+                                Verify Now
+                            </button>
+                        )}
+                    </div>
                 </FormField>
                 <FormField label="Email (optional)" id="email">
                     <input id="email" type="email" defaultValue={current.user?.email ?? authUser?.email ?? ''}

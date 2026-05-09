@@ -11,7 +11,8 @@ import {
     AlertTriangle, 
     XCircle,
     TrendingUp,
-    Tag
+    Tag,
+    Zap
 } from 'lucide-react';
 import { Product } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,15 +24,19 @@ interface TraderProductCardProps {
     onEdit: (product: Product) => void;
     onDelete: (id: number) => void;
     onToggleStatus: (id: number, status: string) => void;
+    onBoost: (id: number) => void;
     isUpdating?: boolean;
+    isBoosting?: boolean;
 }
 
 export default function TraderProductCard({ 
-    product, 
+    product,
     onEdit, 
     onDelete, 
     onToggleStatus,
-    isUpdating 
+    onBoost,
+    isUpdating,
+    isBoosting
 }: TraderProductCardProps) {
     const { t } = useTranslation();
     const [showMenu, setShowMenu] = React.useState(false);
@@ -89,6 +94,14 @@ export default function TraderProductCard({
                     </span>
                 </div>
 
+                {/* Boosted Badge */}
+                {product.is_boosted && (
+                    <div className="absolute top-3 right-3 px-3 py-1.5 bg-amber-500 text-white rounded-full flex items-center gap-1.5 shadow-lg shadow-amber-500/20 z-10 animate-pulse">
+                        <Zap size={12} className="fill-white" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Boosted</span>
+                    </div>
+                )}
+
                 {/* Reservation Count Overlay */}
                 <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/60 backdrop-blur-md text-white rounded-full flex items-center gap-1.5 shadow-sm">
                     <TrendingUp size={12} className="text-brand-400" />
@@ -138,6 +151,13 @@ export default function TraderProductCard({
                                         >
                                             <Edit3 size={18} className="text-brand-600" />
                                             Edit Product
+                                        </button>
+                                        <button 
+                                            onClick={() => { onBoost(product.id); setShowMenu(false); }}
+                                            className="w-full px-4 py-3 text-left flex items-center gap-3 text-sm font-bold text-amber-600 hover:bg-amber-50 transition-colors"
+                                        >
+                                            <Zap size={18} />
+                                            Boost Visibility (KES 20)
                                         </button>
                                         <button 
                                             onClick={() => { onDelete(product.id); setShowMenu(false); }}

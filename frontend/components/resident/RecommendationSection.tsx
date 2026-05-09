@@ -33,6 +33,7 @@ interface Product {
 }
 
 interface RecommendationsData {
+    boosted_products: Product[];
     popular_products: Product[];
     top_traders: Trader[];
 }
@@ -44,6 +45,7 @@ export default function RecommendationSection() {
     });
 
     // Handle both wrapped and unwrapped data formats
+    const boosted = (recommendationsData as any)?.boosted_products || recommendationsData?.data?.boosted_products || [];
     const products = (recommendationsData as any)?.popular_products || recommendationsData?.data?.popular_products || [];
     const traders = (recommendationsData as any)?.top_traders || recommendationsData?.data?.top_traders || [];
 
@@ -68,6 +70,50 @@ export default function RecommendationSection() {
 
     return (
         <div className="space-y-10 py-6">
+            {/* Boosted Products (Micro-Ads) */}
+            {boosted.length > 0 && (
+                <div className="px-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-xl font-black text-green-950">Sponsored Picks</h2>
+                            <span className="text-[8px] font-black bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded border border-amber-200 uppercase tracking-widest">Ad</span>
+                        </div>
+                    </div>
+                    <div className="flex gap-3 md:gap-6 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6 snap-x snap-mandatory">
+                        {boosted.map(product => (
+                            <Link key={product.id} href={`/resident/market/${product.trader.market.id}/trader/${product.trader.id}`} className="min-w-[180px] md:min-w-[260px] snap-center rounded-2xl md:rounded-3xl bg-white border border-amber-200 overflow-hidden shadow-brand-sm group active:scale-[0.98] transition-all flex flex-col relative">
+                                <div className="absolute top-2 right-2 md:top-3 md:right-3 z-10">
+                                    <div className="bg-amber-500 text-white p-1 md:p-2 rounded-lg shadow-lg">
+                                        <Star size={12} className="fill-white" />
+                                    </div>
+                                </div>
+                                <div className="h-32 md:h-44 bg-neutral-100 relative overflow-hidden">
+                                    {product.image_url ? (
+                                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                    ) : (
+                                        <div className="w-full h-full flex flex-col items-center justify-center text-neutral-300">
+                                            <Store size={32} />
+                                        </div>
+                                    )}
+                                    <div className="absolute top-2 left-2 md:top-3 md:left-3 bg-white/90 backdrop-blur-sm px-2 md:px-3 py-0.5 md:py-1 rounded-lg md:rounded-full text-[8px] md:text-xs font-black font-mono text-green-950 shadow-sm">
+                                        KES {Math.round(parseFloat(product.price as string))}
+                                    </div>
+                                </div>
+                                <div className="p-3 md:p-4 flex-1 flex flex-col bg-amber-50/30">
+                                    <h3 className="font-black text-green-950 text-xs md:text-lg truncate mb-1 uppercase">{product.name}</h3>
+                                    <div className="flex items-center gap-1.5 text-text-secondary text-[8px] md:text-sm mb-3">
+                                        <Store size={12} className="text-amber-600" />
+                                        <span className="truncate font-bold">{product.trader.business_name}</span>
+                                    </div>
+                                    <button className="mt-auto w-full h-8 md:h-10 bg-amber-500 text-white rounded-lg md:rounded-xl text-[8px] md:text-sm font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-md shadow-amber-200">
+                                        Grab Now
+                                    </button>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
             {/* Popular Products Carousel */}
             {products.length > 0 && (
                 <div className="px-6">

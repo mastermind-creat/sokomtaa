@@ -177,35 +177,31 @@ export default function ResidentReservationsPage() {
                                     initial={{ y: 20, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}
                                     transition={{ delay: index * 0.05 }}
-                                    className="bg-white p-3 md:p-6 rounded-2xl md:rounded-[3rem] border border-gray-100 shadow-brand-sm group hover:shadow-2xl hover:shadow-gray-200/50 transition-all cursor-pointer relative overflow-hidden flex flex-col gap-3"
+                                    className="bg-white p-2.5 rounded-2xl border border-gray-100 shadow-brand-sm group hover:shadow-lg transition-all cursor-pointer relative overflow-hidden flex flex-col gap-2"
                                     onClick={() => router.push(`/reservations/${res.id}`)}
                                 >
                                     <div className="relative">
-                                        <div className="w-full aspect-square bg-neutral-50 rounded-xl md:rounded-[2rem] overflow-hidden border border-gray-100 relative shadow-inner group-hover:scale-105 transition-transform duration-500">
+                                        <div className="w-full aspect-square bg-neutral-50 rounded-xl overflow-hidden border border-gray-50 relative shadow-inner">
                                             {res.product?.image_url ? (
-                                                <Image src={res.product.image_url} alt={res.product.name} fill className="object-cover" />
+                                                <Image src={res.product.image_url} alt={res.product.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-neutral-200"><ShoppingBag size={24} /></div>
+                                                <div className="w-full h-full flex items-center justify-center text-neutral-200"><ShoppingBag size={20} /></div>
                                             )}
                                         </div>
-                                        <div className="absolute top-2 left-2">
-                                            <span className={`px-2 py-0.5 rounded-lg text-[7px] font-black uppercase tracking-wider border shadow-sm ${getStatusStyles(res.status)}`}>
+                                        <div className="absolute top-1.5 left-1.5">
+                                            <span className={`px-2 py-0.5 rounded-md text-[6px] font-black uppercase tracking-wider border shadow-sm ${getStatusStyles(res.status)}`}>
                                                 {getStatusLabel(res.status)}
                                             </span>
                                         </div>
                                     </div>
                                     
-                                    <div className="flex-1 min-w-0 space-y-1">
-                                        <p className="text-[7px] font-mono font-black text-text-muted">#{res.reservation_code}</p>
-                                        <h4 className="font-black text-green-950 text-[10px] md:text-lg truncate group-hover:text-brand-700 transition-colors uppercase leading-tight">{res.product?.name}</h4>
-                                        <p className="text-[8px] font-bold text-text-secondary truncate">{res.trader?.business_name}</p>
-                                    </div>
-
-                                    <div className="pt-2 border-t border-dashed border-gray-100 flex items-center justify-between">
-                                        <p className="text-xs md:text-xl font-black text-green-950">KES {Math.round(res.total_amount)}</p>
-                                        <div className="w-6 h-6 md:w-12 md:h-12 bg-brand-50 rounded-lg md:rounded-2xl flex items-center justify-center text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-all">
-                                            <ChevronRight size={14} />
+                                    <div className="flex-1 min-w-0 space-y-0.5 px-0.5">
+                                        <div className="flex items-center justify-between gap-1">
+                                            <p className="text-[6px] font-mono font-black text-text-muted">#{res.reservation_code}</p>
+                                            <p className="text-[8px] font-black text-green-950">KES {Math.round(parseFloat(res.total_amount))}</p>
                                         </div>
+                                        <h4 className="font-black text-green-950 text-[9px] truncate group-hover:text-brand-700 transition-colors uppercase leading-tight">{res.product?.name}</h4>
+                                        <p className="text-[7px] font-bold text-text-secondary truncate">{res.trader?.business_name}</p>
                                     </div>
                                 </motion.div>
                             ))}
