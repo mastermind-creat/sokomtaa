@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { Star, MapPin, Store } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Market {
     id: number;
@@ -89,7 +90,12 @@ export default function RecommendationSection() {
                                 </div>
                                 <div className="h-32 md:h-44 bg-neutral-100 relative overflow-hidden">
                                     {product.image_url ? (
-                                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                        <Image 
+                                            src={product.image_url} 
+                                            alt={product.name} 
+                                            fill
+                                            className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                                        />
                                     ) : (
                                         <div className="w-full h-full flex flex-col items-center justify-center text-neutral-300">
                                             <Store size={32} />
@@ -159,9 +165,14 @@ export default function RecommendationSection() {
                     <div className="grid grid-cols-2 md:grid-cols-1 gap-3 md:gap-4">
                         {traders.map(trader => (
                             <Link key={trader.id} href={`/resident/market/${trader.market.id}/trader/${trader.id}`} className="flex flex-col md:flex-row items-center md:items-center gap-3 bg-white p-3 md:p-4 rounded-2xl md:rounded-3xl border border-gray-100 shadow-sm active:scale-[0.98] transition-all group">
-                                <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-brand-50 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                                <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-brand-50 flex items-center justify-center shrink-0 overflow-hidden shadow-inner relative">
                                     {trader.avatar_url ? (
-                                        <img src={trader.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                        <Image 
+                                            src={trader.avatar_url} 
+                                            alt={trader.business_name} 
+                                            fill
+                                            className="object-cover" 
+                                        />
                                     ) : (
                                         <Store size={20} className="text-brand-400" />
                                     )}
