@@ -16,7 +16,8 @@ import {
     X,
     Check,
     PlusCircle,
-    Info
+    Info,
+    AlertTriangle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ApiResponse, Category } from '@/types';
@@ -24,6 +25,8 @@ import { useUIStore } from '@/store/uiStore';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { useAuthStore } from '@/store/authStore';
 
 interface AddProductForm {
     name: string;
@@ -44,7 +47,11 @@ export default function AddProductPage() {
     }, [setPageTitle]);
 
     const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<AddProductForm>();
+    const { user } = useAuthStore();
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+    const isMissingProfile = user?.role === 'trader' && !user?.trader;
+    const isPendingAllocation = user?.role === 'trader' && user?.trader && !user?.trader.stall_id;
     
     // New Category State
     const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -98,12 +105,16 @@ export default function AddProductPage() {
             console.error('Submission error:', error);
             let errorMessage = 'Server error occurred';
             
-            if (error.errors) {
+            if (typeof error === 'string') {
+                errorMessage = error;
+            } else if (error?.errors) {
                 const firstError = Object.values(error.errors)[0];
                 if (Array.isArray(firstError)) {
                     errorMessage = firstError[0];
+                } else if (typeof firstError === 'string') {
+                    errorMessage = firstError;
                 }
-            } else if (error.message) {
+            } else if (error?.message) {
                 errorMessage = error.message;
             }
             
@@ -141,6 +152,40 @@ export default function AddProductPage() {
                 <h1 className="text-3xl font-black text-green-950 tracking-tight">Add New Product</h1>
                 <p className="text-text-secondary font-medium mt-1">List a new item in your stall directory.</p>
             </div>
+
+            <AnimatePresence>
+                {isMissingProfile && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mx-6 mb-8 p-6 bg-rose-50 border border-rose-100 rounded-[2rem] flex items-center gap-4 shadow-sm"
+                    >
+                        <div className="w-12 h-12 bg-rose-600 rounded-2xl flex items-center justify-center text-white shrink-0">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="text-rose-950 font-black text-sm uppercase tracking-tight">Profile Incomplete</h4>
+                            <p className="text-rose-700 text-xs font-bold mt-0.5">Please complete your trader profile setup to start listing products.</p>
+                        </div>
+                        <Link href="/trader/profile" className="px-5 py-3 bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-700 transition-colors">Setup Now</Link>
+                    </motion.div>
+                )}
+                {isPendingAllocation && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mx-6 mb-8 p-6 bg-blue-50 border border-blue-100 rounded-[2rem] flex items-center gap-4 shadow-sm"
+                    >
+                        <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shrink-0">
+                            <Clock size={24} />
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="text-blue-950 font-black text-sm uppercase tracking-tight">Profile Ready • Awaiting Stall</h4>
+                            <p className="text-blue-700 text-xs font-bold mt-0.5">Your profile is complete! You will be able to add products as soon as the admin allocates your stall.</p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <form onSubmit={handleSubmit(onSubmit)} className="px-6 space-y-10">
                 {/* Photo Upload Section */}
@@ -324,7 +369,7 @@ export default function AddProductPage() {
                 </div>
 
                 {/* Fixed Bottom Action Bar */}
-                <div className="fixed bottom-0 left-0 right-0 lg:left-[280px] p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 z-20">
+                <div className="fixed bottom-[80px] left-0 right-0 lg:bottom-0 lg:left-[280px] p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 z-20">
                     <div className="max-w-4xl mx-auto flex gap-4">
                         <button
                             type="button"
@@ -334,11 +379,11 @@ export default function AddProductPage() {
                             Cancel
                         </button>
                         <button
-                            disabled={mutation.isPending}
+                            disabled={mutation.isPending || isMissingProfile}
                             className="flex-[2] h-16 bg-brand-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-brand-900/10 disabled:opacity-50 hover:bg-brand-700 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                             type="submit"
                         >
-                            {mutation.isPending ? <Loader2 className="animate-spin" /> : <><Check size={20} /> Publish Product</>}
+                            {mutation.isPending ? <Loader2 className="animate-spin" /> : <><Check size={20} /> {isMissingProfile ? 'Profile Required' : 'Publish Product'}</>}
                         </button>
                     </div>
                 </div>

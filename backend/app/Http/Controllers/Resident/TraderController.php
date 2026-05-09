@@ -20,7 +20,7 @@ class TraderController extends Controller
     {
         // Only show verified traders
         if ($trader->verification_status !== 'verified') {
-            return $this->error('Mfanyabiashara huyu bado hakuhakikiwa. (This trader is not yet verified.)', 'NOT_VERIFIED', 403);
+            return $this->error('This trader is not yet verified. (Mfanyabiashara huyu bado hakuhakikiwa.)', 'NOT_VERIFIED', 403);
         }
 
         $trader->load(['stall', 'market']);

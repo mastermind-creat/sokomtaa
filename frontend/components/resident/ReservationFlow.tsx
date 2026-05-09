@@ -18,6 +18,9 @@ import {
 import { useMpesa } from '@/hooks/useMpesa';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/hooks/useTranslation';
+import { ApiResponse } from '@/types';
+import api from '@/lib/api';
 
 interface Product {
     id: number;
@@ -37,11 +40,14 @@ interface ReservationFlowProps {
 type Step = 'review' | 'payment' | 'processing' | 'success';
 
 export default function ReservationFlow({ product, traderId, onClose }: ReservationFlowProps) {
+    const { t } = useTranslation();
     const [step, setStep] = useState<Step>('review');
     const [quantity, setQuantity] = useState(1);
     const [phoneNumber, setPhoneNumber] = useState('');
     const [secondsLeft, setSecondsLeft] = useState(60);
+    const [reservationId, setReservationId] = useState<number | null>(null);
     const [reservationCode, setReservationCode] = useState<string>('');
+    const [localError, setLocalError] = useState<string | null>(null);
     
     const { user } = useAuthStore();
     const router = useRouter();
@@ -76,32 +82,26 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
     };
 
     const handleConfirmPayment = async () => {
+        setLocalError(null);
         try {
-            // 1. Create the reservation first in 'pending' status via the hook/initiate (handled in initiateStk flow concept)
-            // Wait, I need a reservation ID before initiating STK.
-            // Let's call the backend to create reservation first.
-            const res = await fetch('/api/reservations', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    product_id: product.id,
-                    quantity: quantity,
-                    trader_id: traderId
-                })
+            // 1. Create the reservation first in 'pending' status
+            const response = await api.post<ApiResponse<any>>('/reservations', {
+                product_id: product.id,
+                quantity: quantity,
+                trader_id: traderId
             });
-            const resData = await res.json();
             
-            if (resData.success) {
-                setReservationId(resData.data.id);
-                setReservationCode(resData.data.reservation_code);
-                
-                // 2. Initiate STK
-                await initiateStk(phoneNumber, 'reservation', resData.data.id);
-                setStep('processing');
-                setSecondsLeft(60);
-            }
-        } catch (err) {
+            const resData = response.data;
+            setReservationId(resData.id);
+            setReservationCode(resData.reservation_code);
+            
+            // 2. Initiate STK
+            await initiateStk(phoneNumber, 'reservation', resData.id);
+            setStep('processing');
+            setSecondsLeft(60);
+        } catch (err: any) {
             console.error('Reservation creation failed', err);
+            setLocalError(err.message || 'Failed to complete reservation. Please try again.');
         }
     };
 
@@ -120,7 +120,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="bg-white rounded-t-[3rem] p-8 max-w-[480px] mx-auto w-full relative shadow-2xl overflow-hidden min-h-[500px]"
+                className="bg-white rounded-t-[3rem] p-6 md:p-8 max-w-[480px] mx-auto w-full relative shadow-2xl overflow-y-auto max-h-[95vh] no-scrollbar"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Drag Handle */}
@@ -146,8 +146,8 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                         </div>
                                     )}
                                 </div>
-                                <div className="space-y-1 py-1">
-                                    <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest">{product.category?.name || 'BIDHAA'}</span>
+                                <div className="space-y-1 py-1 text-left">
+                                    <span className="text-[10px] font-black text-brand-600 uppercase tracking-widest">{product.category?.name || t('common.product')}</span>
                                     <h3 className="text-xl font-black text-green-950 leading-tight">{product.name}</h3>
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-xs font-bold text-text-muted">KES</span>
@@ -160,11 +160,11 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     </div>
                                 </div>
                             </div>
-
+ 
                             <div className="bg-neutral-50 p-6 rounded-[2.5rem] border border-gray-100 flex items-center justify-between">
-                                <div>
+                                <div className="text-left">
                                     <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Quantity ({product.unit}s)</p>
-                                    <h4 className="text-lg font-black text-green-950">Chagua Kiasi</h4>
+                                    <h4 className="text-lg font-black text-green-950">Select Quantity</h4>
                                 </div>
                                 <div className="flex items-center gap-4 bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
                                     <button 
@@ -182,23 +182,23 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     </button>
                                 </div>
                             </div>
-
+ 
                             <div className="space-y-4 pt-4">
                                 <div className="flex items-center justify-between px-4">
-                                    <span className="text-sm font-bold text-text-muted">Jumla (Total)</span>
+                                    <span className="text-sm font-bold text-text-muted">Total Amount</span>
                                     <span className="text-2xl font-black text-green-950 font-mono">KES {parseFloat(product.price) * quantity}</span>
                                 </div>
                                 <button 
                                     onClick={handleNextToPayment}
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-between px-8 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 group"
                                 >
-                                    Peleka kwa Malipo (Pay)
+                                    Proceed to Payment
                                     <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                 </button>
                             </div>
                         </motion.div>
                     )}
-
+ 
                     {/* STEP 2: PAYMENT INFO */}
                     {step === 'payment' && (
                         <motion.div 
@@ -212,10 +212,10 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                 <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 mx-auto mb-4">
                                     <Phone size={32} />
                                 </div>
-                                <h3 className="text-2xl font-black text-green-950">Malipo ya M-Pesa</h3>
-                                <p className="text-sm text-text-secondary font-medium px-4">Weka nambari ya simu itakayotumika kulipia STK Push.</p>
+                                <h3 className="text-2xl font-black text-green-950">M-Pesa Payment</h3>
+                                <p className="text-sm text-text-secondary font-medium px-4">Enter your phone number to receive the payment prompt.</p>
                             </div>
-
+ 
                             <div className="space-y-4">
                                 <div className="relative group">
                                     <Smartphone className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-600" size={20} />
@@ -227,15 +227,22 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                         placeholder="2547XXXXXXXX"
                                     />
                                 </div>
-
-                                <div className="flex gap-4 items-start bg-amber-50 p-5 rounded-[2rem] border border-amber-100">
+ 
+                                <div className="flex gap-4 items-start bg-amber-50 p-5 rounded-[2rem] border border-amber-100 text-left">
                                     <AlertCircle className="text-amber-500 shrink-0" size={24} />
                                     <p className="text-[11px] text-amber-900 leading-relaxed font-bold uppercase tracking-tight">
-                                        Uhifadhi huu ni wa saa 24 pekee. Lipia sasa ili kuzuia bidhaa isichukuliwe na mwingine.
+                                        This reservation is only valid for 24 hours. Pay now to secure your item and avoid disappointment.
                                     </p>
                                 </div>
-                            </div>
 
+                                {localError && (
+                                    <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-xs font-bold border border-red-100 flex items-center gap-2">
+                                        <AlertCircle size={16} />
+                                        {localError}
+                                    </div>
+                                )}
+                            </div>
+ 
                             <div className="flex flex-col gap-3 pt-4">
                                 <button 
                                     onClick={handleConfirmPayment}
@@ -243,18 +250,18 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 active:scale-95 transition-all"
                                 >
                                     {isPolling ? <Loader2 className="animate-spin" /> : <ShieldCheck size={20} />}
-                                    Thibitisha Oda (Pay KES {parseFloat(product.price) * quantity})
+                                    Confirm Order (Pay KES {parseFloat(product.price) * quantity})
                                 </button>
                                 <button 
                                     onClick={() => setStep('review')}
                                     className="w-full py-4 text-[10px] font-black text-text-muted uppercase tracking-widest hover:text-brand-600 transition-colors"
                                 >
-                                    Rudi Nyuma (Back)
+                                    Go Back
                                 </button>
                             </div>
                         </motion.div>
                     )}
-
+ 
                     {/* STEP 3: PROCESSING / POLLING */}
                     {step === 'processing' && (
                         <motion.div 
@@ -270,34 +277,34 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     <Smartphone size={48} className="animate-bounce" />
                                 </div>
                             </div>
-
+ 
                             <div className="space-y-3">
-                                <h3 className="text-2xl font-black text-green-950">Inasindika...</h3>
+                                <h3 className="text-2xl font-black text-green-950">Processing Payment...</h3>
                                 <p className="text-sm text-text-secondary font-medium px-8 leading-relaxed">
-                                    Tafadhali angalia simu yako na uweke <strong>M-Pesa PIN</strong> ili kukamilisha malipo.
+                                    Please check your phone and enter your <strong>M-Pesa PIN</strong> to complete the payment.
                                 </p>
                             </div>
-
+ 
                             <div className="bg-neutral-50 px-6 py-4 rounded-2xl inline-flex items-center gap-3">
                                 <div className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
                                 <span className="font-mono font-black text-brand-600">{secondsLeft}s left</span>
                             </div>
-
+ 
                             {error && (
                                 <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-xs font-bold border border-red-100 mt-4">
                                     {error}
                                 </div>
                             )}
-
+ 
                             <button 
                                 onClick={onClose}
                                 className="text-[10px] font-black text-text-muted uppercase tracking-widest mt-8 block mx-auto underline"
                             >
-                                Ghairi (Cancel Polling)
+                                Cancel Payment
                             </button>
                         </motion.div>
                     )}
-
+ 
                     {/* STEP 4: SUCCESS */}
                     {step === 'success' && (
                         <motion.div 
@@ -330,29 +337,29 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     ))}
                                 </div>
                             </div>
-
+ 
                             <div className="space-y-2">
-                                <h3 className="text-3xl font-black text-green-950 leading-tight">Oda Imepokelewa!</h3>
-                                <p className="text-sm text-text-secondary font-medium">Asante kwa kutumia Soko Mtaa. Bidhaa yako imehifadhiwa.</p>
+                                <h3 className="text-3xl font-black text-green-950 leading-tight">Order Received!</h3>
+                                <p className="text-sm text-text-secondary font-medium">Thank you for using Soko Mtaa. Your items have been successfully reserved.</p>
                             </div>
-
+ 
                             <div className="bg-neutral-50 p-6 rounded-[2.5rem] border-2 border-dashed border-neutral-200">
                                 <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-2">Reservation Code</p>
                                 <h4 className="text-4xl font-black text-green-950 font-mono tracking-tighter">{reservationCode}</h4>
                             </div>
-
+ 
                             <div className="flex flex-col gap-3 pt-4">
                                 <button 
                                     onClick={() => router.push('/reservations')}
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100"
                                 >
-                                    Tazama Oda Zangu
+                                    View My Reservations
                                 </button>
                                 <button 
                                     onClick={onClose}
                                     className="w-full py-4 text-[10px] font-black text-text-muted uppercase tracking-widest"
                                 >
-                                    Funga (Close)
+                                    Close
                                 </button>
                             </div>
                         </motion.div>

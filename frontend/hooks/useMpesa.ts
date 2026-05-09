@@ -43,7 +43,7 @@ export const useMpesa = () => {
             
             try {
                 const response = await api.get<ApiResponse<MpesaStatusResponse>>(`/payments/mpesa/status/${checkoutRequestId}`);
-                const currentStatus = response.data.data.status;
+                const currentStatus = response.data.status;
 
                 if (currentStatus === 'completed' || currentStatus === 'failed') {
                     setStatus(currentStatus);
@@ -51,16 +51,16 @@ export const useMpesa = () => {
                 }
 
                 if (attempts >= maxAttempts) {
-                    setError('IMEPITWA NA MUDA (Timed out). If you paid, please check your orders in a moment.');
+                    setError('TIMED OUT. If you paid, please check your orders in a moment.');
                     stopPolling();
                 }
             } catch (err) {
                 console.error('Polling error:', err);
-                // We continue polling on error unless it's a 404 (handled by backend as 404 if not found for user)
+                // We continue polling on error unless it's a 404
             }
         }, 3000);
     }, [stopPolling]);
-
+ 
     const initiateStk = async (phoneNumber: string, type: 'reservation' | 'market_fee', targetId: number) => {
         setIsPolling(true);
         setError(null);
@@ -71,12 +71,12 @@ export const useMpesa = () => {
                 target_id: targetId
             });
             
-            const checkoutId = response.data.data.checkout_request_id;
+            const checkoutId = response.data.checkout_request_id;
             pollStatus(checkoutId);
             return checkoutId;
         } catch (err: unknown) {
             const apiError = err as { response?: { data?: { message?: string } } };
-            setError(apiError.response?.data?.message || 'Imeshindwa kutuma ombi (Request failed)');
+            setError(apiError.response?.data?.message || 'Failed to send request');
             setIsPolling(false);
             throw err;
         }

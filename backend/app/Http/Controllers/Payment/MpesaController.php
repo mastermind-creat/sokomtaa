@@ -34,11 +34,21 @@ class MpesaController extends Controller
     public function initiateSTK(Request $request): JsonResponse
     {
         $request->validate([
-            'phone_number' => 'required|string|regex:/^2547[0-9]{8}$/',
+            'phone_number' => 'required|string|regex:/^(?:254|\+254|0)?(7|1)[0-9]{8}$/',
             'type' => 'required|in:reservation,market_fee,wallet_topup',
             'target_id' => 'required_if:type,reservation,market_fee|integer',
             'amount' => 'required_if:type,wallet_topup|numeric|min:1',
         ]);
+
+        // Normalize Phone Number to 254XXXXXXXXX
+        $phone = $request->phone_number;
+        $phone = str_replace('+', '', $phone);
+        if (str_starts_with($phone, '0')) {
+            $phone = '254' . substr($phone, 1);
+        }
+        if (strlen($phone) === 9 && (str_starts_with($phone, '7') || str_starts_with($phone, '1'))) {
+            $phone = '254' . $phone;
+        }
 
         $user = Auth::user();
         $amount = 0;
@@ -65,7 +75,7 @@ class MpesaController extends Controller
         }
 
         $stkResponse = $this->mpesaService->stkPush(
-            $request->phone_number,
+            $phone,
             $amount,
             $ref,
             'Soko Mtaa ' . ucfirst($request->type)
@@ -81,7 +91,7 @@ class MpesaController extends Controller
             'user_id' => $user->id,
             'mpesa_checkout_request_id' => $stkResponse['CheckoutRequestID'],
             'amount' => $amount,
-            'phone_number' => $request->phone_number,
+            'phone_number' => $phone,
             'type' => $request->type,
             'status' => 'pending',
         ]);

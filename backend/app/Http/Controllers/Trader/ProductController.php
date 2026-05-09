@@ -30,7 +30,7 @@ class ProductController extends Controller
         $trader = $request->user()->trader;
 
         if (!$trader) {
-            return $this->error('Wasifu wa mfanyabiashara haujapatikana. (Trader profile not found.)', 'NOT_FOUND', 404);
+            return $this->error('Trader profile not found. (Wasifu wa mfanyabiashara haujapatikana.)', 'NOT_FOUND', 404);
         }
 
         $products = Product::where('trader_id', $trader->id)
@@ -59,7 +59,11 @@ class ProductController extends Controller
         $trader = $request->user()->trader;
 
         if (!$trader) {
-            return $this->error('Tafadhali kamilisha wasifu wako kwanza. (Please complete your trader profile setup first.)', 'PROFILE_NOT_FOUND', 404);
+            return $this->error('Please complete your trader profile setup first. (Tafadhali kamilisha wasifu wako kwanza.)', 'PROFILE_INCOMPLETE', 403);
+        }
+
+        if (!$trader->stall_id) {
+            return $this->error('Your stall has not been allocated by the admin yet. (Kibanda chako bado hakijaidhinishwa na admin.)', 'STALL_PENDING', 403);
         }
 
         $data = $request->validated();
@@ -70,14 +74,14 @@ class ProductController extends Controller
         if ($request->hasFile('image')) {
             $imageUrl = $this->cloudinary->uploadImage($request->file('image'), 'products');
             if (!$imageUrl) {
-                return $this->error('Imeshindikana kupakia picha. (Image upload failed.)', 'UPLOAD_FAILED', 500);
+                return $this->error('Image upload failed. (Imeshindikana kupakia picha.)', 'UPLOAD_FAILED', 500);
             }
             $data['image_url'] = $imageUrl;
         }
 
         $product = Product::create($data);
 
-        return $this->success($product, 'Bidhaa imeongezwa. (Product added successfully.)', 201);
+        return $this->success($product, 'Product added successfully. (Bidhaa imeongezwa.)', 201);
     }
 
     /**
@@ -88,7 +92,7 @@ class ProductController extends Controller
         $trader = $request->user()->trader;
         
         if (!$trader || $product->trader_id !== $trader->id) {
-            return $this->error('Huruhusiwi kubadilisha bidhaa hii. (Unauthorized to modify this product.)', 'UNAUTHORIZED', 403);
+            return $this->error('Unauthorized to modify this product. (Huruhusiwi kubadilisha bidhaa hii.)', 'UNAUTHORIZED', 403);
         }
 
         $data = $request->validated();
@@ -106,7 +110,7 @@ class ProductController extends Controller
 
         $product->update($data);
 
-        return $this->success($product, 'Bidhaa imesasishwa. (Product updated successfully.)');
+        return $this->success($product, 'Product updated successfully. (Bidhaa imesasishwa.)');
     }
 
     /**
@@ -122,7 +126,7 @@ class ProductController extends Controller
 
         $product->delete();
 
-        return $this->success(null, 'Bidhaa imefutwa. (Product deleted successfully.)');
+        return $this->success(null, 'Product deleted successfully. (Bidhaa imefutwa.)');
     }
 
     /**
@@ -138,7 +142,7 @@ class ProductController extends Controller
 
         $product->update(['stock_status' => $request->stock_status]);
 
-        return $this->success($product, 'Hali ya bidhaa imesasishwa. (Stock status updated.)');
+        return $this->success($product, 'Stock status updated. (Hali ya bidhaa imesasishwa.)');
     }
 
     /**
@@ -149,7 +153,7 @@ class ProductController extends Controller
         $user = Auth::user();
 
         if (!$user || !$user->trader || $product->trader_id !== $user->trader->id) {
-            abort(403, 'Huruhusiwi kubadilisha bidhaa hii. (Unauthorized to modify this product.)');
+            abort(403, 'Unauthorized to modify this product. (Huruhusiwi kubadilisha bidhaa hii.)');
         }
     }
 }

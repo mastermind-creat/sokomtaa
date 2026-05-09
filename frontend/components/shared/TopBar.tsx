@@ -10,6 +10,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { LanguageToggle } from './LanguageToggle';
 import NotificationBell from './NotificationBell';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 import { Logo } from './Logo';
 
@@ -22,6 +23,7 @@ export default function TopBar({ title: propTitle, onMenuToggle }: TopBarProps) 
     const { user, logout } = useAuthStore();
     const { pageTitle } = useUIStore();
     const { t } = useTranslation();
+    const router = useRouter();
     const [isProfileOpen, setIsProfileOpen] = React.useState(false);
 
     // Header title priority: static title prop > store title > translation default

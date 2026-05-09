@@ -23,27 +23,31 @@ class TraderProfileController extends Controller
         $user = $request->user();
 
         if ($user->trader) {
-            return $this->error('Tayari unayo akaunti ya mfanyabiashara. (You already have a trader profile.)', 'ALREADY_EXISTS', 422);
+            return $this->error('You already have a trader profile. (Tayari unayo akaunti ya mfanyabiashara.)', 'ALREADY_EXISTS', 422);
         }
 
         return DB::transaction(function () use ($request, $user) {
-            // Find the stall within the selected market
-            $stall = Stall::where('stall_number', $request->stall_number)
-                ->where('market_id', $request->market_id)
-                ->first();
+            $stallId = null;
 
-            if (!$stall) {
-                return $this->error('Kibanda hiki hakipatikani katika soko hili. (This stall is not available in this market.)', 'STALL_NOT_FOUND', 422);
-            }
+            // If a stall number is provided, try to find and link it
+            if ($request->stall_number) {
+                $stall = Stall::where('stall_number', $request->stall_number)
+                    ->where('market_id', $request->market_id)
+                    ->first();
 
-            if ($stall->status === 'occupied') {
-                return $this->error('Kibanda hiki tayari kina mfanyabiashara. (This stall is already occupied.)', 'STALL_OCCUPIED', 422);
+                if ($stall) {
+                    if ($stall->status === 'occupied') {
+                        return $this->error('This stall is already occupied. (Kibanda hiki tayari kina mfanyabiashara.)', 'STALL_OCCUPIED', 422);
+                    }
+                    $stallId = $stall->id;
+                    $stall->update(['status' => 'occupied']);
+                }
             }
 
             // Create Trader Profile
             $trader = Trader::create([
                 'user_id' => $user->id,
-                'stall_id' => $stall->id,
+                'stall_id' => $stallId,
                 'market_id' => $request->market_id,
                 'business_name' => $request->business_name,
                 'business_name_sw' => $request->business_name_sw,
@@ -56,13 +60,10 @@ class TraderProfileController extends Controller
                 'closing_time' => $request->closing_time ?? '18:00',
             ]);
 
-            // Update Stall Status
-            $stall->update(['status' => 'occupied']);
-
             // Update User Role to Trader (if not already)
             $user->update(['role' => 'trader']);
 
-            return $this->success($trader, 'Wasifu wa mfanyabiashara umeundwa. (Trader profile created successfully.)', 201);
+            return $this->success($trader, 'Trader profile created successfully. (Wasifu wa mfanyabiashara umeundwa.)', 201);
         });
     }
 
@@ -76,7 +77,7 @@ class TraderProfileController extends Controller
         $trader = $user->trader()->with(['stall', 'market'])->first();
 
         if (!$trader) {
-            return $this->error('Haujava kujiandikisha kama mfanyabiashara. (You are not registered as a trader.)', 'NOT_FOUND', 404);
+            return $this->error('You are not registered as a trader. (Haujava kujiandikisha kama mfanyabiashara.)', 'NOT_FOUND', 404);
         }
 
         return $this->success($trader);
@@ -90,12 +91,12 @@ class TraderProfileController extends Controller
         $trader = $request->user()->trader;
 
         if (!$trader) {
-            return $this->error('Wasifu haupatikani. (Profile not found.)', 'NOT_FOUND', 404);
+            return $this->error('Profile not found. (Wasifu haupatikani.)', 'NOT_FOUND', 404);
         }
 
         $trader->update($request->validated());
 
-        return $this->success($trader, 'Wasifu umesasishwa. (Profile updated successfully.)');
+        return $this->success($trader, 'Profile updated successfully. (Wasifu umesasishwa.)');
     }
     /**
      * Upload an avatar for the trader profile.
@@ -109,7 +110,7 @@ class TraderProfileController extends Controller
         $trader = $request->user()->trader;
 
         if (!$trader) {
-            return $this->error('Wasifu haupatikani. (Profile not found.)', 'NOT_FOUND', 404);
+            return $this->error('Profile not found. (Wasifu haupatikani.)', 'NOT_FOUND', 404);
         }
 
         if ($request->hasFile('avatar')) {
@@ -122,11 +123,11 @@ class TraderProfileController extends Controller
                 }
                 
                 $trader->update(['avatar_url' => $url]);
-                return $this->success(['avatar_url' => $url], 'Picha imepakiwa kikamilifu. (Avatar uploaded successfully.)');
+                return $this->success(['avatar_url' => $url], 'Avatar uploaded successfully. (Picha imepakiwa kikamilifu.)');
             }
-            return $this->error('Imeshindwa kupakia picha. (Failed to upload image.)', 'UPLOAD_ERROR', 500);
+            return $this->error('Failed to upload image. (Imeshindwa kupakia picha.)', 'UPLOAD_ERROR', 500);
         }
 
-        return $this->error('Hakuna picha iliyopatikana. (No image provided.)', 'BAD_REQUEST', 400);
+        return $this->error('No image provided. (Hakuna picha iliyopatikana.)', 'BAD_REQUEST', 400);
     }
 }
