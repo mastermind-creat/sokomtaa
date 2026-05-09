@@ -7,6 +7,8 @@ return [
         'http://localhost:3000',
         'http://localhost:3001',
         'https://sokomtaa.vercel.app',
+        'https://sokomtaa.co.ke',
+        'https://www.sokomtaa.co.ke',
     ],
     'allowed_origins_patterns' => [],
     'allowed_headers'          => ['*'],
