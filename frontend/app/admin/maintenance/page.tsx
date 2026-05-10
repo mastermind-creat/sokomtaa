@@ -57,14 +57,17 @@ export default function MaintenancePage() {
 
     // Mutations for actions
     const runAction = useMutation({
-        mutationFn: async (endpoint: string) => {
+        mutationFn: async (item: { action: string, method?: string }) => {
             setCommandOutput(null);
-            const res = await api.post<{ message: string; output?: string }>(`/admin/maintenance/${endpoint}`);
-            return res; // api.post already returns response.data
+            const res = item.method === 'get' 
+                ? await api.get<{ message?: string; output?: string; logs?: string }>(`/admin/maintenance/${item.action}`)
+                : await api.post<{ message?: string; output?: string; logs?: string }>(`/admin/maintenance/${item.action}`);
+            return res;
         },
-        onSuccess: (data) => {
+        onSuccess: (data, variables) => {
             toast.success(data?.message || 'Action completed');
             if (data?.output) setCommandOutput(data.output);
+            if (data?.logs) setCommandOutput(data.logs);
             queryClient.invalidateQueries({ queryKey: ['system-status'] });
         },
         onError: (error: any) => {
@@ -122,6 +125,16 @@ export default function MaintenancePage() {
             bgColor: 'bg-rose-50',
             action: 'seed',
             danger: true
+        },
+        {
+            id: 'logs',
+            title: 'System Logs',
+            description: 'View the last 100 lines of the production error log.',
+            icon: Terminal,
+            color: 'text-text-primary',
+            bgColor: 'bg-gray-100',
+            action: 'logs',
+            method: 'get'
         }
     ];
 
@@ -173,7 +186,7 @@ export default function MaintenancePage() {
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => {
                                     if (item.danger && !confirm('Are you sure? This action modifies the database.')) return;
-                                    runAction.mutate(item.action);
+                                    runAction.mutate({ action: item.action, method: item.method });
                                 }}
                                 disabled={runAction.isPending}
                                 className="group text-left bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-brand-900/5 transition-all flex flex-col justify-between h-48 relative overflow-hidden"
@@ -192,9 +205,9 @@ export default function MaintenancePage() {
 
                                 <div className="flex items-center justify-between mt-4">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                                        {runAction.isPending && runAction.variables === item.action ? 'Executing...' : 'Click to execute'}
+                                        {runAction.isPending && (runAction.variables as any)?.action === item.action ? 'Executing...' : 'Click to execute'}
                                     </span>
-                                    {runAction.isPending && runAction.variables === item.action && (
+                                    {runAction.isPending && (runAction.variables as any)?.action === item.action && (
                                         <Loader2 className="w-4 h-4 text-brand-600 animate-spin" />
                                     )}
                                 </div>
