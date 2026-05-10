@@ -8,6 +8,10 @@ $app = require_once __DIR__.'/../bootstrap/app.php';
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 
+// Force the cache driver to 'file' before booting to bypass DB permission issues
+putenv('CACHE_STORE=file');
+putenv('CACHE_DRIVER=file');
+
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
 $response = $kernel->handle(
     $request = Illuminate\Http\Request::capture()
