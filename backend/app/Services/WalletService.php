@@ -12,7 +12,7 @@ class WalletService
     /**
      * Credit a wallet (Top-up / Sale earnings).
      */
-    public function credit(Wallet $wallet, float $amount, string $description, string $refType = null, string $refId = null): WalletTransaction
+    public function credit(Wallet $wallet, float $amount, string $description, ?string $refType = null, ?string $refId = null): WalletTransaction
     {
         return DB::transaction(function () use ($wallet, $amount, $description, $refType, $refId) {
             $wallet->increment('balance', $amount);
@@ -33,7 +33,7 @@ class WalletService
     /**
      * Debit a wallet (Fee deduction / Withdrawal).
      */
-    public function debit(Wallet $wallet, float $amount, string $description, string $refType = null, string $refId = null, string $status = 'completed'): WalletTransaction
+    public function debit(Wallet $wallet, float $amount, string $description, ?string $refType = null, ?string $refId = null, string $status = 'completed'): WalletTransaction
     {
         if ($wallet->balance < $amount) {
             throw new Exception("Salio haitoshi (Insufficient balance). Available: KES {$wallet->balance}, Requested: KES {$amount}.");
