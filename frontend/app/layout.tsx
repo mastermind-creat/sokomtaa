@@ -31,16 +31,18 @@ export default function RootLayout({
     <html lang="en" className={`${plusJakarta.variable} ${dmSans.variable} ${jetbrainsMono.variable} h-full antialiased transition-colors duration-500`}>
       <body className="bg-surface-base text-text-primary min-h-full flex flex-col selection:bg-brand-100 selection:text-brand-900 overflow-x-hidden">
         <Providers>
+          <NextTopLoader 
+            color="#2D9653"
+            height={3}
+            showSpinner={false}
+            shadow={false}
+            crawl={true}
+            speed={200}
+            easing="ease"
+            zIndex={9999}
+          />
           <Toaster richColors position="top-right" />
           <GlobalLoader />
-          <React.Suspense fallback={null}>
-            <NextTopLoader 
-              color="#2D9653"
-              height={4}
-              showSpinner={false}
-              shadow={false}
-            />
-          </React.Suspense>
           {/* TV/Large Screen Background Elements */}
           <div className="hidden lg:block fixed inset-0 z-[-1] bg-[radial-gradient(circle_at_top_right,rgba(45,150,83,0.05),transparent),radial-gradient(circle_at_bottom_left,rgba(245,166,35,0.03),transparent)]" />
           

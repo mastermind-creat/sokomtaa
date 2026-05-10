@@ -51,14 +51,31 @@ import { useAuthStore } from '@/store/authStore';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
 import { motion, AnimatePresence } from 'framer-motion';
+import NProgress from 'nprogress';
+
 
 export default function AdminSidebar() {
     const router = useRouter();
     const pathname = usePathname();
     const { t } = useTranslation();
+    const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
     
+    // Stop loader when pathname changes (navigation complete)
+    useEffect(() => {
+        NProgress.done();
+        setNavigatingTo(null);
+    }, [pathname]);
+
+    const navigate = (path: string) => {
+        if (path === pathname) return;
+        setNavigatingTo(path);
+        NProgress.start();
+        router.push(path);
+    };
+
     // Track which sections are expanded
     const [expandedSections, setExpandedSections] = useState<string[]>(['Operations']);
+
 
     const menuSections = [
         {
@@ -185,33 +202,39 @@ export default function AdminSidebar() {
                                     >
                                         {section.items.map((item) => {
                                             const isActive = pathname === item.path;
+                                            const isNavigating = navigatingTo === item.path;
                                             return (
                                                 <button
                                                     key={item.path}
-                                                    onClick={() => router.push(item.path)}
+                                                    onClick={() => navigate(item.path)}
+                                                    disabled={isNavigating}
                                                     className={`w-full flex items-center justify-between p-3 rounded-xl transition-all group active:scale-[0.98] ${
                                                         isActive 
                                                             ? 'bg-green-950 text-white shadow-lg shadow-green-900/20' 
+                                                            : isNavigating
+                                                            ? 'bg-brand-50 text-brand-700'
                                                             : 'text-neutral-600 hover:bg-neutral-50 hover:pl-5'
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-3">
                                                         <item.icon 
                                                             size={16} 
-                                                            className={isActive ? 'text-brand-400' : 'text-neutral-400 group-hover:text-green-950 transition-colors'} 
-                                                            strokeWidth={isActive ? 2.5 : 2}
+                                                            className={isActive ? 'text-brand-400' : isNavigating ? 'text-brand-600 animate-pulse' : 'text-neutral-400 group-hover:text-green-950 transition-colors'} 
+                                                            strokeWidth={isActive || isNavigating ? 2.5 : 2}
                                                         />
-                                                        <span className={`text-[13px] font-bold tracking-tight ${isActive ? 'text-white' : ''}`}>
+                                                        <span className={`text-[13px] font-bold tracking-tight ${isActive ? 'text-white' : isNavigating ? 'text-brand-700' : ''}`}>
                                                             {item.label}
                                                         </span>
                                                     </div>
-                                                    {item.badge && (
+                                                    {isNavigating ? (
+                                                        <div className="w-4 h-4 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+                                                    ) : item.badge ? (
                                                         <div className={`px-2 py-0.5 rounded-md text-[8px] font-black ${
                                                             isActive ? 'bg-white/20 text-white' : 'bg-brand-100 text-brand-700'
                                                         }`}>
                                                             {item.badge}
                                                         </div>
-                                                    )}
+                                                    ) : null}
                                                 </button>
                                             );
                                         })}
