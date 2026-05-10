@@ -5,6 +5,7 @@ import Providers from "@/components/Providers";
 import OfflineBanner from "@/components/shared/OfflineBanner";
 import GlobalLoader from "@/components/shared/GlobalLoader";
 import NextTopLoader from 'nextjs-toploader';
+import { Toaster } from 'sonner';
 
 // Bypass Google Fonts due to build environment network restrictions
 const plusJakarta = { variable: "--font-display" };
@@ -30,6 +31,7 @@ export default function RootLayout({
     <html lang="en" className={`${plusJakarta.variable} ${dmSans.variable} ${jetbrainsMono.variable} h-full antialiased transition-colors duration-500`}>
       <body className="bg-surface-base text-text-primary min-h-full flex flex-col selection:bg-brand-100 selection:text-brand-900 overflow-x-hidden">
         <Providers>
+          <Toaster richColors position="top-right" />
           <GlobalLoader />
           <React.Suspense fallback={null}>
             <NextTopLoader 
