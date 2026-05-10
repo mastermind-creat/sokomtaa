@@ -12,11 +12,19 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 
 class ApplicationReviewController extends Controller
 {
     use ApiResponse;
+
+    protected $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
 
     /**
      * List all stall applications.
@@ -86,6 +94,19 @@ class ApplicationReviewController extends Controller
                     'reviewed_by' => Auth::id(),
                     'reviewed_at' => Carbon::now(),
                 ]);
+
+                // 5. Notify Trader via SMS and App
+                $user = $trader->user;
+                if ($user) {
+                    $this->notificationService->send(
+                        $user,
+                        'Stall Allocated',
+                        "Congratulations! Your stall application at {$application->market->name} has been approved. You have been allocated Stall {$stall->stall_number}. Please log in to your dashboard for details.",
+                        'allocation',
+                        ['stall_id' => $stall->id],
+                        true
+                    );
+                }
             } else {
                 // Rejected
                 $application->update([

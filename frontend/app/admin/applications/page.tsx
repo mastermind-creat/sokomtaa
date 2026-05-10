@@ -137,6 +137,10 @@ export default function AdminApplicationsPage() {
                                             <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest">
                                                 By {app.trader.user.name}
                                             </p>
+                                            <div className="flex items-center gap-1 mt-1 text-text-secondary">
+                                                <MapPin size={10} />
+                                                <span className="text-[10px] font-bold uppercase tracking-widest">{app.market?.name}</span>
+                                            </div>
                                         </div>
                                         <div className="flex flex-col items-end">
                                             {app.preferred_stall ? (
@@ -211,6 +215,10 @@ export default function AdminApplicationsPage() {
                                                 <div className="flex items-center gap-3">
                                                     <Phone size={14} className="text-brand-600" />
                                                     <span className="text-sm font-bold text-text-secondary">{selectedApp.trader.user.phone}</span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <MapPin size={14} className="text-brand-600" />
+                                                    <span className="text-sm font-bold text-text-secondary">Applying at: {selectedApp.market?.name}</span>
                                                 </div>
                                             </div>
                                         </div>

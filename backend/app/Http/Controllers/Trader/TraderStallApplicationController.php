@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\StallApplication;
 use App\Models\Stall;
 use App\Traits\ApiResponse;
+use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +15,13 @@ use Illuminate\Support\Facades\Auth;
 class TraderStallApplicationController extends Controller
 {
     use ApiResponse;
+
+    protected $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
 
     /**
      * Get the authenticated trader's current stall application.
@@ -74,6 +83,19 @@ class TraderStallApplicationController extends Controller
             'motivation'         => $request->motivation,
             'status'             => 'pending',
         ]);
+
+        // Notify all admins
+        $admins = User::where('role', 'admin')->where('is_active', true)->get();
+        foreach ($admins as $admin) {
+            $this->notificationService->send(
+                $admin,
+                'New Stall Application',
+                "New Stall Application from {$user->trader->business_name} for {$user->trader->market->name}",
+                'application',
+                ['application_id' => $application->id],
+                false
+            );
+        }
 
         return $this->success($application, 'Stall application submitted successfully.', 201);
     }
