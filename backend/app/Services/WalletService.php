@@ -104,9 +104,33 @@ class WalletService
      */
     public function getOrCreateForTrader($traderId): Wallet
     {
+        $trader = \App\Models\Trader::find($traderId);
         return Wallet::firstOrCreate(
-            ['trader_id' => $traderId],
-            ['balance' => 0.00, 'is_active' => true]
+            ['user_id' => $trader?->user_id],
+            ['trader_id' => $traderId, 'balance' => 0.00, 'is_active' => true]
         );
+    }
+
+    /**
+     * Get or create a wallet for a user.
+     */
+    public function getOrCreateForUser($userId): Wallet
+    {
+        $user = \App\Models\User::find($userId);
+        $wallet = Wallet::firstOrCreate(
+            ['user_id' => $userId],
+            [
+                'trader_id' => $user?->trader?->id,
+                'balance' => 0.00, 
+                'is_active' => true
+            ]
+        );
+
+        // If wallet exists but trader_id is missing (e.g. resident became trader), update it
+        if ($user?->trader?->id && !$wallet->trader_id) {
+            $wallet->update(['trader_id' => $user->trader->id]);
+        }
+
+        return $wallet;
     }
 }

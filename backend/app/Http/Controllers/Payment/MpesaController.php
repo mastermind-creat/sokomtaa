@@ -183,7 +183,7 @@ class MpesaController extends Controller
                 );
             } elseif ($payment->type === 'market_fee' || $payment->type === 'wallet_topup') {
                 $walletService = app(WalletService::class);
-                $wallet = $walletService->getOrCreateForTrader($payment->user->trader?->id);
+                $wallet = $walletService->getOrCreateForUser($payment->user_id);
                 
                 // Credit the wallet
                 $walletService->credit(
@@ -227,6 +227,12 @@ class MpesaController extends Controller
         $payment = Payment::where('mpesa_checkout_request_id', $checkoutRequestId)
             ->where('user_id', Auth::id())
             ->firstOrFail();
+
+        Log::info('Checking M-Pesa Status:', [
+            'checkout_id' => $checkoutRequestId,
+            'status' => $payment->status,
+            'user_id' => Auth::id()
+        ]);
 
         return $this->success([
             'status' => $payment->status,
