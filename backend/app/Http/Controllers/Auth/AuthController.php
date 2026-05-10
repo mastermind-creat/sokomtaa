@@ -139,11 +139,24 @@ class AuthController extends Controller
 
     public function forgotPassword(Request $request): JsonResponse
     {
-        $request->validate([
-            'phone' => 'required|string|exists:users,phone',
-        ]);
+        $phone = $request->phone;
+        
+        // Normalize: if starts with 07..., try both 07... and 2547...
+        $searchPhones = [$phone];
+        if (str_starts_with($phone, '0')) {
+            $searchPhones[] = '254' . substr($phone, 1);
+        } elseif (str_starts_with($phone, '7')) {
+             $searchPhones[] = '254' . $phone;
+             $searchPhones[] = '0' . $phone;
+        } elseif (str_starts_with($phone, '254')) {
+            $searchPhones[] = '0' . substr($phone, 3);
+        }
 
-        $user = User::where('phone', $request->phone)->first();
+        $user = User::whereIn('phone', $searchPhones)->first();
+
+        if (!$user) {
+            return $this->error('The selected phone number is not registered.', 'VALIDATION_FAILED', 422);
+        }
 
         // Generate a 6-digit OTP
         $otp = rand(100000, 999999);
