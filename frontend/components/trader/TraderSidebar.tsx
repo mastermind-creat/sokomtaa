@@ -64,6 +64,17 @@ export default function TraderSidebar() {
     const pathname = usePathname();
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = React.useState(true);
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const getActiveState = (href: string) => {
+        if (!mounted) return false;
+        if (href === '/trader/products') return pathname.startsWith('/trader/products');
+        return pathname === href;
+    };
 
     return (
         <aside className="hidden lg:flex flex-col w-[280px] h-screen bg-white border-r border-gray-100 sticky top-0 left-0 overflow-y-auto no-scrollbar">
@@ -113,9 +124,9 @@ export default function TraderSidebar() {
                 <div>
                     <p className="px-3 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">Takwimu na Uhifadhi</p>
                     <div className="space-y-1">
-                        <SidebarLink href="/trader/dashboard" icon={LayoutDashboard} label={t('nav.dawati')} active={pathname === '/trader/dashboard'} />
-                        <SidebarLink href="/trader/products" icon={Package} label={t('sidebar.products_stock')} active={pathname.startsWith('/trader/products')} />
-                        <SidebarLink href="/trader/reservations" icon={Ticket} label={t('sidebar.order_history')} active={pathname === '/trader/reservations'} count={3} />
+                        <SidebarLink href="/trader/dashboard" icon={LayoutDashboard} label={t('nav.dawati')} active={getActiveState('/trader/dashboard')} />
+                        <SidebarLink href="/trader/products" icon={Package} label={t('sidebar.products_stock')} active={getActiveState('/trader/products')} />
+                        <SidebarLink href="/trader/reservations" icon={Ticket} label={t('sidebar.order_history')} active={getActiveState('/trader/reservations')} count={3} />
                     </div>
                 </div>
 
@@ -123,9 +134,9 @@ export default function TraderSidebar() {
                 <div>
                     <p className="px-3 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">{t('sidebar.store_mgmt')}</p>
                     <div className="space-y-1">
-                        <SidebarLink href="/trader/wallet" icon={CreditCard} label={t('sidebar.my_wallet') || 'Wallet Yangu'} active={pathname === '/trader/wallet'} />
-                        <SidebarLink href="/trader/analytics" icon={BarChart3} label={t('sidebar.store_analytics')} active={pathname === '/trader/analytics'} />
-                        <SidebarLink href="/trader/reviews" icon={MessageSquare} label={t('sidebar.reviews')} active={pathname === '/trader/reviews'} />
+                        <SidebarLink href="/trader/wallet" icon={CreditCard} label={t('sidebar.my_wallet') || 'Wallet Yangu'} active={getActiveState('/trader/wallet')} />
+                        <SidebarLink href="/trader/analytics" icon={BarChart3} label={t('sidebar.store_analytics')} active={getActiveState('/trader/analytics')} />
+                        <SidebarLink href="/trader/reviews" icon={MessageSquare} label={t('sidebar.reviews')} active={getActiveState('/trader/reviews')} />
                     </div>
                 </div>
             </div>

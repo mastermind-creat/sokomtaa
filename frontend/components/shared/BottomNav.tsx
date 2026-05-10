@@ -11,6 +11,11 @@ export default function BottomNav() {
     const router = useRouter();
     const pathname = usePathname();
     const { t } = useTranslation();
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const tabs = [
         { icon: Search, label: t('nav.discover'), path: '/', roles: ['resident', 'trader', 'admin'] },
@@ -32,10 +37,15 @@ export default function BottomNav() {
 
     const activeTabs = tabs.filter(tab => !tab.roles || tab.roles.includes(user?.role || 'resident'));
 
+    const getActiveState = (path: string) => {
+        if (!mounted) return false;
+        return pathname === path || (path !== '/' && pathname.startsWith(path));
+    };
+
     return (
         <nav className="fixed bottom-0 left-0 right-0 h-[72px] bg-white/90 backdrop-blur-xl border-t border-gray-100 flex items-center justify-around px-1 z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
             {activeTabs.map((tab) => {
-                const isActive = pathname === tab.path || (tab.path !== '/' && pathname.startsWith(tab.path));
+                const isActive = getActiveState(tab.path);
                 return (
                     <button
                         key={tab.path}

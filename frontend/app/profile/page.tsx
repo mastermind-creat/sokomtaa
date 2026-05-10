@@ -64,6 +64,23 @@ export default function ResidentProfilePage() {
         }
     });
 
+    const { mutate: uploadAvatar, isPending: isUploadingAvatar } = useMutation({
+        mutationFn: async (file: File) => {
+            const formData = new FormData();
+            formData.append('avatar', file);
+            return api.post('/profile/avatar', formData);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['profile'] });
+        },
+    });
+
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            uploadAvatar(e.target.files[0]);
+        }
+    };
+
     const handleLogout = async () => {
         try {
             await api.post('/auth/logout');
@@ -112,9 +129,14 @@ export default function ResidentProfilePage() {
                                         <span className="text-white opacity-90">{user?.name?.charAt(0)}</span>
                                     )}
                                 </motion.div>
-                                <button className="absolute bottom-2 right-2 w-12 h-12 bg-white text-green-950 rounded-2xl flex items-center justify-center shadow-2xl hover:bg-brand-50 active:scale-90 transition-all border border-gray-100">
-                                    <Camera size={20} />
-                                </button>
+                                <label className="absolute bottom-2 right-2 w-12 h-12 bg-white text-green-950 rounded-2xl flex items-center justify-center shadow-2xl hover:bg-brand-50 active:scale-90 transition-all border border-gray-100 cursor-pointer">
+                                    {isUploadingAvatar ? (
+                                        <Loader2 size={20} className="animate-spin text-brand-600" />
+                                    ) : (
+                                        <Camera size={20} />
+                                    )}
+                                    <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                                </label>
                             </div>
 
                             <div className="text-center lg:text-left space-y-3">

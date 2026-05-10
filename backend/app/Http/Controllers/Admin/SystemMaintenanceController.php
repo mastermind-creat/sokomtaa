@@ -22,8 +22,17 @@ class SystemMaintenanceController extends Controller
             'db_connection' => config('database.default'),
             'cache_driver' => config('cache.default'),
             'storage_link_exists' => $this->public_exists('storage'),
-            'last_migration' => DB::table('migrations')->latest()->first(),
+            'last_migration' => $this->getLastMigration(),
         ]);
+    }
+
+    private function getLastMigration()
+    {
+        try {
+            return DB::table('migrations')->latest('id')->first();
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     /**

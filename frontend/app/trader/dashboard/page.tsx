@@ -16,6 +16,7 @@ import {
     CheckCircle2,
     AlertTriangle,
     BarChart3,
+    ShieldCheck,
     Loader2
 } from 'lucide-react';
 import api from '@/lib/api';

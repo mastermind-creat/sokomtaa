@@ -9,6 +9,7 @@ use App\Services\StallService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class MarketController extends Controller
@@ -77,6 +78,10 @@ class MarketController extends Controller
      */
     public function update(Request $request, Market $market): JsonResponse
     {
+        Log::info('Market Update Request:', $request->all());
+        Log::info('Has banner_image: ' . ($request->hasFile('banner_image') ? 'Yes' : 'No'));
+        Log::info('Has icon_image: ' . ($request->hasFile('icon_image') ? 'Yes' : 'No'));
+
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'location' => 'sometimes|required|string|max:255',
@@ -96,19 +101,25 @@ class MarketController extends Controller
         $data = $request->except(['banner_image', 'icon_image']);
 
         if ($request->hasFile('banner_image')) {
-            // Delete old banner if it exists and is a Cloudinary URL
-            if ($market->banner_url) {
-                $this->cloudinaryService->deleteImage($market->banner_url);
+            $url = $this->cloudinaryService->uploadImage($request->file('banner_image'), 'markets/banners');
+            if ($url) {
+                // Delete old banner if it exists and is a Cloudinary URL
+                if ($market->banner_url) {
+                    $this->cloudinaryService->deleteImage($market->banner_url);
+                }
+                $data['banner_url'] = $url;
             }
-            $data['banner_url'] = $this->cloudinaryService->uploadImage($request->file('banner_image'), 'markets/banners');
         }
 
         if ($request->hasFile('icon_image')) {
-            // Delete old icon if it exists
-            if ($market->icon_url) {
-                $this->cloudinaryService->deleteImage($market->icon_url);
+            $url = $this->cloudinaryService->uploadImage($request->file('icon_image'), 'markets/icons');
+            if ($url) {
+                // Delete old icon if it exists
+                if ($market->icon_url) {
+                    $this->cloudinaryService->deleteImage($market->icon_url);
+                }
+                $data['icon_url'] = $url;
             }
-            $data['icon_url'] = $this->cloudinaryService->uploadImage($request->file('icon_image'), 'markets/icons');
         }
 
         $market->update($data);

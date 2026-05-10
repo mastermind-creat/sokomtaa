@@ -59,6 +59,11 @@ export default function AdminSidebar() {
     const pathname = usePathname();
     const { t } = useTranslation();
     const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Stop loader when pathname changes (navigation complete)
     useEffect(() => {
@@ -134,8 +139,14 @@ export default function AdminSidebar() {
         }
     ];
 
+    const getActiveState = (path: string) => {
+        if (!mounted) return false;
+        return pathname === path;
+    };
+
     // Automatically expand the section that contains the current active route
     useEffect(() => {
+        if (!mounted) return;
         const activeSection = menuSections.find(section =>
             section.items.some(item => pathname === item.path)
         );
@@ -168,7 +179,7 @@ export default function AdminSidebar() {
             <nav className="flex-1 px-4 space-y-2 overflow-y-auto no-scrollbar pb-10">
                 {menuSections.map((section, sIdx) => {
                     const isExpanded = expandedSections.includes(section.title);
-                    const isAnyItemActive = section.items.some(item => pathname === item.path);
+                    const isAnyItemActive = section.items.some(item => getActiveState(item.path));
 
                     return (
                         <div key={sIdx} className="space-y-1">
@@ -200,7 +211,7 @@ export default function AdminSidebar() {
                                         className="overflow-hidden space-y-1 ml-2"
                                     >
                                         {section.items.map((item) => {
-                                            const isActive = pathname === item.path;
+                                            const isActive = getActiveState(item.path);
                                             const isNavigating = navigatingTo === item.path;
                                             return (
                                                 <button

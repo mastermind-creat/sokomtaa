@@ -14,6 +14,7 @@ class Trader extends Model
 
     protected $fillable = [
         'user_id',
+        'market_id',
         'stall_id',
         'stall_type',
         'latitude',

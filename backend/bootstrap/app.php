@@ -27,6 +27,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(fn ($request, $e) => $request->is('api/*'));
 
         $exceptions->render(function (\Illuminate\Validation\ValidationException $e, $request) {
+            \Illuminate\Support\Facades\Log::info('Validation Error:', [
+                'url' => $request->fullUrl(),
+                'errors' => $e->errors(),
+                'data' => $request->all()
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -64,6 +69,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (\Throwable $e, $request) {
             if ($request->is('api/*')) {
+                \Illuminate\Support\Facades\Log::error('API Error:', [
+                    'url' => $request->fullUrl(),
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
                 $status  = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface ? $e->getStatusCode() : 500;
                 $message = app()->isProduction() ? 'An unexpected error occurred' : $e->getMessage();
 

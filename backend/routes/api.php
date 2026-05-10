@@ -68,7 +68,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/me', [TraderProfileController::class, 'me']);
         Route::put('/update', [TraderProfileController::class, 'update']);
         Route::post('/avatar', [TraderProfileController::class, 'uploadAvatar']);
+        Route::post('/banner', [TraderProfileController::class, 'uploadBanner']);
         Route::post('/kyc', [TraderProfileController::class, 'submitKyc']);
+        Route::get('/stats', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'dashboardStats']);
     });
 
     // ── Reservations (Resident creates, Trader/Resident views) ───────────────
@@ -113,6 +115,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('profile')->group(function () {
         Route::get('/', [\App\Http\Controllers\Resident\ProfileController::class, 'show']);
         Route::patch('/', [\App\Http\Controllers\Resident\ProfileController::class, 'update']);
+        Route::post('/avatar', [\App\Http\Controllers\Resident\ProfileController::class, 'uploadAvatar']);
         Route::post('/password', [\App\Http\Controllers\Resident\ProfileController::class, 'changePassword']);
     });
 
@@ -152,6 +155,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::prefix('trader/reservations')->group(function () {
             Route::get('/', [\App\Http\Controllers\Trader\TraderReservationController::class, 'index']);
             Route::get('/stats', [\App\Http\Controllers\Trader\TraderReservationController::class, 'stats']);
+            Route::get('/recent', [\App\Http\Controllers\Trader\TraderReservationController::class, 'recent']);
         });
 
         // Trader Reviews Received

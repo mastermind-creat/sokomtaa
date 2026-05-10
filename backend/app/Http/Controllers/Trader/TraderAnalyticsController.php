@@ -40,6 +40,8 @@ class TraderAnalyticsController extends Controller
             'out_of_stock_items' => Product::where('trader_id', $traderId)->where('stock_status', 'out_of_stock')->count(),
 
             'profile_views' => $user->trader->profile_views,
+            'growth' => '+14%', // Mock growth for now
+            'has_overdue_fees' => false, // Default to false
         ];
 
         return $this->success($stats);

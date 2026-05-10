@@ -10,6 +10,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class TraderProfileController extends Controller
 {
@@ -20,6 +21,7 @@ class TraderProfileController extends Controller
      */
     public function setup(TraderProfileRequest $request): JsonResponse
     {
+        /** @var \App\Models\User $user */
         $user = $request->user();
 
         if ($user->trader) {
@@ -127,6 +129,10 @@ class TraderProfileController extends Controller
      */
     public function update(TraderProfileRequest $request): JsonResponse
     {
+        Log::info('Trader Profile Update Request:', [
+            'user_id' => Auth::id(),
+            'data' => $request->validated()
+        ]);
         $trader = $request->user()->trader;
 
         if (!$trader) {
@@ -143,6 +149,7 @@ class TraderProfileController extends Controller
      */
     public function uploadAvatar(\Illuminate\Http\Request $request, \App\Services\CloudinaryService $cloudinary): JsonResponse
     {
+        Log::info('Trader Avatar Upload Triggered', ['user_id' => Auth::id()]);
         $request->validate([
             'avatar' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
@@ -154,16 +161,55 @@ class TraderProfileController extends Controller
         }
 
         if ($request->hasFile('avatar')) {
-            $url = $cloudinary->uploadImage($request->file('avatar'), 'traders');
+            Log::info('Processing Trader Avatar File');
+            $url = $cloudinary->uploadImage($request->file('avatar'), 'traders/logos');
             
             if ($url) {
                 if ($trader->avatar_url) {
                     $cloudinary->deleteImage($trader->avatar_url);
                 }
                 
+                Log::info('Trader Avatar Uploaded:', ['trader_id' => $trader->id, 'url' => $url]);
                 $trader->update(['avatar_url' => $url]);
-                return $this->success(['avatar_url' => $url], 'Avatar uploaded successfully.');
+                return $this->success(['avatar_url' => $url], 'Logo uploaded successfully. (Nembo imepakiwa.)');
             }
+            Log::error('Trader Avatar Upload Failed in Service');
+            return $this->error('Failed to upload image.', 'UPLOAD_ERROR', 500);
+        }
+
+        return $this->error('No image provided.', 'BAD_REQUEST', 400);
+    }
+
+    /**
+     * Upload a banner for the trader profile.
+     */
+    public function uploadBanner(\Illuminate\Http\Request $request, \App\Services\CloudinaryService $cloudinary): JsonResponse
+    {
+        Log::info('Trader Banner Upload Triggered', ['user_id' => Auth::id()]);
+        $request->validate([
+            'banner' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        $trader = $request->user()->trader;
+
+        if (!$trader) {
+            return $this->error('Profile not found.', 'NOT_FOUND', 404);
+        }
+
+        if ($request->hasFile('banner')) {
+            Log::info('Processing Trader Banner File');
+            $url = $cloudinary->uploadImage($request->file('banner'), 'traders/banners');
+            
+            if ($url) {
+                if ($trader->banner_url) {
+                    $cloudinary->deleteImage($trader->banner_url);
+                }
+                
+                Log::info('Trader Banner Uploaded:', ['trader_id' => $trader->id, 'url' => $url]);
+                $trader->update(['banner_url' => $url]);
+                return $this->success(['banner_url' => $url], 'Banner uploaded successfully. (Bango imepakiwa.)');
+            }
+            Log::error('Trader Banner Upload Failed in Service');
             return $this->error('Failed to upload image.', 'UPLOAD_ERROR', 500);
         }
 

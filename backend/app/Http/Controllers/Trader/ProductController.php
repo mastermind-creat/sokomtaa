@@ -105,7 +105,9 @@ class ProductController extends Controller
             }
 
             $imageUrl = $this->cloudinary->uploadImage($request->file('image'), 'products');
-            $data['image_url'] = $imageUrl;
+            if ($imageUrl) {
+                $data['image_url'] = $imageUrl;
+            }
         }
 
         $product->update($data);

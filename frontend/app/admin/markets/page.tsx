@@ -46,9 +46,7 @@ export default function AdminMarketsPage() {
 
     // ── Mutations ──
     const createMutation = useMutation({
-        mutationFn: (data: FormData) => api.post('/admin/markets', data, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        }),
+        mutationFn: (data: FormData) => api.post('/admin/markets', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
             setIsModalOpen(false);
@@ -59,9 +57,7 @@ export default function AdminMarketsPage() {
         mutationFn: ({ id, data }: { id: number, data: FormData }) => {
             // Append _method=PUT for Laravel to handle FormData in a PUT request
             data.append('_method', 'PUT');
-            return api.post(`/admin/markets/${id}`, data, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            return api.post(`/admin/markets/${id}`, data);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });

@@ -35,6 +35,11 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     const pathname = usePathname();
     const { t } = useTranslation();
     const { logout } = useAuthStore();
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const menuSections = [
         {
@@ -118,7 +123,7 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                                     <h4 className="px-3 text-[10px] font-black text-neutral-400 uppercase tracking-widest">{section.title}</h4>
                                     <div className="space-y-1">
                                         {section.items.map((item) => {
-                                            const isActive = pathname === item.path;
+                                            const isActive = mounted && pathname === item.path;
                                             return (
                                                 <button
                                                     key={item.path}

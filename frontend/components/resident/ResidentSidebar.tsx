@@ -22,6 +22,11 @@ export default function ResidentSidebar() {
     const router = useRouter();
     const pathname = usePathname();
     const { t } = useTranslation();
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const menuItems = [
         { icon: Home, label: t('common.dashboard'), path: '/resident/dashboard', badge: null },
@@ -30,6 +35,12 @@ export default function ResidentSidebar() {
         { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: null },
         { icon: MapPin, label: t('common.markets'), path: '/market/map', badge: null },
     ];
+
+    // Helper to check if a path is active, but only after mounting to avoid hydration mismatch
+    const getActiveState = (path: string) => {
+        if (!mounted) return false;
+        return pathname === path;
+    };
 
     return (
         <aside className="hidden lg:flex flex-col w-[280px] h-screen bg-[#FAFAF8] border-r border-gray-100 sticky top-0 left-0 overflow-y-auto no-scrollbar">
@@ -47,7 +58,7 @@ export default function ResidentSidebar() {
             <nav className="flex-1 px-4 space-y-1">
                 <p className="px-4 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">{t('sidebar.discovery')}</p>
                 {menuItems.map((item) => {
-                    const isActive = pathname === item.path;
+                    const isActive = getActiveState(item.path);
                     return (
                         <button
                             key={item.path}

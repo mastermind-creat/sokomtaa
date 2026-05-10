@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
@@ -27,7 +28,13 @@ class ProfileController extends Controller
      */
     public function update(Request $request): JsonResponse
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
+
+        Log::info('Resident Profile Update Request:', [
+            'user_id' => $user->id,
+            'data' => $request->all()
+        ]);
 
         $validated = $request->validate([
             'name'               => 'sometimes|string|max:255',
@@ -52,6 +59,8 @@ class ProfileController extends Controller
             'password'         => 'required|string|min:8|confirmed',
         ]);
 
+         /** @var \App\Models\User $user */
+
         $user = Auth::user();
 
         if (!Hash::check($request->current_password, $user->password)) {
@@ -63,5 +72,39 @@ class ProfileController extends Controller
         ]);
 
         return $this->success(null, 'Password changed successfully. (Nenosiri imebadilishwa.)');
+    }
+
+    /**
+     * Upload an avatar for the user profile.
+     */
+    public function uploadAvatar(Request $request, \App\Services\CloudinaryService $cloudinary): JsonResponse
+    {
+        Log::info('Resident Avatar Upload Triggered', ['user_id' => Auth::id()]);
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if ($request->hasFile('avatar')) {
+            Log::info('Processing Resident Avatar File');
+            $url = $cloudinary->uploadImage($request->file('avatar'), 'profiles');
+            
+            if ($url) {
+                // Delete old avatar if it exists
+                if ($user->avatar_url) {
+                    $cloudinary->deleteImage($user->avatar_url);
+                }
+                
+                Log::info('Resident Avatar Uploaded:', ['user_id' => $user->id, 'url' => $url]);
+                $user->update(['avatar_url' => $url]);
+                return $this->success(['avatar_url' => $url], 'Profile picture updated successfully. (Picha ya wasifu imesasishwa.)');
+            }
+            Log::error('Resident Avatar Upload Failed in Service');
+            return $this->error('Failed to upload image.', 'UPLOAD_ERROR', 500);
+        }
+
+        return $this->error('No image provided.', 'BAD_REQUEST', 400);
     }
 }

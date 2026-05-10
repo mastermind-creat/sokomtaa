@@ -40,6 +40,30 @@ class TraderReservationController extends Controller
     }
 
     /**
+     * Get the 5 most recent active reservations for the dashboard.
+     */
+    public function recent(): JsonResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!$user->trader) {
+            return $this->error('User is not a trader.', 'NOT_TRADER', 403);
+        }
+
+        $traderId = $user->trader->id;
+        
+        $recent = Reservation::where('trader_id', $traderId)
+            ->whereIn('status', ['pending', 'paid', 'ready'])
+            ->with(['resident:id,name,phone', 'product:id,name,unit,image_url'])
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        return $this->success($recent);
+    }
+
+    /**
      * Quick stats for the trader's order dashboard.
      */
     public function stats(): JsonResponse

@@ -20,6 +20,8 @@ class Market extends Model
         'longitude',
         'is_active',
         'building_config',
+        'banner_url',
+        'icon_url',
     ];
 
     protected $casts = [
