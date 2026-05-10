@@ -24,10 +24,10 @@ class TraderProfileRequest extends FormRequest
             'longitude' => 'nullable|required_if:stall_type,independent|numeric|between:-180,180',
             'mpesa_number' => 'nullable|string|max:20',
             'permit_number' => 'nullable|string|max:255',
-            'avatar_url' => 'nullable|string',
-            'banner_url' => 'nullable|string',
-            'opening_time' => 'nullable|string|regex:/^[0-2][0-9]:[0-5][0-9]$/',
-            'closing_time' => 'nullable|string|regex:/^[0-2][0-9]:[0-5][0-9]$/',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'banner' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'opening_time' => 'nullable|string',
+            'closing_time' => 'nullable|string',
         ];
     }
 

@@ -30,6 +30,22 @@ class TraderProfileController extends Controller
 
         return DB::transaction(function () use ($request, $user) {
             $stallId = null;
+            $cloudinary = app(\App\Services\CloudinaryService::class);
+
+            // Handle Image Uploads
+            $avatarUrl = null;
+            if ($request->hasFile('avatar')) {
+                $avatarUrl = $cloudinary->uploadImage($request->file('avatar'), 'avatars');
+            }
+
+            $bannerUrl = null;
+            if ($request->hasFile('banner')) {
+                $bannerUrl = $cloudinary->uploadImage($request->file('banner'), 'banners');
+            }
+
+            // Normalize Times (AM/PM to HH:mm)
+            $openingTime = $this->normalizeTime($request->opening_time ?? '06:00');
+            $closingTime = $this->normalizeTime($request->closing_time ?? '18:00');
 
             // If a stall number is provided, try to find and link it
             if ($request->stall_number) {
@@ -61,8 +77,10 @@ class TraderProfileController extends Controller
                 'permit_number' => $request->permit_number,
                 'verification_status' => 'pending',
                 'is_open' => false,
-                'opening_time' => $request->opening_time ?? '06:00',
-                'closing_time' => $request->closing_time ?? '18:00',
+                'opening_time' => $openingTime,
+                'closing_time' => $closingTime,
+                'avatar_url' => $avatarUrl,
+                'banner_url' => $bannerUrl,
             ]);
 
             // Update User Role to Trader (if not already)
@@ -314,5 +332,24 @@ class TraderProfileController extends Controller
         }
 
         return $this->success($trader, 'KYC documents updated successfully.');
+    }
+
+    /**
+     * Normalize time to HH:mm format.
+     */
+    private function normalizeTime(?string $time): ?string
+    {
+        if (!$time) return null;
+        
+        try {
+            // Try to parse AM/PM format first
+            return \Carbon\Carbon::parse($time)->format('H:i');
+        } catch (\Exception $e) {
+            // Fallback for simple HH:mm if parsing fails
+            if (preg_match('/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/', $time)) {
+                return $time;
+            }
+            return null;
+        }
     }
 }
