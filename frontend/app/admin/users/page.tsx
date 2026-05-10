@@ -29,18 +29,29 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function AdminUsersPage() {
     const { setPageTitle } = useUIStore();
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [activeRole, setActiveRole] = useState('all');
 
     React.useEffect(() => {
         setPageTitle('Community Registry');
     }, [setPageTitle]);
 
+    React.useEffect(() => {
+        const handler = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
     const { data: usersRaw, isLoading } = useQuery({
-        queryKey: ['admin-users', activeRole],
-        queryFn: () => api.get('/admin/users', { params: { role: activeRole } }).catch(() => ({ data: { data: [] } })),
+        queryKey: ['admin-users', activeRole, debouncedSearch],
+        queryFn: () => {
+            const params: Record<string, string> = {};
+            if (activeRole !== 'all') params.role = activeRole;
+            if (debouncedSearch) params.search = debouncedSearch;
+            return api.get('/admin/users', { params }).then(res => res.data);
+        },
     });
 
-    const users = (usersRaw as any)?.data?.data || [];
+    const users = (usersRaw as any)?.data || [];
 
     const stats = [
         { label: 'Admins', count: users.filter((u: any) => u.role === 'admin').length, color: 'text-purple-600', icon: Shield },

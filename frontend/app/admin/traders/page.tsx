@@ -49,7 +49,7 @@ export default function AdminTradersPage() {
     });
     const markets = marketsData?.data || [];
 
-    const { data: tradersData, isLoading } = useQuery<ApiResponse<Trader[]>>({
+    const { data: tradersData, isLoading, isError, error } = useQuery<ApiResponse<Trader[]>>({
         queryKey: ['admin-traders', filterStatus, selectedMarketId, debouncedSearch],
         queryFn: () => {
             const params: Record<string, string> = {};
@@ -58,6 +58,7 @@ export default function AdminTradersPage() {
             if (debouncedSearch) params.search = debouncedSearch;
             return api.get('/admin/traders', { params }).then(res => res.data);
         },
+        retry: 1,
     });
     
     const traders = tradersData?.data || [];
@@ -132,6 +133,16 @@ export default function AdminTradersPage() {
             <div className="px-4 space-y-4">
                 {isLoading ? (
                     <div className="p-10 text-center opacity-30 font-black uppercase tracking-widest text-[10px]">Auditing Registry...</div>
+                ) : isError ? (
+                    <div className="p-10 text-center text-rose-500">
+                        <p className="font-black uppercase tracking-widest text-[10px]">Failed to load traders. Check API connection.</p>
+                        <p className="text-[9px] mt-1 opacity-60">{String((error as any)?.message || '')}</p>
+                    </div>
+                ) : traders.length === 0 ? (
+                    <div className="py-20 text-center opacity-40">
+                        <Store size={48} className="mx-auto mb-4" />
+                        <p className="text-xs font-black uppercase tracking-widest">No traders found</p>
+                    </div>
                 ) : traders.map((trader) => (
                     <motion.div 
                         key={trader.id}

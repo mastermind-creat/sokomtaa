@@ -12,26 +12,43 @@ class UserController extends Controller
     /**
      * Display a listing of all system users.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $roleFilter = $request->query('role');
+        $search = $request->query('search');
+
         $users = User::latest()
+            ->when($roleFilter && $roleFilter !== 'all', function ($query) use ($roleFilter) {
+                return $query->where('role', $roleFilter);
+            })
+            ->when($search, function ($query) use ($search) {
+                return $query->where(function ($q) use ($search) {
+                    $q->where('name', 'LIKE', "%{$search}%")
+                      ->orWhere('phone', 'LIKE', "%{$search}%")
+                      ->orWhere('email', 'LIKE', "%{$search}%");
+                });
+            })
             ->get()
             ->map(function ($u) {
                 return [
-                    'id' => $u->id,
-                    'name' => $u->name,
-                    'phone' => $u->phone,
-                    'role' => $u->role,
-                    'status' => $u->is_active ? 'active' : 'suspended',
-                    'created_at' => $u->created_at->toIso8601String(),
-                    'last_active' => 'Active recently' // In production, use session tracking
+                    'id'           => $u->id,
+                    'name'         => $u->name,
+                    'phone'        => $u->phone,
+                    'email'        => $u->email,
+                    'role'         => $u->role,
+                    'is_active'    => $u->is_active,
+                    'status'       => $u->is_active ? 'active' : 'suspended',
+                    'phone_verified' => $u->phone_verified,
+                    'avatar_url'   => $u->avatar_url,
+                    'created_at'   => $u->created_at->toIso8601String(),
+                    'last_active'  => 'Active recently',
                 ];
             });
 
         return response()->json([
             'success' => true,
             'message' => 'Users retrieved.',
-            'data' => $users
+            'data'    => $users
         ]);
     }
 }
