@@ -4,6 +4,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { StatCard } from '@/components/admin/StatCard';
+import Link from 'next/link';
 import {
     Users,
     Home,
@@ -11,7 +12,8 @@ import {
     ArrowRight,
     Activity,
     Map as MapIcon,
-    Filter
+    Filter,
+    ShieldCheck
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -151,14 +153,17 @@ export default function AdminDashboard() {
                         description={`${stats?.stalls.occupied} / ${stats?.stalls.total} units filled`}
                     />
                     <div className="hidden xl:block">
-                        <StatCard
-                            title="Pending Orders"
-                            value="142"
-                            icon={Activity}
-                            color="bg-brand-950"
-                            trend={{ value: 8, isPositive: true, label: 'Today' }}
-                            description="Market-wide reservations"
-                        />
+                        <Link href="/admin/traders">
+                            <StatCard
+                                title="Pending KYC"
+                                value={stats?.traders.pending?.toString() || '0'}
+                                icon={ShieldCheck}
+                                color="bg-amber-600"
+                                variant="compact"
+                                trend={{ value: stats?.traders.pending || 0, isPositive: true, label: 'Awaiting Review' }}
+                                description="Merchant Verifications"
+                            />
+                        </Link>
                     </div>
                 </div>
 

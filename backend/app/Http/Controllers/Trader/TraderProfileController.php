@@ -68,6 +68,19 @@ class TraderProfileController extends Controller
             // Update User Role to Trader (if not already)
             $user->update(['role' => 'trader']);
 
+            // Notify Admins about new registration
+            $admins = \App\Models\User::where('role', 'admin')->get();
+            $notificationService = app(\App\Services\NotificationService::class);
+            foreach ($admins as $admin) {
+                $notificationService->send(
+                    $admin,
+                    'New Merchant Registration',
+                    "{$trader->business_name} has registered for a permit.",
+                    'trader_signup',
+                    ['trader_id' => $trader->id]
+                );
+            }
+
             return $this->success($trader, 'Trader profile created successfully. Please proceed to KYC verification.', 201);
         });
     }
@@ -104,6 +117,19 @@ class TraderProfileController extends Controller
         }
 
         $trader->update($updates);
+
+        // Notify Admins about KYC submission
+        $admins = \App\Models\User::where('role', 'admin')->get();
+        $notificationService = app(\App\Services\NotificationService::class);
+        foreach ($admins as $admin) {
+            $notificationService->send(
+                $admin,
+                'KYC Documents Submitted',
+                "{$trader->business_name} has submitted identity documents for review.",
+                'kyc_submitted',
+                ['trader_id' => $trader->id]
+            );
+        }
 
         return $this->success($trader, 'KYC documents submitted successfully. Admin will verify shortly.');
     }

@@ -19,6 +19,7 @@ class AdminDashboardController extends Controller
     {
         $totalRevenue = MarketFee::where('status', 'paid')->sum('amount');
         $activeTraders = Trader::where('verification_status', 'verified')->count();
+        $pendingTraders = Trader::where('verification_status', 'pending')->whereNotNull('id_front_url')->count();
         
         $totalStalls = Stall::count();
         $occupiedStalls = Stall::where('status', 'occupied')->count();
@@ -37,6 +38,7 @@ class AdminDashboardController extends Controller
                 ],
                 'traders' => [
                     'total' => $activeTraders,
+                    'pending' => $pendingTraders,
                     'growth' => 12 // Hardcoded mock growth
                 ],
                 'stalls' => [
