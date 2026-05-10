@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Loader2, Phone, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ApiResponse, AuthResponse } from '@/types';
@@ -167,9 +168,9 @@ export default function LoginPage() {
                         <div>
                             <div className="flex justify-between items-center mb-2">
                                 <label className="text-sm font-bold text-green-900">Password</label>
-                                <button type="button" className="text-xs text-brand-600 font-bold hover:underline">
+                                <Link href="/forgot-password" className="text-xs text-brand-600 font-bold hover:underline">
                                     Forgot password?
-                                </button>
+                                </Link>
                             </div>
                             <div className="relative">
                                 <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 text-brand-500">
