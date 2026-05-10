@@ -37,7 +37,7 @@ interface TraderProfile {
     banner_url: string | null;
     avatar_url: string | null;
     permit_image_url: string | null;
-    verification_status: 'pending' | 'verified' | 'rejected';
+    verification_status: 'unverified' | 'pending' | 'verified' | 'rejected';
     rejection_reason: string | null;
     user: { name: string; phone: string; email: string; };
 }
@@ -374,22 +374,25 @@ export default function TraderProfilePage() {
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h4 className="text-base font-black text-green-950 uppercase tracking-tight">
-                                            {current.verification_status === 'verified' ? 'Account Verified' :
+                                        <h4 className="text-sm font-black text-green-950">
+                                            {current.verification_status === 'verified' ? 'Account Verified' : 
                                              current.verification_status === 'rejected' ? 'Verification Rejected' :
+                                             current.verification_status === 'unverified' ? 'Identity Verification Required' :
                                              'Verification Pending'}
                                         </h4>
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                                             current.verification_status === 'verified' ? 'bg-green-200 text-green-800' :
                                             current.verification_status === 'rejected' ? 'bg-red-200 text-red-800' :
+                                            current.verification_status === 'unverified' ? 'bg-gray-200 text-gray-800' :
                                             'bg-amber-200 text-amber-800'
                                         }`}>
-                                            {current.verification_status}
+                                            {current.verification_status === 'unverified' ? 'Not Submitted' : current.verification_status}
                                         </span>
                                     </div>
                                     <p className="text-gray-600 text-sm font-medium mt-1">
                                         {current.verification_status === 'verified' ? 'Your business is fully verified. Customers can trust your stall.' :
                                          current.verification_status === 'rejected' ? `Issue: ${current.rejection_reason ?? 'Invalid documents provided.'}` :
+                                         current.verification_status === 'unverified' ? 'Please scan and upload your National ID to enable all trader features.' :
                                          'Our team is currently reviewing your documents. This usually takes 24-48 hours.'}
                                     </p>
                                 </div>
@@ -419,6 +422,7 @@ export default function TraderProfilePage() {
                                                         className="absolute inset-0 opacity-0 cursor-pointer"
                                                         aria-label="Upload ID Front"
                                                         accept="image/*"
+                                                        capture="environment"
                                                     />
                                                 </div>
                                                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Front Side</span>
@@ -439,6 +443,7 @@ export default function TraderProfilePage() {
                                                         className="absolute inset-0 opacity-0 cursor-pointer"
                                                         aria-label="Upload ID Back"
                                                         accept="image/*"
+                                                        capture="environment"
                                                     />
                                                 </div>
                                                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Back Side</span>
@@ -478,7 +483,7 @@ export default function TraderProfilePage() {
                                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Upload Permit Photo</p>
                                             </div>
                                         )}
-                                        <input type="file" ref={permitInputRef} onChange={handlePermitChange} className="hidden" accept="image/*" />
+                                        <input type="file" ref={permitInputRef} onChange={handlePermitChange} className="hidden" accept="image/*" capture="environment" />
                                         <button 
                                             onClick={() => permitInputRef.current?.click()}
                                             className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-black uppercase tracking-widest transition-all"
