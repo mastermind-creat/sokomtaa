@@ -14,7 +14,6 @@ interface LoginFormData {
     password: string;
 }
 import { Logo } from '@/components/shared/Logo';
-import { Navbar } from '@/components/landing/Navbar';
 
 export default function LoginPage() {
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>();
@@ -22,6 +21,7 @@ export default function LoginPage() {
     const router = useRouter();
     const [error, setError] = React.useState<string | null>(null);
     const [showPassword, setShowPassword] = React.useState(false);
+    const [isRedirecting, setIsRedirecting] = React.useState(false);
 
     React.useEffect(() => {
         if (isAuthenticated && user) {
@@ -35,11 +35,11 @@ export default function LoginPage() {
     const onSubmit = async (data: LoginFormData) => {
         try {
             setError(null);
-            // Note: api interceptor already unwraps response.data, so response IS ApiResponse<AuthResponse>
             const response = await api.post('/auth/login', data) as unknown as ApiResponse<AuthResponse>;
             const { user, token } = response.data;
 
             setAuth(user, token);
+            setIsRedirecting(true); // Keep loading state active during Next.js router transition
 
             if (!user.phone_verified) {
                 router.push('/verify');
@@ -51,17 +51,16 @@ export default function LoginPage() {
                 router.push('/');
             }
         } catch (err: unknown) {
-            // api interceptor rejects with response.data (already unwrapped) or string
             const errObj = err as { message?: string } | string;
             const msg = typeof errObj === 'string' ? errObj : errObj?.message ?? 'Login failed. Please check your credentials.';
             setError(msg);
+            setIsRedirecting(false);
         }
     };
 
     return (
         <div className="bg-white">
-            <Navbar />
-            <div className="min-h-screen w-full flex pt-20 lg:pt-0">
+            <div className="min-h-screen w-full flex">
             {/* Left Panel — Branding (desktop only) */}
             <div className="hidden lg:flex flex-col justify-between w-[45%] bg-gradient-to-br from-green-900 via-brand-700 to-green-800 p-14 relative overflow-hidden">
                 {/* Background decoration */}
@@ -71,16 +70,31 @@ export default function LoginPage() {
                 </div>
 
                 <div className="relative z-10">
-                    <div className="mb-16 cursor-pointer" onClick={() => router.push('/')}>
+                    <motion.div 
+                        className="mb-16 cursor-pointer inline-block" 
+                        onClick={() => router.push('/')}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
                         <Logo variant="green" width={180} />
-                    </div>
+                    </motion.div>
 
-                    <h2 className="text-4xl font-black text-white leading-tight mb-4">
+                    <motion.h2 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="text-4xl font-black text-white leading-tight mb-4"
+                    >
                         Kenya&apos;s Neighbourhood<br />Digital Marketplace
-                    </h2>
-                    <p className="text-green-200 text-lg leading-relaxed">
+                    </motion.h2>
+                    <motion.p 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.1 }}
+                        className="text-green-200 text-lg leading-relaxed"
+                    >
                         Connecting local traders and residents across Kenyan markets — digitally, seamlessly, locally.
-                    </p>
+                    </motion.p>
                 </div>
 
                 <div className="relative z-10 grid grid-cols-2 gap-4">
@@ -89,11 +103,18 @@ export default function LoginPage() {
                         { label: 'Registered Traders', value: '500+' },
                         { label: 'Daily Transactions', value: '1,200+' },
                         { label: 'Counties Covered', value: '4' },
-                    ].map((stat) => (
-                        <div key={stat.label} className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+                    ].map((stat, idx) => (
+                        <motion.div 
+                            key={stat.label}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: 0.2 + (idx * 0.1) }}
+                            whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.15)" }}
+                            className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10 cursor-pointer transition-colors"
+                        >
                             <p className="text-2xl font-black text-white">{stat.value}</p>
                             <p className="text-xs text-green-200 font-medium mt-0.5">{stat.label}</p>
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
             </div>
@@ -186,11 +207,11 @@ export default function LoginPage() {
 
                         {/* Submit Button */}
                         <button
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isRedirecting}
                             className="w-full h-[54px] bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-black text-base rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
                             type="submit"
                         >
-                            {isSubmitting ? (
+                            {(isSubmitting || isRedirecting) ? (
                                 <Loader2 className="animate-spin" size={20} />
                             ) : (
                                 <>

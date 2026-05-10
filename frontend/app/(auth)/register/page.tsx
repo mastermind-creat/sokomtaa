@@ -18,7 +18,6 @@ interface RegisterFormData {
     preferred_language: string;
 }
 import { Logo } from '@/components/shared/Logo';
-import { Navbar } from '@/components/landing/Navbar';
 
 export default function RegisterPage() {
     const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterFormData>({
@@ -31,6 +30,7 @@ export default function RegisterPage() {
     const router = useRouter();
     const [error, setError] = React.useState<string | null>(null);
     const [showPassword, setShowPassword] = React.useState(false);
+    const [isRedirecting, setIsRedirecting] = React.useState(false);
 
     const selectedRole = watch('role');
     const password = watch('password');
@@ -38,21 +38,21 @@ export default function RegisterPage() {
     const onSubmit = async (data: RegisterFormData) => {
         try {
             setError(null);
-            // api interceptor already unwraps response.data
             const response = await api.post('/auth/register', data) as unknown as ApiResponse<AuthResponse>;
             setAuth(response.data.user, response.data.token);
+            setIsRedirecting(true); // Keep loading state active during Next.js router transition
             router.push('/verify');
         } catch (err: unknown) {
             const errObj = err as { message?: string } | string;
             const msg = typeof errObj === 'string' ? errObj : errObj?.message ?? 'Registration failed. Please check your details.';
             setError(msg);
+            setIsRedirecting(false);
         }
     };
 
     return (
         <div className="bg-white">
-            <Navbar />
-            <div className="min-h-screen w-full flex pt-20 lg:pt-0">
+            <div className="min-h-screen w-full flex">
             {/* Left Panel — Branding (desktop only) */}
             <div className="hidden lg:flex flex-col justify-between w-[42%] bg-gradient-to-br from-green-900 via-brand-700 to-green-800 p-14 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-10">
@@ -61,15 +61,30 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="relative z-10">
-                    <div className="mb-16 cursor-pointer" onClick={() => router.push('/')}>
+                    <motion.div 
+                        className="mb-16 cursor-pointer inline-block" 
+                        onClick={() => router.push('/')}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
                         <Logo variant="green" width={180} />
-                    </div>
-                    <h2 className="text-4xl font-black text-white leading-tight mb-4">
+                    </motion.div>
+                    <motion.h2 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="text-4xl font-black text-white leading-tight mb-4"
+                    >
                         Join the Neighbourhood<br />Marketplace
-                    </h2>
-                    <p className="text-green-200 text-lg leading-relaxed">
+                    </motion.h2>
+                    <motion.p 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.1 }}
+                        className="text-green-200 text-lg leading-relaxed"
+                    >
                         Create your free account and start buying, selling or managing your local market — all in one place.
-                    </p>
+                    </motion.p>
                 </div>
 
                 <div className="relative z-10 space-y-3">
@@ -78,11 +93,18 @@ export default function RegisterPage() {
                         'Reserve products via M-Pesa',
                         'Track your stall & revenue',
                         'Get county market updates',
-                    ].map((item) => (
-                        <div key={item} className="flex items-center gap-3">
+                    ].map((item, idx) => (
+                        <motion.div 
+                            key={item} 
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.2 + (idx * 0.1) }}
+                            whileHover={{ x: 10, backgroundColor: "rgba(255,255,255,0.1)" }}
+                            className="flex items-center gap-3 p-2 rounded-xl transition-all cursor-pointer"
+                        >
                             <CheckCircle2 size={16} className="text-amber-400 shrink-0" />
                             <span className="text-green-100 text-sm font-medium">{item}</span>
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
             </div>
@@ -245,11 +267,11 @@ export default function RegisterPage() {
 
                         {/* Submit Button */}
                         <button
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isRedirecting}
                             className="w-full h-[54px] bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-black text-base rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
                             type="submit"
                         >
-                            {isSubmitting ? (
+                            {(isSubmitting || isRedirecting) ? (
                                 <Loader2 className="animate-spin" size={20} />
                             ) : (
                                 <>
