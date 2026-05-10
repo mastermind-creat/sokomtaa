@@ -33,40 +33,31 @@ export default function AdminAnalyticsPage() {
 
     const { data: analyticsDataRaw, isLoading } = useQuery({
         queryKey: ['admin-analytics', period],
-        queryFn: () => api.get('/admin/analytics', { params: { period } }).catch(() => ({ data: {
-            levy_collection: [
-                { date: 'Mon', amount: 1200 }, { date: 'Tue', amount: 1500 },
-                { date: 'Wed', amount: 1100 }, { date: 'Thu', amount: 2400 },
-                { date: 'Fri', amount: 3200 }, { date: 'Sat', amount: 2800 },
-                { date: 'Sun', amount: 1800 }
-            ],
-            reservation_volume: [
-                { date: 'Mon', count: 45 }, { date: 'Tue', count: 52 },
-                { date: 'Wed', count: 38 }, { date: 'Thu', count: 65 },
-                { date: 'Fri', count: 89 }, { date: 'Sat', count: 104 },
-                { date: 'Sun', count: 76 }
-            ],
-            category_demand: [
-                { name: 'Vegetables', value: 450 },
-                { name: 'Grains', value: 320 },
-                { name: 'Fish', value: 210 },
-                { name: 'Fruits', value: 180 }
-            ],
-            peak_hours: [
-                { hour: '6am', count: 12 }, { hour: '8am', count: 85 },
-                { hour: '12pm', count: 64 }, { hour: '4pm', count: 92 },
-                { hour: '8pm', count: 24 }
-            ],
-            occupancy_rate: 82
-        } })),
+        queryFn: () => api.get('/admin/analytics', { params: { period } }),
     });
 
-    const analytics = (analyticsDataRaw as any)?.data || {};
+    const analytics = (analyticsDataRaw as any)?.data || {
+        levy_collection: [],
+        reservation_volume: [],
+        category_demand: [],
+        peak_hours: [],
+        occupancy_rate: 0
+    };
+
+    // Dynamically calculate summary stats
+    const totalVolume = analytics.levy_collection?.reduce((sum: number, item: any) => sum + Number(item.amount), 0) || 0;
+    const formatVolume = (val: number) => val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toString();
+    
+    let peakHour = '--';
+    if (analytics.peak_hours && analytics.peak_hours.length > 0) {
+        const topHour = [...analytics.peak_hours].sort((a: any, b: any) => b.count - a.count)[0];
+        peakHour = topHour.hour;
+    }
 
     const stats = [
-        { label: 'Volume (KES)', value: '142k', color: 'text-brand-600', icon: TrendingUp },
-        { label: 'Occupancy', value: '82%', color: 'text-blue-600', icon: Target },
-        { label: 'Peak Hour', value: '11am', color: 'text-orange-600', icon: Clock },
+        { label: 'Volume (KES)', value: formatVolume(totalVolume), color: 'text-brand-600', icon: TrendingUp },
+        { label: 'Occupancy', value: `${analytics.occupancy_rate || 0}%`, color: 'text-blue-600', icon: Target },
+        { label: 'Peak Hour', value: peakHour, color: 'text-orange-600', icon: Clock },
     ];
 
     if (isLoading) return <div className="p-10 text-center opacity-30 font-black uppercase tracking-widest text-[10px]">Loading Economic Matrix...</div>;
