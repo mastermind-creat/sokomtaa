@@ -75,7 +75,7 @@ class TraderProfileController extends Controller
                 'description' => $request->description,
                 'mpesa_number' => $request->mpesa_number ?? $user->phone,
                 'permit_number' => $request->permit_number,
-                'verification_status' => 'pending',
+                'verification_status' => 'unverified',
                 'is_open' => false,
                 'opening_time' => $openingTime,
                 'closing_time' => $closingTime,
@@ -134,6 +134,7 @@ class TraderProfileController extends Controller
             $updates['selfie_url'] = $cloudinary->uploadImage($request->file('selfie'), 'traders/kyc');
         }
 
+        $updates['verification_status'] = 'pending';
         $trader->update($updates);
 
         // Notify Admins about KYC submission
