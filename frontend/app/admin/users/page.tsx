@@ -47,11 +47,11 @@ export default function AdminUsersPage() {
             const params: Record<string, string> = {};
             if (activeRole !== 'all') params.role = activeRole;
             if (debouncedSearch) params.search = debouncedSearch;
-            return api.get('/admin/users', { params }).then(res => res.data);
+            return api.get('/admin/users', { params });
         },
     });
 
-    const users = (usersRaw as any)?.data || [];
+    const users: any[] = Array.isArray(usersRaw) ? usersRaw : (usersRaw as any)?.data || [];
 
     const stats = [
         { label: 'Admins', count: users.filter((u: any) => u.role === 'admin').length, color: 'text-purple-600', icon: Shield },

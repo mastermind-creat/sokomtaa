@@ -43,25 +43,25 @@ export default function AdminTradersPage() {
         return () => clearTimeout(handler);
     }, [searchQuery]);
 
-    const { data: marketsData } = useQuery<ApiResponse<any[]>>({
+    const { data: marketsData } = useQuery<any>({
         queryKey: ['admin-markets'],
-        queryFn: () => api.get('/admin/markets').then(res => res.data),
+        queryFn: () => api.get('/admin/markets'),
     });
-    const markets = marketsData?.data || [];
+    const markets: any[] = Array.isArray(marketsData) ? marketsData : (marketsData as any)?.data || [];
 
-    const { data: tradersData, isLoading, isError, error } = useQuery<ApiResponse<Trader[]>>({
+    const { data: tradersData, isLoading, isError, error } = useQuery<any>({
         queryKey: ['admin-traders', filterStatus, selectedMarketId, debouncedSearch],
         queryFn: () => {
             const params: Record<string, string> = {};
             if (filterStatus !== 'all') params.verification_status = filterStatus;
             if (selectedMarketId) params.market_id = selectedMarketId;
             if (debouncedSearch) params.search = debouncedSearch;
-            return api.get('/admin/traders', { params }).then(res => res.data);
+            return api.get('/admin/traders', { params });
         },
         retry: 1,
     });
     
-    const traders = tradersData?.data || [];
+    const traders: Trader[] = Array.isArray(tradersData) ? tradersData : (tradersData as any)?.data || [];
 
     const stats = [
         { label: 'Active', value: traders.filter(t => t.verification_status === 'verified').length, icon: CheckCircle2, color: 'text-brand-600' },
