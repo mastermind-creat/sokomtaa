@@ -12,10 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('wallet_transactions', function (Blueprint $table) {
-            // Status for withdrawal tracking: completed, pending, failed
-            $table->enum('status', ['completed', 'pending', 'failed'])->default('completed')->after('type');
-            // Running balance snapshot after this transaction
-            $table->decimal('balance_after', 15, 2)->nullable()->after('status');
+            if (!Schema::hasColumn('wallet_transactions', 'status')) {
+                $table->enum('status', ['completed', 'pending', 'failed'])->default('completed')->after('type');
+            }
+            if (!Schema::hasColumn('wallet_transactions', 'balance_after')) {
+                $table->decimal('balance_after', 15, 2)->nullable()->after('status');
+            }
         });
     }
 
