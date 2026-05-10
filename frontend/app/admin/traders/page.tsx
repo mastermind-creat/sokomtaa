@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUIStore } from '@/store/uiStore';
 import { 
@@ -35,6 +35,11 @@ export default function AdminTradersPage() {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState<string>('all');
     const [selectedMarketId, setSelectedMarketId] = useState<string>('');
+    const [reviewTrader, setReviewTrader] = useState<Trader | null>(null);
+    const [isReviewing, setIsReviewing] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState('');
+
+    const queryClient = useQueryClient();
 
     React.useEffect(() => {
         const handler = setTimeout(() => {
@@ -191,8 +196,11 @@ export default function AdminTradersPage() {
 
                         {/* One-Handed Triage Hub */}
                         <div className="flex gap-2">
-                            <button className="flex-1 h-14 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand-100 flex items-center justify-center gap-2 active:scale-95 transition-all">
-                                <ShieldCheck size={16} /> Verify Permit
+                            <button 
+                                onClick={() => setReviewTrader(trader)}
+                                className="flex-1 h-14 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand-100 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                            >
+                                <ShieldCheck size={16} /> {trader.verification_status === 'pending' ? 'Review KYC' : 'Re-audit KYC'}
                             </button>
                             <button className="w-14 h-14 bg-gray-100 text-green-950 rounded-2xl flex items-center justify-center active:scale-95 transition-all hover:bg-gray-200">
                                 <ChevronRight size={20} />
@@ -211,6 +219,130 @@ export default function AdminTradersPage() {
                     <span className="font-black text-[10px] uppercase tracking-[0.2em]">Onboard New Merchant</span>
                 </button>
             </div>
+            {/* ── KYC Review Modal ── */}
+            <AnimatePresence>
+                {reviewTrader && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setReviewTrader(null)}
+                            className="absolute inset-0 bg-green-950/40 backdrop-blur-md"
+                        />
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                        >
+                            <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-2xl font-black text-green-950 uppercase tracking-tighter">KYC Audit</h3>
+                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mt-1">Reviewing: {reviewTrader.business_name}</p>
+                                </div>
+                                <div className={cn(
+                                    "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                                    reviewTrader.stall_type === 'independent' ? "bg-amber-50 text-amber-700 border-amber-100" : "bg-brand-50 text-brand-700 border-brand-100"
+                                )}>
+                                    {reviewTrader.stall_type || 'managed'} Stall
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar">
+                                {/* Identity Documents */}
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">Identity Documents</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <p className="text-[9px] font-black text-text-muted uppercase tracking-widest text-center">National ID Front</p>
+                                            <div className="aspect-[1.6/1] bg-gray-100 rounded-2xl overflow-hidden border border-gray-200 group relative">
+                                                {reviewTrader.id_front_url ? (
+                                                    <img src={reviewTrader.id_front_url} alt="ID Front" className="w-full h-full object-cover transition-transform group-hover:scale-110 cursor-zoom-in" onClick={() => window.open(reviewTrader.id_front_url, '_blank')} />
+                                                ) : (
+                                                    <div className="flex items-center justify-center h-full text-text-muted text-[10px] font-black uppercase">Not Uploaded</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-[9px] font-black text-text-muted uppercase tracking-widest text-center">National ID Back</p>
+                                            <div className="aspect-[1.6/1] bg-gray-100 rounded-2xl overflow-hidden border border-gray-200 group relative">
+                                                {reviewTrader.id_back_url ? (
+                                                    <img src={reviewTrader.id_back_url} alt="ID Back" className="w-full h-full object-cover transition-transform group-hover:scale-110 cursor-zoom-in" onClick={() => window.open(reviewTrader.id_back_url, '_blank')} />
+                                                ) : (
+                                                    <div className="flex items-center justify-center h-full text-text-muted text-[10px] font-black uppercase">Not Uploaded</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Rejection Field */}
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">Compliance Notes</h4>
+                                    <textarea 
+                                        placeholder="Enter reason for rejection if applicable..."
+                                        className="w-full h-32 p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 transition-all resize-none"
+                                        value={rejectionReason}
+                                        onChange={(e) => setRejectionReason(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-8 bg-gray-50/50 border-t border-gray-100 flex gap-3">
+                                <button 
+                                    disabled={isReviewing}
+                                    onClick={async () => {
+                                        if(!rejectionReason) {
+                                            alert('Please provide a reason for rejection');
+                                            return;
+                                        }
+                                        setIsReviewing(true);
+                                        try {
+                                            await api.post(`/admin/traders/${reviewTrader.id}/verify`, { 
+                                                status: 'rejected',
+                                                reason: rejectionReason 
+                                            });
+                                            setReviewTrader(null);
+                                            window.location.reload();
+                                        } catch (e) {
+                                            console.error(e);
+                                        } finally {
+                                            setIsReviewing(false);
+                                        }
+                                    }}
+                                    className="flex-1 h-14 bg-white text-rose-600 border border-rose-100 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-50 transition-all disabled:opacity-50"
+                                >
+                                    Reject Application
+                                </button>
+                                <button 
+                                    disabled={isReviewing}
+                                    onClick={async () => {
+                                        setIsReviewing(true);
+                                        try {
+                                            await api.post(`/admin/traders/${reviewTrader.id}/verify`, { 
+                                                status: 'verified' 
+                                            });
+                                            setReviewTrader(null);
+                                            window.location.reload();
+                                        } catch (e) {
+                                            console.error(e);
+                                        } finally {
+                                            setIsReviewing(false);
+                                        }
+                                    }}
+                                    className="flex-[2] h-14 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand-200 hover:bg-brand-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {isReviewing ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
+                                    Approve & Verify
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
+
+import { Loader2 } from 'lucide-react';

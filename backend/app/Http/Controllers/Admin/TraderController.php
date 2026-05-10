@@ -52,4 +52,33 @@ class TraderController extends Controller
             'data' => $traders
         ], 200);
     }
+
+    /**
+     * Verify or reject a trader's KYC.
+     */
+    public function verify(Request $request, Trader $trader): JsonResponse
+    {
+        $request->validate([
+            'status' => 'required|in:verified,rejected',
+            'reason' => 'required_if:status,rejected|string|nullable'
+        ]);
+
+        $trader->verification_status = $request->status;
+        
+        if ($request->status === 'rejected') {
+            $trader->rejection_reason = $request->reason;
+        } else {
+            $trader->rejection_reason = null;
+            // If verified, we can auto-open their shop for the first time if they want
+            $trader->is_open = true; 
+        }
+
+        $trader->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Trader status updated to {$request->status}",
+            'data' => $trader
+        ]);
+    }
 }

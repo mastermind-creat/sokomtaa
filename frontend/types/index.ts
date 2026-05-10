@@ -112,6 +112,13 @@ export interface Trader {
     permit_number?: string | null;
     permit_image_url?: string | null;
     verification_status: 'pending' | 'verified' | 'rejected';
+    rejection_reason?: string | null;
+    stall_type: 'managed' | 'independent';
+    latitude: number | null;
+    longitude: number | null;
+    id_front_url?: string | null;
+    id_back_url?: string | null;
+    selfie_url?: string | null;
     avatar_url?: string | null;
     banner_url?: string | null;
     is_open: boolean;

@@ -15,13 +15,18 @@ class Trader extends Model
     protected $fillable = [
         'user_id',
         'stall_id',
-        'market_id',
+        'stall_type',
+        'latitude',
+        'longitude',
         'business_name',
         'business_name_sw',
         'description',
         'mpesa_number',
         'permit_number',
         'permit_image_url',
+        'id_front_url',
+        'id_back_url',
+        'selfie_url',
         'verification_status',
         'rejection_reason',
         'avatar_url',
@@ -39,6 +44,8 @@ class Trader extends Model
     protected $casts = [
         'is_open' => 'boolean',
         'average_rating' => 'decimal:2',
+        'latitude' => 'decimal:7',
+        'longitude' => 'decimal:7',
         'last_fee_deduction_at' => 'datetime',
     ];
 

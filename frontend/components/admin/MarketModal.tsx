@@ -26,6 +26,8 @@ const marketSchema = z.object({
     latitude: z.string().optional().nullable(),
     longitude: z.string().optional().nullable(),
     is_active: z.boolean().default(true),
+    banner_image: z.any().optional(),
+    icon_image: z.any().optional(),
 });
 
 type MarketFormValues = z.infer<typeof marketSchema>;
@@ -33,7 +35,7 @@ type MarketFormValues = z.infer<typeof marketSchema>;
 interface MarketModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: MarketFormValues) => void;
+    onSubmit: (data: FormData) => void;
     initialData?: Market | null;
     isLoading?: boolean;
 }
@@ -62,6 +64,20 @@ export const MarketModal: React.FC<MarketModalProps> = ({
             is_active: true,
         }
     });
+
+    const handleFormSubmit = (data: MarketFormValues) => {
+        const formData = new FormData();
+        Object.entries(data).forEach(([key, value]) => {
+            if (key === 'banner_image' || key === 'icon_image') {
+                if (value instanceof FileList && value[0]) {
+                    formData.append(key, value[0]);
+                }
+            } else if (value !== undefined && value !== null) {
+                formData.append(key, value.toString());
+            }
+        });
+        onSubmit(formData);
+    };
 
     React.useEffect(() => {
         if (initialData) {
@@ -128,7 +144,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                         </button>
                     </div>
 
-                    <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
+                    <form onSubmit={handleSubmit(handleFormSubmit)} className="p-8 space-y-6">
                         <div className="space-y-4">
                             {/* Market Name */}
                             <div className="space-y-1.5">
@@ -230,6 +246,32 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                                         {...register('longitude')}
                                         placeholder="36.817223"
                                         className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Images Section */}
+                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 mt-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                        Banner Image
+                                    </label>
+                                    <input 
+                                        type="file"
+                                        accept="image/*"
+                                        {...register('banner_image')}
+                                        className="w-full text-[10px] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                        Market Icon
+                                    </label>
+                                    <input 
+                                        type="file"
+                                        accept="image/*"
+                                        {...register('icon_image')}
+                                        className="w-full text-[10px] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
                                     />
                                 </div>
                             </div>

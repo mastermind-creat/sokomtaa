@@ -30,6 +30,15 @@ const createUserIcon = () => L.divIcon({
     iconAnchor: [16, 16]
 });
 
+const createTraderIcon = () => L.divIcon({
+    html: `<div class="w-10 h-10 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-xl border-4 border-white transform hover:scale-110 transition-all">
+             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+           </div>`,
+    className: 'custom-trader-icon',
+    iconSize: [40, 40],
+    iconAnchor: [20, 40]
+});
+
 interface Market {
     id: number;
     name: string;
@@ -38,6 +47,15 @@ interface Market {
     longitude: number;
     distance: number;
     traders_count: number;
+}
+
+interface Trader {
+    id: number;
+    business_name: string;
+    latitude: number;
+    longitude: number;
+    distance: number;
+    stall_type: string;
 }
 
 export default function NearbyMarketsMap() {
@@ -63,7 +81,7 @@ export default function NearbyMarketsMap() {
         }
     }, []);
 
-    const { data: nearbyData, isLoading } = useQuery({
+    const { data: nearbyMarketsData, isLoading: marketsLoading } = useQuery({
         queryKey: ['markets-nearby', userLocation],
         queryFn: async () => {
             if (!userLocation) return [];
@@ -79,7 +97,24 @@ export default function NearbyMarketsMap() {
         enabled: !!userLocation
     });
 
-    const markets = Array.isArray(nearbyData) ? nearbyData : ((nearbyData as any)?.data || []);
+    const { data: nearbyTradersData, isLoading: tradersLoading } = useQuery({
+        queryKey: ['traders-nearby', userLocation],
+        queryFn: async () => {
+            if (!userLocation) return [];
+            const res = await api.get('/traders/nearby', {
+                params: {
+                    lat: userLocation[0],
+                    lng: userLocation[1],
+                    radius: 10 // 10km radius for independent traders
+                }
+            });
+            return res.data as Trader[];
+        },
+        enabled: !!userLocation
+    });
+
+    const markets = Array.isArray(nearbyMarketsData) ? nearbyMarketsData : ((nearbyMarketsData as any)?.data || []);
+    const traders = Array.isArray(nearbyTradersData) ? nearbyTradersData : ((nearbyTradersData as any)?.data || []);
 
     if (!mapReady) return null;
 
@@ -136,7 +171,7 @@ export default function NearbyMarketsMap() {
                     {/* Market Markers */}
                     {markets.map((market) => (
                         <Marker 
-                            key={market.id} 
+                            key={`market-${market.id}`} 
                             position={[market.latitude, market.longitude]} 
                             icon={createMarketIcon()}
                         >
@@ -162,6 +197,42 @@ export default function NearbyMarketsMap() {
                                             className="flex items-center gap-1 text-brand-600 font-black text-[10px] uppercase tracking-widest group"
                                         >
                                             Visit <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </Popup>
+                        </Marker>
+                    ))}
+
+                    {/* Independent Trader Markers */}
+                    {traders.map((trader) => (
+                        <Marker 
+                            key={`trader-${trader.id}`} 
+                            position={[trader.latitude, trader.longitude]} 
+                            icon={createTraderIcon()}
+                        >
+                            <Popup className="custom-popup">
+                                <div className="p-2 min-w-[200px]">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-8 h-8 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-green-950 text-sm leading-tight uppercase">{trader.business_name}</h4>
+                                            <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest">
+                                                Independent • {trader.distance.toFixed(1)} km away
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-50">
+                                        <div className="text-[10px] font-black text-text-muted uppercase tracking-widest">
+                                            Open Stall
+                                        </div>
+                                        <button 
+                                            onClick={() => router.push(`/trader/${trader.id}`)}
+                                            className="flex items-center gap-1 text-brand-600 font-black text-[10px] uppercase tracking-widest group"
+                                        >
+                                            View Store <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                                         </button>
                                     </div>
                                 </div>

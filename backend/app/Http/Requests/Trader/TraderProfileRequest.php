@@ -14,11 +14,14 @@ class TraderProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'market_id' => 'required|exists:markets,id',
+            'stall_type' => 'required|in:managed,independent',
+            'market_id' => 'nullable|exists:markets,id',
             'business_name' => 'required|string|max:255',
             'business_name_sw' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'stall_number' => 'nullable|string|exists:stalls,stall_number',
+            'latitude' => 'nullable|required_if:stall_type,independent|numeric|between:-90,90',
+            'longitude' => 'nullable|required_if:stall_type,independent|numeric|between:-180,180',
             'mpesa_number' => 'nullable|string|max:20',
             'permit_number' => 'nullable|string|max:255',
             'opening_time' => 'nullable|string|regex:/^[0-2][0-9]:[0-5][0-9]$/',

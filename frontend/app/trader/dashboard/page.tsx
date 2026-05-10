@@ -68,12 +68,15 @@ export default function TraderDashboard() {
     const hasOverdueFees = statsData?.has_overdue_fees || false;
     const isPendingVerification = user?.role === 'trader' && !user?.phone_verified;
     const isMissingProfile = user?.role === 'trader' && !user?.trader;
-    const isPendingAllocation = user?.role === 'trader' && user?.trader && !user?.trader.stall_id;
+    const isIndependent = user?.trader?.stall_type === 'independent';
+    const isPendingAllocation = user?.role === 'trader' && user?.trader && !isIndependent && !user?.trader.stall_id;
+    const isKycPending = user?.trader?.verification_status === 'pending';
+    const isKycRejected = user?.trader?.verification_status === 'rejected';
 
     return (
         <div className="pb-40 -mx-4 md:-mx-0 font-sans">
             <AnimatePresence>
-                {(isMissingProfile || isPendingVerification || hasOverdueFees) && (
+                {(isMissingProfile || isPendingVerification || isPendingAllocation || isKycPending || isKycRejected || hasOverdueFees) && (
                     <div className="px-4 mb-6 space-y-3">
                         {isMissingProfile && (
                             <motion.div 
@@ -103,9 +106,43 @@ export default function TraderDashboard() {
                                     <Clock size={20} />
                                 </div>
                                 <div className="flex-1">
-                                    <h4 className="text-blue-950 font-black text-xs uppercase tracking-tight">Profile Ready • Awaiting Stall</h4>
-                                    <p className="text-blue-700 text-[10px] font-bold">You have successfully set up your profile. Please wait for the admin to allocate your physical stall.</p>
+                                    <h4 className="text-blue-950 font-black text-xs uppercase tracking-tight">Awaiting Allocation</h4>
+                                    <p className="text-blue-700 text-[10px] font-bold">The admin is currently assigning your stall within the market hub.</p>
                                 </div>
+                            </motion.div>
+                        )}
+                        {isKycPending && (
+                            <motion.div 
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="bg-amber-50 border border-amber-100 rounded-3xl p-5 flex items-center gap-4 shadow-sm"
+                            >
+                                <div className="w-10 h-10 bg-amber-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                                    <ShieldCheck size={20} />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="text-amber-950 font-black text-xs uppercase tracking-tight">KYC Under Audit</h4>
+                                    <p className="text-amber-700 text-[10px] font-bold">Your identity documents are being reviewed by our compliance team.</p>
+                                </div>
+                                <Link href="/trader/profile" className="px-4 py-2 bg-amber-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg">Check Docs</Link>
+                            </motion.div>
+                        )}
+                        {isKycRejected && (
+                            <motion.div 
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="bg-rose-50 border border-rose-100 rounded-3xl p-5 flex items-center gap-4 shadow-sm"
+                            >
+                                <div className="w-10 h-10 bg-rose-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                                    <AlertTriangle size={20} />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="text-rose-950 font-black text-xs uppercase tracking-tight">KYC Rejected</h4>
+                                    <p className="text-rose-700 text-[10px] font-bold">Reason: {user?.trader?.rejection_reason || 'Documents unclear'}. Please re-upload.</p>
+                                </div>
+                                <Link href="/trader/profile" className="px-4 py-2 bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg">Re-upload</Link>
                             </motion.div>
                         )}
                         {isPendingVerification && (

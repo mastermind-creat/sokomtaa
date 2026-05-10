@@ -50,8 +50,8 @@ export default function MaintenancePage() {
     const { data: status, isLoading } = useQuery({
         queryKey: ['system-status'],
         queryFn: async () => {
-            const res = await api.get<never, SystemStatus>('/admin/maintenance/status');
-            return res.data;
+            const res = await api.get<SystemStatus>('/admin/maintenance/status');
+            return res; // api.get already returns response.data
         }
     });
 
@@ -59,17 +59,19 @@ export default function MaintenancePage() {
     const runAction = useMutation({
         mutationFn: async (endpoint: string) => {
             setCommandOutput(null);
-            const res = await api.post<never, { message: string; output?: string }>(`/admin/maintenance/${endpoint}`);
-            return res.data;
+            const res = await api.post<{ message: string; output?: string }>(`/admin/maintenance/${endpoint}`);
+            return res; // api.post already returns response.data
         },
         onSuccess: (data) => {
-            toast.success(data.message);
-            if (data.output) setCommandOutput(data.output);
+            toast.success(data?.message || 'Action completed');
+            if (data?.output) setCommandOutput(data.output);
             queryClient.invalidateQueries({ queryKey: ['system-status'] });
         },
         onError: (error: any) => {
-            toast.error(error.response?.data?.message || 'Action failed');
-            if (error.response?.data?.message) setCommandOutput(error.response.data.message);
+            // error is response.data because of the interceptor in api.ts
+            const message = error?.message || error?.error || 'Action failed';
+            toast.error(message);
+            setCommandOutput(`ERROR: ${message}`);
         }
     });
 

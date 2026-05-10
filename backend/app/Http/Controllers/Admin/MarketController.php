@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Market;
+use App\Services\CloudinaryService;
+use App\Services\StallService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,6 +14,15 @@ use Illuminate\Support\Facades\Validator;
 class MarketController extends Controller
 {
     use ApiResponse;
+
+    protected $cloudinaryService;
+    protected $stallService;
+
+    public function __construct(CloudinaryService $cloudinaryService, StallService $stallService)
+    {
+        $this->cloudinaryService = $cloudinaryService;
+        $this->stallService = $stallService;
+    }
 
     /**
      * List all markets.
@@ -34,16 +45,31 @@ class MarketController extends Controller
             'estate' => 'required|string|max:255',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
+            'banner_image' => 'nullable|image|max:5120',
+            'icon_image' => 'nullable|image|max:2048'
         ]);
 
         if ($validator->fails()) {
             return $this->error('Validation Error', 'VALIDATION_ERROR', 422, $validator->errors()->toArray());
         }
 
-        $market = Market::create($request->all());
+        $data = $request->except(['banner_image', 'icon_image']);
 
-        return $this->success($market, 'Market created successfully', 201);
+        if ($request->hasFile('banner_image')) {
+            $data['banner_url'] = $this->cloudinaryService->uploadImage($request->file('banner_image'), 'markets/banners');
+        }
+
+        if ($request->hasFile('icon_image')) {
+            $data['icon_url'] = $this->cloudinaryService->uploadImage($request->file('icon_image'), 'markets/icons');
+        }
+
+        $market = Market::create($data);
+
+        // Auto-generate standard stall infrastructure
+        $this->stallService->generateStandardInfrastructure($market);
+
+        return $this->success($market, 'Market created successfully with standard stall layout', 201);
     }
 
     /**
@@ -58,14 +84,34 @@ class MarketController extends Controller
             'estate' => 'sometimes|required|string|max:255',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
+            'banner_image' => 'nullable|image|max:5120',
+            'icon_image' => 'nullable|image|max:2048'
         ]);
 
         if ($validator->fails()) {
             return $this->error('Validation Error', 'VALIDATION_ERROR', 422, $validator->errors()->toArray());
         }
 
-        $market->update($request->all());
+        $data = $request->except(['banner_image', 'icon_image']);
+
+        if ($request->hasFile('banner_image')) {
+            // Delete old banner if it exists and is a Cloudinary URL
+            if ($market->banner_url) {
+                $this->cloudinaryService->deleteImage($market->banner_url);
+            }
+            $data['banner_url'] = $this->cloudinaryService->uploadImage($request->file('banner_image'), 'markets/banners');
+        }
+
+        if ($request->hasFile('icon_image')) {
+            // Delete old icon if it exists
+            if ($market->icon_url) {
+                $this->cloudinaryService->deleteImage($market->icon_url);
+            }
+            $data['icon_url'] = $this->cloudinaryService->uploadImage($request->file('icon_image'), 'markets/icons');
+        }
+
+        $market->update($data);
 
         return $this->success($market, 'Market updated successfully');
     }
@@ -94,5 +140,22 @@ class MarketController extends Controller
         $market->save();
 
         return $this->success($market, 'Market status updated');
+    }
+
+    /**
+     * Reset market stalls to standard template.
+     */
+    public function resetStalls(Market $market): JsonResponse
+    {
+        // Delete all existing allocations for stalls in this market
+        \App\Models\Allocation::whereIn('stall_id', $market->stalls()->pluck('id'))->delete();
+
+        // Delete all existing stalls
+        $market->stalls()->delete();
+
+        // Regenerate standard layout
+        $this->stallService->generateStandardInfrastructure($market);
+
+        return $this->success($market, 'Market infrastructure reset to standard template');
     }
 }

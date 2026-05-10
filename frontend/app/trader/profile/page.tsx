@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
     Camera, Store, Clock, Phone, Upload, User,
-    Key, Save, Eye, EyeOff, Loader2, ShieldCheck
+    Key, Save, Eye, EyeOff, Loader2, ShieldCheck,
+    MapPin, FileText
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
@@ -25,6 +26,12 @@ interface TraderProfile {
     closing_time: string;
     is_open: boolean;
     permit_number: string;
+    stall_type: 'managed' | 'independent';
+    latitude: number | null;
+    longitude: number | null;
+    id_front_url: string | null;
+    id_back_url: string | null;
+    selfie_url: string | null;
     banner_url: string | null;
     avatar_url: string | null;
     user: { name: string; phone: string; email: string; };
@@ -108,7 +115,26 @@ export default function TraderProfilePage() {
         }
     });
 
-    const isPending = isSettingUp || isUpdating;
+    const { mutate: submitKyc, isPending: isSubmittingKyc } = useMutation({
+        mutationFn: async (data: { id_front: File; id_back: File; selfie?: File }) => {
+            const formData = new FormData();
+            formData.append('id_front', data.id_front);
+            formData.append('id_back', data.id_back);
+            if (data.selfie) formData.append('selfie', data.selfie);
+            return api.post('/trader/kyc', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] });
+            alert('KYC documents submitted successfully!');
+        },
+        onError: (err: any) => {
+            alert(err.message || 'Failed to submit KYC documents.');
+        }
+    });
+
+    const isPending = isSettingUp || isUpdating || isSubmittingKyc;
 
     const { mutate: uploadAvatar, isPending: isUploadingAvatar } = useMutation({
         mutationFn: async (file: File) => {
@@ -211,27 +237,93 @@ export default function TraderProfilePage() {
 
                 {isFirstTimeSetup && (
                     <>
-                        <FormField label="Select Your Market" id="market">
-                            <select
-                                id="market"
-                                value={current.market_id ?? ''}
-                                onChange={e => set('market_id' as any, e.target.value)}
-                                className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium"
-                            >
-                                <option value="">Choose a market...</option>
-                                {markets?.map(m => (
-                                    <option key={m.id} value={m.id}>{m.name} - {m.estate}</option>
-                                ))}
-                            </select>
-                        </FormField>
-                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                            <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider flex items-center gap-2">
-                                <Clock size={12} /> Stall Allocation Note
-                            </p>
-                            <p className="text-blue-600 text-xs mt-1 font-medium">
-                                After registration, the county admin will review your profile and allocate a physical stall for your business.
-                            </p>
+                        <div className="space-y-3">
+                            <label className="block text-sm font-bold text-text-primary">Where is your stall located?</label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => set('stall_type', 'managed')}
+                                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                                        (current.stall_type ?? 'managed') === 'managed'
+                                            ? 'border-primary bg-primary/5'
+                                            : 'border-gray-100 bg-gray-50 hover:border-gray-200'
+                                    }`}
+                                >
+                                    <Store className={(current.stall_type ?? 'managed') === 'managed' ? 'text-primary' : 'text-gray-400'} />
+                                    <span className="text-xs font-black uppercase tracking-wider">Inside Market</span>
+                                </button>
+                                <button
+                                    onClick={() => set('stall_type', 'independent')}
+                                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                                        current.stall_type === 'independent'
+                                            ? 'border-primary bg-primary/5'
+                                            : 'border-gray-100 bg-gray-50 hover:border-gray-200'
+                                    }`}
+                                >
+                                    <MapPin className={current.stall_type === 'independent' ? 'text-primary' : 'text-gray-400'} />
+                                    <span className="text-xs font-black uppercase tracking-wider">Independent</span>
+                                </button>
+                            </div>
                         </div>
+
+                        {(current.stall_type ?? 'managed') === 'managed' ? (
+                            <>
+                                <FormField label="Select Your Market" id="market">
+                                    <select
+                                        id="market"
+                                        value={current.market_id ?? ''}
+                                        onChange={e => set('market_id' as any, e.target.value)}
+                                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium"
+                                    >
+                                        <option value="">Choose a market...</option>
+                                        {markets?.map(m => (
+                                            <option key={m.id} value={m.id}>{m.name} - {m.estate}</option>
+                                        ))}
+                                    </select>
+                                </FormField>
+                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                                    <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider flex items-center gap-2">
+                                        <Clock size={12} /> Stall Allocation Note
+                                    </p>
+                                    <p className="text-blue-600 text-xs mt-1 font-medium">
+                                        After registration, the county admin will review your profile and allocate a physical stall for your business.
+                                    </p>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                                    <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-2">
+                                        <MapPin size={12} /> Independent Stall Location
+                                    </p>
+                                    <p className="text-amber-600 text-xs mt-1 font-medium">
+                                        Please provide your stall's exact location so residents can find you easily.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if (navigator.geolocation) {
+                                            navigator.geolocation.getCurrentPosition((pos) => {
+                                                setForm(f => ({ ...f, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+                                                alert('Location captured successfully!');
+                                            }, (err) => {
+                                                alert('Failed to get location: ' + err.message);
+                                            });
+                                        } else {
+                                            alert('Geolocation is not supported by your browser.');
+                                        }
+                                    }}
+                                    className="w-full h-12 flex items-center justify-center gap-2 bg-green-50 text-green-700 border border-green-200 rounded-xl text-sm font-black uppercase tracking-wider hover:bg-green-100 transition-all"
+                                >
+                                    <MapPin size={18} />
+                                    {current.latitude ? 'Location Captured ✓' : 'Get Current Location'}
+                                </button>
+                                {current.latitude && (
+                                    <p className="text-center text-[10px] font-mono text-gray-400">
+                                        Lat: {current.latitude.toFixed(6)}, Lng: {current.longitude?.toFixed(6)}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </>
                 )}
 
@@ -306,6 +398,96 @@ export default function TraderProfilePage() {
                         placeholder="+254 7XX XXX XXX"
                         className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono" />
                 </FormField>
+            </div>
+
+            {/* KYC Verification */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+                <h2 className="flex items-center gap-2 text-sm font-black text-text-primary uppercase tracking-wider">
+                    <ShieldCheck className="w-4 h-4" /> KYC Verification
+                </h2>
+                <div className="p-4 bg-green-50 border border-green-100 rounded-xl">
+                    <p className="text-[10px] font-bold text-green-700 uppercase tracking-wider flex items-center gap-2">
+                        <FileText size={12} /> Identity Documents
+                    </p>
+                    <p className="text-green-600 text-xs mt-1 font-medium">
+                        Upload your National ID to be verified. This helps build trust with your customers.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ID Front</label>
+                        <div className="relative aspect-[3/2] bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all overflow-hidden group">
+                            {current.id_front_url ? (
+                                <Image src={current.id_front_url} alt="ID Front" fill className="object-cover" />
+                            ) : (
+                                <>
+                                    <Camera className="w-6 h-6 text-gray-300 group-hover:text-primary transition-colors" />
+                                    <span className="text-[10px] font-bold text-gray-400 group-hover:text-primary transition-colors uppercase">Tap to Upload</span>
+                                </>
+                            )}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                onChange={(e) => {
+                                    if (e.target.files?.[0]) {
+                                        const file = e.target.files[0];
+                                        const reader = new FileReader();
+                                        reader.onload = (re) => set('id_front_url' as any, re.target?.result as string);
+                                        reader.readAsDataURL(file);
+                                        (e.target as any)._file = file; // Attach for submission
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ID Back</label>
+                        <div className="relative aspect-[3/2] bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all overflow-hidden group">
+                            {current.id_back_url ? (
+                                <Image src={current.id_back_url} alt="ID Back" fill className="object-cover" />
+                            ) : (
+                                <>
+                                    <Camera className="w-6 h-6 text-gray-300 group-hover:text-primary transition-colors" />
+                                    <span className="text-[10px] font-bold text-gray-400 group-hover:text-primary transition-colors uppercase">Tap to Upload</span>
+                                </>
+                            )}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                onChange={(e) => {
+                                    if (e.target.files?.[0]) {
+                                        const file = e.target.files[0];
+                                        const reader = new FileReader();
+                                        reader.onload = (re) => set('id_back_url' as any, re.target?.result as string);
+                                        reader.readAsDataURL(file);
+                                        (e.target as any)._file = file; // Attach for submission
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {!isFirstTimeSetup && (current.id_front_url && current.id_back_url) && (
+                    <button
+                        onClick={() => {
+                            const frontInput = document.querySelector('input[type="file"]') as any;
+                            const backInput = document.querySelectorAll('input[type="file"]')[1] as any;
+                            if (frontInput?._file && backInput?._file) {
+                                submitKyc({ id_front: frontInput._file, id_back: backInput._file });
+                            } else {
+                                alert('Please re-select files to submit.');
+                            }
+                        }}
+                        disabled={isPending}
+                        className="w-full h-12 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary-light active:scale-95 transition-all disabled:opacity-50"
+                    >
+                        {isSubmittingKyc ? <Loader2 className="animate-spin mx-auto" /> : 'Submit KYC Documents'}
+                    </button>
+                )}
             </div>
 
             {/* Permit */}

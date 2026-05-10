@@ -46,7 +46,9 @@ export default function AdminMarketsPage() {
 
     // ── Mutations ──
     const createMutation = useMutation({
-        mutationFn: (data: any) => api.post('/admin/markets', data),
+        mutationFn: (data: FormData) => api.post('/admin/markets', data, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
             setIsModalOpen(false);
@@ -54,7 +56,13 @@ export default function AdminMarketsPage() {
     });
 
     const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: number, data: any }) => api.put(`/admin/markets/${id}`, data),
+        mutationFn: ({ id, data }: { id: number, data: FormData }) => {
+            // Append _method=PUT for Laravel to handle FormData in a PUT request
+            data.append('_method', 'PUT');
+            return api.post(`/admin/markets/${id}`, data, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
             setIsModalOpen(false);
@@ -75,6 +83,20 @@ export default function AdminMarketsPage() {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
         }
     });
+
+    const resetInfrastructureMutation = useMutation({
+        mutationFn: (id: number) => api.post(`/admin/markets/${id}/reset-stalls`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+            alert('Market infrastructure has been reset to standard template.');
+        }
+    });
+
+    const handleResetInfrastructure = (id: number) => {
+        if (window.confirm('WARNING: This will delete all existing stalls in this market and regenerate them from the standard template. Active allocations will be lost. Proceed?')) {
+            resetInfrastructureMutation.mutate(id);
+        }
+    };
 
     const handleFormSubmit = (data: any) => {
         if (selectedMarket) {
@@ -160,11 +182,20 @@ export default function AdminMarketsPage() {
                                 key={market.id}
                                 className="bg-white rounded-[2.5rem] border border-gray-50 shadow-sm overflow-hidden flex flex-col"
                             >
+                                {market.banner_url && (
+                                     <div className="h-20 w-full overflow-hidden border-b border-gray-50">
+                                         <img src={market.banner_url} alt="" className="w-full h-full object-cover opacity-80" />
+                                     </div>
+                                 )}
                                 <div className="p-6 flex-1">
                                     <div className="flex items-start justify-between mb-6">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 bg-gray-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-gray-200 shrink-0">
-                                                <Store size={28} />
+                                            <div className="w-14 h-14 bg-gray-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-gray-200 shrink-0 overflow-hidden">
+                                                {market.icon_url ? (
+                                                     <img src={market.icon_url} alt="" className="w-full h-full object-cover" />
+                                                 ) : (
+                                                     <Store size={28} />
+                                                 )}
                                             </div>
                                             <div>
                                                 <h3 className="text-xl font-black text-green-950 uppercase tracking-tight leading-tight">{market.name}</h3>
@@ -219,8 +250,14 @@ export default function AdminMarketsPage() {
                                         <Trash2 size={16} /> Delete
                                     </button>
                                 </div>
-                                <button className="w-full h-12 bg-gray-950 hover:bg-black flex items-center justify-between px-6 active:scale-[0.98] transition-all">
-                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Configure Infrastructure</span>
+                                <button 
+                                    onClick={() => handleResetInfrastructure(market.id)}
+                                    className="w-full h-12 bg-gray-950 hover:bg-black flex items-center justify-between px-6 active:scale-[0.98] transition-all disabled:opacity-50"
+                                    disabled={resetInfrastructureMutation.isPending}
+                                >
+                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                        {resetInfrastructureMutation.isPending && resetInfrastructureMutation.variables === market.id ? 'Regenerating...' : 'Configure Infrastructure'}
+                                    </span>
                                     <ChevronRight size={16} className="text-white/40" />
                                 </button>
                             </motion.div>

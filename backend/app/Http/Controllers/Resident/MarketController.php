@@ -68,6 +68,11 @@ class MarketController extends Controller
             ->with('trader')
             ->get();
 
+        // Get products in this market (via traders)
+        $products = \App\Models\Product::whereHas('trader', function ($query) use ($market) {
+            $query->where('market_id', $market->id);
+        })->with(['trader.stall', 'category'])->get();
+
         // Get categories that have products in this market
         $categories = Category::whereHas('products', function ($query) use ($market) {
             $query->whereHas('trader', function ($q) use ($market) {
@@ -79,7 +84,57 @@ class MarketController extends Controller
             'market' => $market,
             'traders' => $traders,
             'stalls' => $stalls,
+            'products' => $products,
             'categories' => $categories
         ]);
+    }
+
+    /**
+     * Compare prices of similar items in a market.
+     */
+    public function compare(Request $request, Market $market): JsonResponse
+    {
+        $query = $request->input('q');
+        
+        $productsQuery = \App\Models\Product::whereHas('trader', function ($q) use ($market) {
+            $q->where('market_id', $market->id);
+        })->with(['trader:id,business_name,avatar_url', 'trader.stall:id,stall_number', 'category:id,name']);
+
+        if ($query) {
+            $productsQuery->where(function($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%")
+                  ->orWhere('description', 'LIKE', "%{$query}%");
+            });
+        }
+
+        $products = $productsQuery->get();
+
+        // Group by normalized name (lowercase, trimmed)
+        $grouped = $products->groupBy(function ($item) {
+            return strtolower(trim($item->name));
+        })->map(function ($items, $name) {
+            return [
+                'name' => $items->first()->name, // Use original casing from first item
+                'category' => $items->first()->category?->name,
+                'min_price' => $items->min('price'),
+                'max_price' => $items->max('price'),
+                'avg_price' => round($items->avg('price'), 2),
+                'unit' => $items->first()->unit,
+                'traders' => $items->map(function($item) {
+                    return [
+                        'trader_id' => $item->trader_id,
+                        'business_name' => $item->trader->business_name,
+                        'avatar_url' => $item->trader->avatar_url,
+                        'average_rating' => $item->trader->average_rating,
+                        'stall_number' => $item->trader->stall?->stall_number,
+                        'price' => $item->price,
+                        'stock_status' => $item->stock_status,
+                        'product_id' => $item->id
+                    ];
+                })->sortBy('price')->values()
+            ];
+        })->values();
+
+        return $this->success($grouped);
     }
 }

@@ -40,6 +40,7 @@ Route::prefix('markets')->group(function () {
     Route::get('/', [\App\Http\Controllers\Resident\MarketController::class, 'index']);
     Route::get('/nearby', [\App\Http\Controllers\Resident\MarketController::class, 'nearby']);
     Route::get('/{market}', [\App\Http\Controllers\Resident\MarketController::class, 'show']);
+    Route::get('/{market}/compare', [\App\Http\Controllers\Resident\MarketController::class, 'compare']);
 });
 
 // Global Search & Recommendations (Public)
@@ -48,6 +49,7 @@ Route::get('/recommendations', [\App\Http\Controllers\SearchController::class, '
 
 // Trader Discovery (Public)
 Route::prefix('traders')->group(function () {
+    Route::get('/nearby', [\App\Http\Controllers\Resident\TraderController::class, 'nearby']);
     Route::get('/search', [\App\Http\Controllers\Resident\TraderController::class, 'search']);
     Route::get('/{trader}', [\App\Http\Controllers\Resident\TraderController::class, 'show']);
     Route::get('/{trader}/products', [\App\Http\Controllers\Resident\TraderController::class, 'products']);
@@ -66,6 +68,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/me', [TraderProfileController::class, 'me']);
         Route::put('/update', [TraderProfileController::class, 'update']);
         Route::post('/avatar', [TraderProfileController::class, 'uploadAvatar']);
+        Route::post('/kyc', [TraderProfileController::class, 'submitKyc']);
     });
 
     // ── Reservations (Resident creates, Trader/Resident views) ───────────────
@@ -247,6 +250,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         // Traders Management
         Route::get('/traders', [\App\Http\Controllers\Admin\TraderController::class, 'index']);
+        Route::post('/traders/{trader}/verify', [\App\Http\Controllers\Admin\TraderController::class, 'verify']);
 
         // Markets Management
         Route::prefix('markets')->group(function () {
@@ -255,6 +259,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::put('/{market}', [\App\Http\Controllers\Admin\MarketController::class, 'update']);
             Route::delete('/{market}', [\App\Http\Controllers\Admin\MarketController::class, 'destroy']);
             Route::patch('/{market}/toggle', [\App\Http\Controllers\Admin\MarketController::class, 'toggleStatus']);
+            Route::post('/{market}/reset-stalls', [\App\Http\Controllers\Admin\MarketController::class, 'resetStalls']);
         });
 
         // Analytics & Ledgers

@@ -20,7 +20,7 @@ import {
     Users,
     ArrowRight
 } from 'lucide-react';
-import { ApiResponse, Stall } from '@/types';
+import { ApiResponse, Stall, Market } from '@/types';
 
 const MarketSchematicMap = dynamic(() => import('@/components/map/MarketSchematicMap'), { 
     ssr: false,
@@ -31,14 +31,36 @@ export default function AdminMapPage() {
     const { setPageTitle } = useUIStore();
     const [selectedBlock, setSelectedBlock] = useState('A');
     const [selectedStall, setSelectedStall] = useState<Stall | null>(null);
+    const [selectedMarketId, setSelectedMarketId] = useState<number | null>(null);
 
     React.useEffect(() => {
         setPageTitle('Market Map (Ramani)');
     }, [setPageTitle]);
 
+    // Fetch markets list
+    const { data: marketsData } = useQuery<ApiResponse<Market[]>>({
+        queryKey: ['admin-markets-minimal'],
+        queryFn: () => api.get('/admin/markets'),
+    });
+
+    const markets = marketsData?.data || [];
+
+    // Auto-select first market if none selected
+    React.useEffect(() => {
+        if (markets.length > 0 && !selectedMarketId) {
+            setSelectedMarketId(markets[0].id);
+        }
+    }, [markets, selectedMarketId]);
+
     const { data: mapDataRaw, isLoading } = useQuery<ApiResponse<Stall[]>>({
-        queryKey: ['admin-map-data', selectedBlock],
-        queryFn: () => api.get('/admin/map-data', { params: { block: selectedBlock } }).then(res => res.data),
+        queryKey: ['admin-map-data', selectedBlock, selectedMarketId],
+        queryFn: () => api.get('/admin/map-data', { 
+            params: { 
+                block: selectedBlock,
+                market_id: selectedMarketId 
+            } 
+        }).then(res => res.data),
+        enabled: !!selectedMarketId
     });
 
     const stalls = mapDataRaw?.data || [];
@@ -46,20 +68,34 @@ export default function AdminMapPage() {
     return (
         <div className="h-[calc(100vh-140px)] flex flex-col md:flex-row gap-6 p-4 md:p-8 max-w-[1600px] mx-auto overflow-hidden">
             <div className="flex-1 relative min-h-[400px]">
-                <div className="absolute top-6 left-6 z-10 flex gap-2">
-                    {['A', 'B', 'C'].map((block) => (
-                        <button
-                            key={block}
-                            onClick={() => setSelectedBlock(block)}
-                            className={`px-6 py-2 rounded-full font-bold text-sm shadow-lg transition-all ${
-                                selectedBlock === block 
-                                ? 'bg-brand-600 text-white translate-y-[-2px]' 
-                                : 'bg-white text-gray-600 hover:bg-gray-50'
-                            }`}
-                        >
-                            Block {block}
-                        </button>
-                    ))}
+                <div className="absolute top-6 left-6 z-10 flex gap-4 items-center">
+                    <select
+                        value={selectedMarketId || ''}
+                        onChange={(e) => setSelectedMarketId(Number(e.target.value))}
+                        className="h-10 px-4 bg-white border border-gray-100 rounded-full text-xs font-black uppercase tracking-widest shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                    >
+                        {markets.map((market) => (
+                            <option key={market.id} value={market.id}>
+                                {market.name}
+                            </option>
+                        ))}
+                    </select>
+
+                    <div className="flex gap-2">
+                        {['A', 'B', 'C'].map((block) => (
+                            <button
+                                key={block}
+                                onClick={() => setSelectedBlock(block)}
+                                className={`px-6 py-2 rounded-full font-bold text-sm shadow-lg transition-all ${
+                                    selectedBlock === block 
+                                    ? 'bg-brand-600 text-white translate-y-[-2px]' 
+                                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                                }`}
+                            >
+                                Block {block}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <div className="w-full h-full">

@@ -62,4 +62,33 @@ class TraderController extends Controller
 
         return $this->success($traders);
     }
+
+    /**
+     * Find traders near a specific location (independent stalls).
+     */
+    public function nearby(Request $request): JsonResponse
+    {
+        $request->validate([
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
+            'radius' => 'nullable|numeric|min:1|max:100' // km
+        ]);
+
+        $lat = $request->lat;
+        $lng = $request->lng;
+        $radius = $request->radius ?? 10; // Default 10km
+
+        // Haversine formula to find independent traders within radius
+        // Only show verified independent traders OR managed ones that have lat/lng
+        $traders = Trader::where('verification_status', 'verified')
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->selectRaw("*, ( 6371 * acos( cos( radians(?) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitude ) ) ) ) AS distance", [$lat, $lng, $lat])
+            ->having('distance', '<=', $radius)
+            ->orderBy('distance')
+            ->with(['market', 'stall'])
+            ->get();
+
+        return $this->success($traders);
+    }
 }

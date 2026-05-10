@@ -21,7 +21,7 @@ class SystemMaintenanceController extends Controller
             'environment' => app()->environment(),
             'db_connection' => config('database.default'),
             'cache_driver' => config('cache.default'),
-            'storage_link_exists' => public_exists('storage'),
+            'storage_link_exists' => $this->public_exists('storage'),
             'last_migration' => DB::table('migrations')->latest()->first(),
         ]);
     }
@@ -32,6 +32,7 @@ class SystemMaintenanceController extends Controller
     public function migrate()
     {
         try {
+            set_time_limit(300); // Increase time limit to 5 minutes
             Artisan::call('migrate', ['--force' => true]);
             return response()->json([
                 'message' => 'Migrations completed successfully.',
@@ -48,6 +49,7 @@ class SystemMaintenanceController extends Controller
     public function clearCache()
     {
         try {
+            set_time_limit(300);
             Artisan::call('cache:clear');
             Artisan::call('config:clear');
             Artisan::call('route:clear');
@@ -68,6 +70,7 @@ class SystemMaintenanceController extends Controller
     public function optimize()
     {
         try {
+            set_time_limit(300);
             Artisan::call('optimize');
             return response()->json([
                 'message' => 'Application optimized successfully.',
@@ -84,9 +87,22 @@ class SystemMaintenanceController extends Controller
     public function storageLink()
     {
         try {
+            set_time_limit(300);
+            $link = public_path('storage');
+            
+            // If it's a symlink or directory, remove it first to avoid "already exists" error
+            if (is_link($link) || file_exists($link)) {
+                if (PHP_OS_FAMILY === 'Windows') {
+                    exec("rmdir /s /q \"$link\"");
+                } else {
+                    exec("rm -rf \"$link\"");
+                }
+            }
+
             Artisan::call('storage:link');
+            
             return response()->json([
-                'message' => 'Storage link created successfully.',
+                'message' => 'Storage link recreated successfully.',
                 'output' => Artisan::output()
             ]);
         } catch (\Exception $e) {
@@ -100,6 +116,7 @@ class SystemMaintenanceController extends Controller
     public function seed()
     {
         try {
+            set_time_limit(300);
             Artisan::call('db:seed', ['--force' => true]);
             return response()->json([
                 'message' => 'Database seeding completed.',
@@ -109,12 +126,12 @@ class SystemMaintenanceController extends Controller
             return response()->json(['message' => 'Seeding failed: ' . $e->getMessage()], 500);
         }
     }
-}
 
-/**
- * Helper to check if public path exists.
- */
-function public_exists($path)
-{
-    return file_exists(public_path($path));
+    /**
+     * Helper to check if public path exists.
+     */
+    private function public_exists($path)
+    {
+        return file_exists(public_path($path));
+    }
 }

@@ -90,20 +90,20 @@ export const MarketPreview = () => {
             {/* Markets Grid */}
             <div className="flex-1">
               {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-6">
                   {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="h-80 bg-gray-100 animate-pulse rounded-[32px]" />
+                    <div key={i} className="h-48 md:h-80 bg-gray-100 animate-pulse rounded-2xl md:rounded-[32px]" />
                   ))}
                 </div>
               ) : error ? (
-                <div className="p-12 text-center bg-red-50 rounded-[32px] border border-red-100">
-                  <p className="font-bold text-red-600">Failed to load markets. Please check if the API is running.</p>
+                <div className="p-8 text-center bg-red-50 rounded-3xl border border-red-100">
+                  <p className="font-bold text-red-600 text-sm">Failed to load markets.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-8">
+                <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-2 gap-3 md:gap-8">
                   {markets?.map((market: Market) => (
-                    <div key={market.id} className="group flex flex-col bg-white border border-gray-100 rounded-[40px] overflow-hidden hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500 relative">
-                      <div className="h-56 bg-gray-200 relative overflow-hidden">
+                    <div key={market.id} className="group flex flex-col bg-white border border-gray-100 rounded-2xl md:rounded-[40px] overflow-hidden hover:shadow-xl transition-all duration-500 relative">
+                      <div className="h-32 md:h-56 bg-gray-200 relative overflow-hidden">
                         {market.banner_url ? (
                           <div className="relative w-full h-full">
                             <Image 
@@ -119,16 +119,16 @@ export const MarketPreview = () => {
                           </div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+                        <div className="absolute bottom-3 left-3 right-3 md:bottom-6 md:left-6 md:right-6 flex items-end justify-between">
                           <div>
-                            <div className="px-3 py-1 bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full mb-2 inline-block">
+                            <div className="px-2 py-0.5 md:px-3 md:py-1 bg-brand-500 text-white text-[8px] md:text-[10px] font-black uppercase tracking-widest rounded-full mb-1 md:mb-2 inline-block">
                               {market.estate}
                             </div>
-                            <h3 className="font-display text-2xl font-black text-white tracking-tighter">
+                            <h3 className="font-display text-base md:text-2xl font-black text-white tracking-tighter line-clamp-1">
                               {market.name}
                             </h3>
                           </div>
-                          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-xl">
+                          <div className="hidden md:flex w-12 h-12 bg-white rounded-2xl items-center justify-center shadow-xl">
                             {market.icon_url ? (
                                 <div className="relative w-6 h-6">
                                 <Image src={market.icon_url} alt="" fill className="object-contain" />
@@ -140,42 +140,42 @@ export const MarketPreview = () => {
                         </div>
                       </div>
                       
-                      <div className="p-8">
-                        <p className="text-gray-500 font-medium text-sm leading-relaxed mb-8 h-10 overflow-hidden line-clamp-2">
+                      <div className="p-4 md:p-8">
+                        <p className="hidden md:block text-gray-500 font-medium text-sm leading-relaxed mb-8 h-10 overflow-hidden line-clamp-2">
                           {market.description}
                         </p>
                         
-                        <div className="flex items-center justify-between pt-6 border-t border-gray-50">
-                          <div className="flex items-center gap-2 font-black text-green-950 text-sm italic">
-                            <span className="text-brand-600">{market.traders_count || 0}</span> Verified Traders
+                        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:pt-6 md:border-t md:border-gray-50">
+                          <div className="flex items-center gap-1.5 font-black text-green-950 text-[10px] md:text-sm italic">
+                            <span className="text-brand-600">{market.traders_count || 0}</span> <span className="hidden sm:inline">Verified</span> Traders
                           </div>
                           <Link 
                             href={hasHydrated && isAuthenticated ? `/market/${market.id}` : "/login"} 
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 text-white font-black text-sm rounded-xl shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition-all"
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-brand-600 text-white font-black text-[10px] md:text-sm rounded-lg md:rounded-xl shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition-all"
                           >
-                            Enter Market
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                            Enter <span className="hidden sm:inline">Market</span>
+                            <svg className="hidden md:block" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                           </Link>
                         </div>
                       </div>
                     </div>
                   ))}
                   
-                  {/* "View All" placeholder card as requested */}
+                  {/* "View All" placeholder card */}
                   <Link 
                     href={
                       hasHydrated && isAuthenticated 
                         ? (user?.role === 'admin' ? '/admin/dashboard' : user?.role === 'trader' ? '/trader/dashboard' : '/resident/dashboard')
                         : "/login"
                     } 
-                    className="group p-8 border-4 border-dashed border-gray-200 rounded-[40px] flex flex-col items-center justify-center text-center hover:border-brand-600 transition-all gap-4 min-h-[400px]"
+                    className="group p-4 md:p-8 border-2 md:border-4 border-dashed border-gray-200 rounded-2xl md:rounded-[40px] flex flex-col items-center justify-center text-center hover:border-brand-600 transition-all gap-2 md:gap-4 min-h-[160px] md:min-h-[400px]"
                   >
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    <div className="w-10 h-10 md:w-16 md:h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </div>
-                    <div className="font-black text-xl text-green-950">View all {markets?.length || 'available'} markets</div>
-                    <p className="text-sm font-medium text-gray-400">
-                      {isAuthenticated ? "Go to your dashboard to see more" : "Login to browse the full directory of Kenyan markets"}
+                    <div className="font-black text-sm md:text-xl text-green-950">View all</div>
+                    <p className="hidden md:block text-sm font-medium text-gray-400">
+                      {isAuthenticated ? "Go to your dashboard" : "Login to browse full directory"}
                     </p>
                   </Link>
                 </div>

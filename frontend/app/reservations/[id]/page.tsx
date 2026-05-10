@@ -18,13 +18,15 @@ import {
     XCircle,
     ShoppingBag,
     ShieldCheck,
-    Smartphone
+    Smartphone,
+    Star
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMpesa } from '@/hooks/useMpesa';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import ReviewSheet from '@/components/resident/ReviewSheet';
 
 interface Reservation {
     id: number;
@@ -56,7 +58,9 @@ export default function ReservationPickupPage() {
     const { initiateStk, isPolling, status: mpesaStatus, error: mpesaError } = useMpesa();
     const [checkoutId, setCheckoutId] = React.useState<string | null>(null);
 
-    const { data: resData, isLoading, refetch } = useQuery<ApiResponse<Reservation>>({
+    const [showReviewSheet, setShowReviewSheet] = React.useState(false);
+
+    const { data: resData, isLoading, refetch } = useQuery<ApiResponse<Reservation & { review?: any }>>({
         queryKey: ['reservation', id],
         queryFn: () => api.get(`/reservations/${id}`),
     });
@@ -286,6 +290,16 @@ export default function ReservationPickupPage() {
                         </div>
                     )}
 
+                    {reservation.status === 'completed' && !reservation.review && (
+                        <button 
+                            onClick={() => setShowReviewSheet(true)}
+                            className="w-full h-16 bg-amber-500 text-white rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-amber-200"
+                        >
+                            <Star size={18} fill="currentColor" />
+                            Leave a Review
+                        </button>
+                    )}
+
                     <button 
                         onClick={() => router.push(`/trader/${reservation.trader.id}`)}
                         className="w-full h-16 bg-white border-2 border-gray-100 text-green-950 rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest active:scale-95 transition-all"
@@ -313,6 +327,14 @@ export default function ReservationPickupPage() {
                 </div>
 
             </main>
+            <AnimatePresence>
+                {showReviewSheet && reservation && (
+                    <ReviewSheet 
+                        reservation={reservation}
+                        onClose={() => setShowReviewSheet(false)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

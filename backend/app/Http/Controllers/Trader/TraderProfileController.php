@@ -49,6 +49,9 @@ class TraderProfileController extends Controller
                 'user_id' => $user->id,
                 'stall_id' => $stallId,
                 'market_id' => $request->market_id,
+                'stall_type' => $request->stall_type ?? 'managed',
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
                 'business_name' => $request->business_name,
                 'business_name_sw' => $request->business_name_sw,
                 'description' => $request->description,
@@ -63,8 +66,44 @@ class TraderProfileController extends Controller
             // Update User Role to Trader (if not already)
             $user->update(['role' => 'trader']);
 
-            return $this->success($trader, 'Trader profile created successfully.', 201);
+            return $this->success($trader, 'Trader profile created successfully. Please proceed to KYC verification.', 201);
         });
+    }
+
+    /**
+     * Submit KYC documents for verification.
+     */
+    public function submitKyc(\Illuminate\Http\Request $request, \App\Services\CloudinaryService $cloudinary): JsonResponse
+    {
+        $request->validate([
+            'id_front' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'id_back' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'selfie' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        $trader = $request->user()->trader;
+
+        if (!$trader) {
+            return $this->error('Profile not found.', 'NOT_FOUND', 404);
+        }
+
+        $updates = [];
+
+        if ($request->hasFile('id_front')) {
+            $updates['id_front_url'] = $cloudinary->uploadImage($request->file('id_front'), 'traders/kyc');
+        }
+
+        if ($request->hasFile('id_back')) {
+            $updates['id_back_url'] = $cloudinary->uploadImage($request->file('id_back'), 'traders/kyc');
+        }
+
+        if ($request->hasFile('selfie')) {
+            $updates['selfie_url'] = $cloudinary->uploadImage($request->file('selfie'), 'traders/kyc');
+        }
+
+        $trader->update($updates);
+
+        return $this->success($trader, 'KYC documents submitted successfully. Admin will verify shortly.');
     }
 
     /**
@@ -98,6 +137,7 @@ class TraderProfileController extends Controller
 
         return $this->success($trader, 'Profile updated successfully.');
     }
+
     /**
      * Upload an avatar for the trader profile.
      */
@@ -117,7 +157,6 @@ class TraderProfileController extends Controller
             $url = $cloudinary->uploadImage($request->file('avatar'), 'traders');
             
             if ($url) {
-                // If the trader already has an avatar that isn't null, we could optionally delete it here
                 if ($trader->avatar_url) {
                     $cloudinary->deleteImage($trader->avatar_url);
                 }

@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-    LayoutDashboard, 
-    Store, 
-    Users, 
-    MapPin, 
-    Ticket, 
-    MessageSquare, 
-    FileText, 
+import {
+    LayoutDashboard,
+    Store,
+    Users,
+    MapPin,
+    Ticket,
+    MessageSquare,
+    FileText,
     Bell,
     Settings,
     ChevronRight,
@@ -25,15 +25,15 @@ import {
 } from 'lucide-react';
 
 const Building2 = ({ size, className, strokeWidth }: { size?: number; className?: string; strokeWidth?: number }) => (
-    <svg 
-        width={size} 
-        height={size} 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth={strokeWidth} 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
+    <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
         className={className}
     >
         <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
@@ -59,7 +59,7 @@ export default function AdminSidebar() {
     const pathname = usePathname();
     const { t } = useTranslation();
     const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
-    
+
     // Stop loader when pathname changes (navigation complete)
     useEffect(() => {
         NProgress.done();
@@ -83,16 +83,16 @@ export default function AdminSidebar() {
             icon: LayoutDashboard,
             items: [
                 { icon: LayoutDashboard, label: t('admin.dashboard_title'), path: '/admin/dashboard' },
-                { icon: BarChart3, label: t('common.analytics') || 'Analytics', path: '/admin/analytics' },
-                { icon: MapIcon, label: t('common.market_map') || 'Market Map', path: '/admin/map' },
+                { icon: BarChart3, label: t('Analytics') || 'Analytics', path: '/admin/analytics' },
+                { icon: MapIcon, label: t('Market_map') || 'Market Map', path: '/admin/map' },
             ]
         },
         {
             title: 'Infrastructure',
             icon: Building2,
             items: [
-                { icon: MapPin, label: t('common.markets'), path: '/admin/markets' },
-                { icon: Store, label: t('common.stalls'), path: '/admin/stalls' },
+                { icon: MapPin, label: t('Markets'), path: '/admin/markets' },
+                { icon: Store, label: t('Stalls'), path: '/admin/stalls' },
                 { icon: GanttChartSquare, label: 'Allocations', path: '/admin/allocations' },
             ]
         },
@@ -101,7 +101,7 @@ export default function AdminSidebar() {
             icon: Users,
             items: [
                 { icon: FileText, label: 'Applications', path: '/admin/applications', badge: 'New' },
-                { icon: Users, label: t('common.traders'), path: '/admin/traders' },
+                { icon: Users, label: t('Traders'), path: '/admin/traders' },
                 { icon: UsersRound, label: 'User Management', path: '/admin/users' },
             ]
         },
@@ -109,7 +109,7 @@ export default function AdminSidebar() {
             title: 'Commerce',
             icon: CreditCard,
             items: [
-                { icon: Ticket, label: t('common.fees'), path: '/admin/fees' },
+                { icon: Ticket, label: t('Fees'), path: '/admin/fees' },
                 { icon: CreditCard, label: 'Payment History', path: '/admin/payments' },
                 { icon: ShoppingBag, label: 'Reservations', path: '/admin/reservations' },
                 { icon: Star, label: 'Reviews', path: '/admin/reviews' },
@@ -119,8 +119,8 @@ export default function AdminSidebar() {
             title: 'Communication',
             icon: MessageSquare,
             items: [
-                { icon: MessageSquare, label: t('common.complaints'), path: '/admin/complaints', badge: 5 },
-                { icon: Bell, label: t('common.notifications'), path: '/admin/notices' },
+                { icon: MessageSquare, label: t('Complaints'), path: '/admin/complaints', badge: 5 },
+                { icon: Bell, label: t('Notifications'), path: '/admin/notices' },
             ]
         },
         {
@@ -129,14 +129,14 @@ export default function AdminSidebar() {
             items: [
                 { icon: ShieldCheck, label: 'Audit Log', path: '/admin/audit-log' },
                 { icon: Terminal, label: 'Maintenance', path: '/admin/maintenance' },
-                { icon: Settings, label: t('common.settings'), path: '/admin/settings' },
+                { icon: Settings, label: t('Settings'), path: '/admin/settings' },
             ]
         }
     ];
 
     // Automatically expand the section that contains the current active route
     useEffect(() => {
-        const activeSection = menuSections.find(section => 
+        const activeSection = menuSections.find(section =>
             section.items.some(item => pathname === item.path)
         );
         if (activeSection && !expandedSections.includes(activeSection.title)) {
@@ -145,9 +145,9 @@ export default function AdminSidebar() {
     }, [pathname]);
 
     const toggleSection = (title: string) => {
-        setExpandedSections(prev => 
-            prev.includes(title) 
-                ? prev.filter(t => t !== title) 
+        setExpandedSections(prev =>
+            prev.includes(title)
+                ? prev.filter(t => t !== title)
                 : [...prev, title]
         );
     };
@@ -156,8 +156,8 @@ export default function AdminSidebar() {
         <aside className="hidden lg:flex flex-col w-[300px] h-screen bg-white border-r border-neutral-100 sticky top-0 left-0 overflow-hidden">
             {/* Logo Area */}
             <div className="p-8 pb-6">
-                <div 
-                    onClick={() => router.push('/')} 
+                <div
+                    onClick={() => router.push('/')}
                     className="cursor-pointer active:scale-95 transition-transform"
                 >
                     <Logo variant="light" width={140} />
@@ -174,11 +174,10 @@ export default function AdminSidebar() {
                         <div key={sIdx} className="space-y-1">
                             <button
                                 onClick={() => toggleSection(section.title)}
-                                className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all ${
-                                    isAnyItemActive && !isExpanded 
-                                        ? 'bg-brand-50 text-brand-700' 
+                                className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all ${isAnyItemActive && !isExpanded
+                                        ? 'bg-brand-50 text-brand-700'
                                         : 'text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">
@@ -208,18 +207,17 @@ export default function AdminSidebar() {
                                                     key={item.path}
                                                     onClick={() => navigate(item.path)}
                                                     disabled={isNavigating}
-                                                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all group active:scale-[0.98] ${
-                                                        isActive 
-                                                            ? 'bg-green-950 text-white shadow-lg shadow-green-900/20' 
+                                                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all group active:scale-[0.98] ${isActive
+                                                            ? 'bg-green-950 text-white shadow-lg shadow-green-900/20'
                                                             : isNavigating
-                                                            ? 'bg-brand-50 text-brand-700'
-                                                            : 'text-neutral-600 hover:bg-neutral-50 hover:pl-5'
-                                                    }`}
+                                                                ? 'bg-brand-50 text-brand-700'
+                                                                : 'text-neutral-600 hover:bg-neutral-50 hover:pl-5'
+                                                        }`}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <item.icon 
-                                                            size={16} 
-                                                            className={isActive ? 'text-brand-400' : isNavigating ? 'text-brand-600 animate-pulse' : 'text-neutral-400 group-hover:text-green-950 transition-colors'} 
+                                                        <item.icon
+                                                            size={16}
+                                                            className={isActive ? 'text-brand-400' : isNavigating ? 'text-brand-600 animate-pulse' : 'text-neutral-400 group-hover:text-green-950 transition-colors'}
                                                             strokeWidth={isActive || isNavigating ? 2.5 : 2}
                                                         />
                                                         <span className={`text-[13px] font-bold tracking-tight ${isActive ? 'text-white' : isNavigating ? 'text-brand-700' : ''}`}>
@@ -229,9 +227,8 @@ export default function AdminSidebar() {
                                                     {isNavigating ? (
                                                         <div className="w-4 h-4 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
                                                     ) : item.badge ? (
-                                                        <div className={`px-2 py-0.5 rounded-md text-[8px] font-black ${
-                                                            isActive ? 'bg-white/20 text-white' : 'bg-brand-100 text-brand-700'
-                                                        }`}>
+                                                        <div className={`px-2 py-0.5 rounded-md text-[8px] font-black ${isActive ? 'bg-white/20 text-white' : 'bg-brand-100 text-brand-700'
+                                                            }`}>
                                                             {item.badge}
                                                         </div>
                                                     ) : null}
@@ -253,8 +250,8 @@ export default function AdminSidebar() {
                         <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{t('common.language')}</p>
                         <LanguageToggle />
                     </div>
-                    
-                    <button 
+
+                    <button
                         onClick={() => {
                             const { logout } = useAuthStore.getState();
                             logout();
