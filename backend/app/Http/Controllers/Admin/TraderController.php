@@ -56,7 +56,7 @@ class TraderController extends Controller
     /**
      * Verify or reject a trader's KYC.
      */
-    public function verify(Request $request, Trader $trader, \App\Services\TalkSasaService $smsService): JsonResponse
+    public function verify(Request $request, Trader $trader, \App\Services\NotificationService $notificationService): JsonResponse
     {
         $request->validate([
             'status' => 'required|in:verified,rejected',
@@ -68,20 +68,18 @@ class TraderController extends Controller
         if ($request->status === 'rejected') {
             $trader->rejection_reason = $request->reason;
             
-            // Optionally, send rejection SMS
-            $phone = $trader->user->phone;
-            $message = "Soko Mtaa: Your trader KYC verification was rejected. Reason: {$request->reason}. Please login to update your documents.";
-            $smsService->sendSms($phone, $message);
+            // Notify trader of rejection (In-App + SMS)
+            $message = "Your trader KYC verification was rejected. Reason: {$request->reason}. Please login to update your documents.";
+            $notificationService->send($trader->user, 'KYC Verification Rejected', $message, 'general', null, true);
             
         } else {
             $trader->rejection_reason = null;
             // If verified, we can auto-open their shop for the first time if they want
             $trader->is_open = true; 
             
-            // Send success SMS
-            $phone = $trader->user->phone;
+            // Notify trader of success (In-App + SMS)
             $message = "Habari! Your Soko Mtaa Trader Profile has been verified. You can now manage your stall and receive reservations.";
-            $smsService->sendSms($phone, $message);
+            $notificationService->send($trader->user, 'KYC Verification Successful', $message, 'general', null, true);
         }
 
         $trader->save();
