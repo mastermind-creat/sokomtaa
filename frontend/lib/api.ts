@@ -19,11 +19,11 @@ api.interceptors.request.use((config) => {
             config.headers.Authorization = `Bearer ${token}`;
         }
         
-        // Only show global loader for mutations or non-GET requests if desired, 
-        // or for all to satisfy "all click functions" requirement. 
-        // For now, let's track all requests.
-        requestCount++;
-        useUIStore.getState().setIsGlobalLoading(true);
+        // Only show global loader for mutations (non-GET requests)
+        if (config.method && config.method.toUpperCase() !== 'GET') {
+            requestCount++;
+            useUIStore.getState().setIsGlobalLoading(true);
+        }
     }
     return config;
 });
@@ -32,15 +32,19 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => {
         if (typeof window !== 'undefined') {
-            requestCount = Math.max(0, requestCount - 1);
-            if (requestCount === 0) useUIStore.getState().setIsGlobalLoading(false);
+            if (response.config.method && response.config.method.toUpperCase() !== 'GET') {
+                requestCount = Math.max(0, requestCount - 1);
+                if (requestCount === 0) useUIStore.getState().setIsGlobalLoading(false);
+            }
         }
         return response.data;
     },
     (error) => {
         if (typeof window !== 'undefined') {
-            requestCount = Math.max(0, requestCount - 1);
-            if (requestCount === 0) useUIStore.getState().setIsGlobalLoading(false);
+            if (error.config?.method && error.config.method.toUpperCase() !== 'GET') {
+                requestCount = Math.max(0, requestCount - 1);
+                if (requestCount === 0) useUIStore.getState().setIsGlobalLoading(false);
+            }
         }
         
         if (error.response?.status === 401) {
