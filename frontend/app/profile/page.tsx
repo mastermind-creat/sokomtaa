@@ -26,7 +26,8 @@ import {
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ApiResponse, User } from '@/types';
+import { uploadToCloudinary } from '@/lib/cloudinary';
+import { User, ApiResponse } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import Image from 'next/image';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -41,22 +42,26 @@ export default function ResidentProfilePage() {
     const [email, setEmail] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
 
-    const { data: profileData, isLoading } = useQuery<ApiResponse<User>>({
+    const { data: user, isLoading } = useQuery<User>({
         queryKey: ['profile'],
-        queryFn: () => api.get('/profile').then(res => res.data),
+        queryFn: async () => {
+            const res = await api.get<never, ApiResponse<User>>('/profile');
+            return res.data;
+        },
     });
 
     useEffect(() => {
-        if (profileData?.data) {
-            setName(profileData.data.name);
-            setEmail(profileData.data.email || '');
+        if (user) {
+            setName(user.name);
+            setEmail(user.email || '');
         }
-    }, [profileData]);
+    }, [user]);
 
     const updateProfileMutation = useMutation({
         mutationFn: (data: Partial<User>) => api.patch('/profile', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['profile'] });
+            useAuthStore.getState().refreshUser();
             setIsUpdating(false);
         },
         onError: () => {
@@ -66,13 +71,19 @@ export default function ResidentProfilePage() {
 
     const { mutate: uploadAvatar, isPending: isUploadingAvatar } = useMutation({
         mutationFn: async (file: File) => {
-            const formData = new FormData();
-            formData.append('avatar', file);
-            return api.post('/profile/avatar', formData);
+            // 1. Upload directly to Cloudinary
+            const url = await uploadToCloudinary(file, 'profiles');
+            
+            // 2. Update our backend with the new URL
+            return api.patch('/profile', { avatar_url: url });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['profile'] });
+            useAuthStore.getState().refreshUser();
         },
+        onError: (err: any) => {
+            alert(err.message || 'Failed to upload image');
+        }
     });
 
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,8 +115,6 @@ export default function ResidentProfilePage() {
         );
     }
 
-    const user = profileData?.data;
-
     return (
         <DashboardLayout title="My Account">
             <div className="max-w-4xl mx-auto space-y-10 pb-32">
@@ -124,7 +133,7 @@ export default function ResidentProfilePage() {
                                     className="w-32 h-32 lg:w-40 lg:h-40 bg-brand-500 rounded-[3rem] flex items-center justify-center text-5xl font-black shadow-2xl border-4 border-white/20 relative overflow-hidden"
                                 >
                                     {user?.avatar_url ? (
-                                        <Image src={user.avatar_url} alt={user.name} fill className="object-cover" />
+                                        <Image src={user.avatar_url} alt={user.name} fill className="object-cover" unoptimized />
                                     ) : (
                                         <span className="text-white opacity-90">{user?.name?.charAt(0)}</span>
                                     )}
@@ -142,7 +151,7 @@ export default function ResidentProfilePage() {
                             <div className="text-center lg:text-left space-y-3">
                                 <div className="flex flex-wrap justify-center lg:justify-start gap-2">
                                     <span className="px-3 py-1 bg-brand-500/20 backdrop-blur-md border border-brand-500/30 rounded-full text-[10px] font-black uppercase tracking-widest text-brand-300">
-                                        Resident Member
+                                        {user?.role === 'trader' ? 'Soko Mtaa Trader' : 'Resident Member'}
                                     </span>
                                     {user?.phone_verified ? (
                                         <span className="px-3 py-1 bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-300 flex items-center gap-1.5">

@@ -141,7 +141,7 @@ class TraderProfileController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $trader = $user->trader()->with(['stall', 'market'])->first();
+        $trader = $user->trader()->with(['stall', 'market', 'user'])->first();
 
         if (!$trader) {
             return $this->error('You are not registered as a trader.', 'NOT_FOUND', 404);
@@ -197,7 +197,13 @@ class TraderProfileController extends Controller
                 
                 Log::info('Trader Avatar Uploaded:', ['trader_id' => $trader->id, 'url' => $url]);
                 $trader->update(['avatar_url' => $url]);
-                return $this->success(['avatar_url' => $url], 'Logo uploaded successfully. (Nembo imepakiwa.)');
+                
+                // Sync with User profile avatar
+                /** @var \App\Models\User $user */
+                $user = Auth::user();
+                $user->update(['avatar_url' => $url]);
+                
+                return $this->success(['avatar_url' => $url], 'Profile picture updated successfully.');
             }
             Log::error('Trader Avatar Upload Failed in Service');
             return $this->error('Failed to upload image.', 'UPLOAD_ERROR', 500);
@@ -240,5 +246,73 @@ class TraderProfileController extends Controller
         }
 
         return $this->error('No image provided.', 'BAD_REQUEST', 400);
+    }
+
+    /**
+     * Upload a business permit for the trader profile.
+     */
+    public function uploadPermit(\Illuminate\Http\Request $request, \App\Services\CloudinaryService $cloudinary): JsonResponse
+    {
+        Log::info('Trader Permit Upload Triggered', ['user_id' => Auth::id()]);
+        $request->validate([
+            'permit' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        $trader = $request->user()->trader;
+
+        if (!$trader) {
+            return $this->error('Profile not found.', 'NOT_FOUND', 404);
+        }
+
+        if ($request->hasFile('permit')) {
+            Log::info('Processing Trader Permit File');
+            $url = $cloudinary->uploadImage($request->file('permit'), 'traders/permits');
+            
+            if ($url) {
+                if ($trader->permit_image_url) {
+                    $cloudinary->deleteImage($trader->permit_image_url);
+                }
+                
+                Log::info('Trader Permit Uploaded:', ['trader_id' => $trader->id, 'url' => $url]);
+                $trader->update(['permit_image_url' => $url]);
+                return $this->success(['permit_image_url' => $url], 'Permit uploaded successfully.');
+            }
+            Log::error('Trader Permit Upload Failed in Service');
+            return $this->error('Failed to upload image.', 'UPLOAD_ERROR', 500);
+        }
+        return $this->error('No image provided.', 'BAD_REQUEST', 400);
+    }
+    /**
+     * Update KYC document URLs after direct client-side upload.
+     */
+    public function updateKycUrls(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $request->validate([
+            'id_front_url' => 'sometimes|string',
+            'id_back_url' => 'sometimes|string',
+            'selfie_url' => 'sometimes|string',
+        ]);
+
+        $trader = $request->user()->trader;
+        if (!$trader) {
+            return $this->error('Profile not found.', 'NOT_FOUND', 404);
+        }
+
+        $trader->update($request->only(['id_front_url', 'id_back_url', 'selfie_url']));
+
+        // Notify Admins
+        $admins = \App\Models\User::where('role', 'admin')->get();
+        $notificationService = app(\App\Services\NotificationService::class);
+        foreach ($admins as $admin) {
+            $notificationService->send(
+                $admin,
+                'KYC Documents Updated',
+                "{$trader->business_name} has updated identity documents.",
+                'kyc_updated',
+                ['trader_id' => $trader->id]
+            );
+        }
+
+        return $this->success($trader, 'KYC documents updated successfully.');
     }
 }

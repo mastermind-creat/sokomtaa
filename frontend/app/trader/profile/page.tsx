@@ -1,18 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Camera, Store, Clock, Phone, Upload, User,
     Key, Save, Eye, EyeOff, Loader2, ShieldCheck,
-    MapPin, FileText
+    FileText, ChevronRight, AlertCircle, CheckCircle2,
+    BadgeCheck, XCircle
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 
 import { useUIStore } from '@/store/uiStore';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 import { useAuthStore } from '@/store/authStore';
 
 import Image from 'next/image';
@@ -34,14 +36,18 @@ interface TraderProfile {
     selfie_url: string | null;
     banner_url: string | null;
     avatar_url: string | null;
+    permit_image_url: string | null;
+    verification_status: 'pending' | 'verified' | 'rejected';
+    rejection_reason: string | null;
     user: { name: string; phone: string; email: string; };
 }
 
-function FormField({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
+function FormField({ label, id, children, error }: { label: string; id: string; children: React.ReactNode; error?: string }) {
     return (
-        <div>
-            <label htmlFor={id} className="block text-sm font-bold text-text-brand-600 mb-2">{label}</label>
+        <div className="space-y-2">
+            <label htmlFor={id} className="block text-sm font-bold text-green-900">{label}</label>
             {children}
+            {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
         </div>
     );
 }
@@ -50,20 +56,25 @@ export default function TraderProfilePage() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const [saved, setSaved] = useState(false);
+    const [activeTab, setActiveTab] = useState<'business' | 'kyc' | 'account'>('business');
     const [showChangePassword, setShowChangePassword] = useState(false);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
     const [showPw, setShowPw] = useState({ current: false, newPw: false, confirm: false });
-    const [kycFiles, setKycFiles] = useState<{ id_front?: File, id_back?: File }>({});
+    const [kycFiles, setKycFiles] = useState<{ id_front?: File, id_back?: File, permit?: File }>({});
+    
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
+    const permitInputRef = useRef<HTMLInputElement>(null);
+
     const { setPageTitle } = useUIStore();
     const { user: authUser, refreshUser } = useAuthStore();
     
     React.useEffect(() => {
-        setPageTitle('My Profile');
+        setPageTitle('Profile Management');
         refreshUser();
     }, [setPageTitle, refreshUser]);
 
-    const { data: profile, isLoading, error: profileError } = useQuery({
+    const { data: profile, isLoading, error: profileError } = useQuery<TraderProfile, { message: string, code: string }>({
         queryKey: ['trader-profile-full'],
         queryFn: async () => {
             const res = await api.get<never, ApiResponse<TraderProfile>>('/trader/me');
@@ -72,21 +83,13 @@ export default function TraderProfilePage() {
         retry: false
     });
 
-    const { data: markets, isLoading: marketsLoading } = useQuery({
-        queryKey: ['markets-list'],
-        queryFn: async () => {
-            const res = await api.get<never, ApiResponse<any[]>>('/markets');
-            return res.data;
-        }
-    });
-
-    const isFirstTimeSetup = (profileError as any)?.code === 'NOT_FOUND';
+    const isFirstTimeSetup = profileError?.code === 'NOT_FOUND';
 
     const [form, setForm] = useState<Partial<TraderProfile & { market_id: number; stall_number: string }>>({});
     const current: Partial<TraderProfile & { market_id: number; stall_number: string }> = { ...profile, ...form };
 
     const { mutate: setupProfile, isPending: isSettingUp } = useMutation({
-        mutationFn: (data: any) => api.post('/trader/setup', data),
+        mutationFn: (data: Partial<TraderProfile>) => api.post('/trader/setup', data),
         onSuccess: async () => {
             await refreshUser();
             queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] });
@@ -97,521 +100,557 @@ export default function TraderProfilePage() {
             }, 1500);
             setForm({});
         },
-        onError: (err: any) => {
-            alert(err.message || 'Failed to setup profile. Please check your details.');
-        }
+        onError: (err: { message?: string }) => alert(err.message || 'Failed to setup profile.')
     });
-
 
     const { mutate: saveProfile, isPending: isUpdating } = useMutation({
         mutationFn: (data: Partial<TraderProfile>) => api.put('/trader/update', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] });
+            useAuthStore.getState().refreshUser();
             setSaved(true);
             setTimeout(() => setSaved(false), 2500);
             setForm({});
         },
-        onError: (err: any) => {
-            alert(err.message || 'Failed to save profile.');
-        }
+        onError: (err: { message?: string }) => alert(err.message || 'Failed to save profile.')
     });
-
-    const { mutate: submitKyc, isPending: isSubmittingKyc } = useMutation({
-        mutationFn: async (data: { id_front: File; id_back: File; selfie?: File }) => {
-            const formData = new FormData();
-            formData.append('id_front', data.id_front);
-            formData.append('id_back', data.id_back);
-            if (data.selfie) formData.append('selfie', data.selfie);
-            return api.post('/trader/kyc', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] });
-            alert('KYC documents submitted successfully!');
-        },
-        onError: (err: any) => {
-            alert(err.message || 'Failed to submit KYC documents.');
-        }
-    });
-
-    const isPending = isSettingUp || isUpdating || isSubmittingKyc;
 
     const { mutate: uploadAvatar, isPending: isUploadingAvatar } = useMutation({
         mutationFn: async (file: File) => {
-            const formData = new FormData();
-            formData.append('avatar', file);
-            return api.post('/trader/avatar', formData);
+            const url = await uploadToCloudinary(file, 'traders/logos');
+            return api.put('/trader/update', { avatar_url: url });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] });
+            useAuthStore.getState().refreshUser();
         },
+        onError: (err: { message?: string }) => alert(err.message || 'Failed to upload image.')
     });
 
     const { mutate: uploadBanner, isPending: isUploadingBanner } = useMutation({
         mutationFn: async (file: File) => {
-            const formData = new FormData();
-            formData.append('banner', file);
-            return api.post('/trader/banner', formData);
+            const url = await uploadToCloudinary(file, 'traders/banners');
+            return api.put('/trader/update', { banner_url: url });
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] }),
+        onError: (err: { message?: string }) => alert(err.message || 'Failed to upload banner.')
+    });
+
+    const { mutate: uploadPermit, isPending: isUploadingPermit } = useMutation({
+        mutationFn: async (file: File) => {
+            const url = await uploadToCloudinary(file, 'traders/permits');
+            return api.put('/trader/update', { permit_image_url: url });
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] }),
+        onError: (err: { message?: string }) => alert(err.message || 'Failed to upload permit.')
+    });
+
+    const { mutate: submitKyc, isPending: isSubmittingKyc } = useMutation({
+        mutationFn: async (data: { id_front: File; id_back: File }) => {
+            // Upload in parallel
+            const [id_front_url, id_back_url] = await Promise.all([
+                uploadToCloudinary(data.id_front, 'traders/kyc'),
+                uploadToCloudinary(data.id_back, 'traders/kyc')
+            ]);
+            
+            return api.post('/trader/kyc/update-urls', { id_front_url, id_back_url });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] });
+            alert('KYC documents submitted successfully!');
+            setKycFiles({});
         },
+        onError: (err: { message?: string }) => alert(err.message || 'Failed to submit KYC.')
     });
 
+    const isPending = isSettingUp || isUpdating || isSubmittingKyc || isUploadingAvatar || isUploadingBanner || isUploadingPermit;
+
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            uploadAvatar(e.target.files[0]);
-        }
+        if (e.target.files?.[0]) uploadAvatar(e.target.files[0]);
     };
 
     const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            uploadBanner(e.target.files[0]);
+        if (e.target.files?.[0]) uploadBanner(e.target.files[0]);
+    };
+
+    const handlePermitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files?.[0]) {
+            const file = e.target.files[0];
+            uploadPermit(file);
         }
     };
 
-    const set = (key: keyof TraderProfile, value: string | boolean) =>
+    const set = (key: keyof TraderProfile, value: string | number | boolean | null) =>
         setForm(f => ({ ...f, [key]: value }));
 
-    if (isLoading || (isFirstTimeSetup && marketsLoading)) {
+    if (isLoading) {
         return (
-            <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-                <div className="h-52 bg-gray-100 rounded-3xl animate-pulse" />
-                <div className="h-64 bg-gray-100 rounded-2xl animate-pulse" />
+            <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+                <div className="h-48 bg-gray-100 rounded-3xl animate-pulse" />
+                <div className="h-64 bg-gray-100 rounded-3xl animate-pulse" />
             </div>
         );
     }
 
+    const tabs = [
+        { id: 'business', label: 'Business Profile', icon: Store },
+        { id: 'kyc', label: 'Identity & KYC', icon: ShieldCheck },
+        { id: 'account', label: 'Account Settings', icon: User },
+    ] as const;
+
     return (
-        <>
-            <div className="max-w-2xl mx-auto px-4 py-6 space-y-5 pb-10">
-            {isFirstTimeSetup && (
-                <div className="mb-6 p-6 bg-brand-50 border border-brand-100 rounded-[2.5rem] flex items-center gap-4">
-                    <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center text-white shrink-0">
-                        <Store size={24} />
-                    </div>
-                    <div>
-                        <h4 className="text-brand-950 font-black text-sm uppercase tracking-tight">Complete Your Setup</h4>
-                        <p className="text-brand-700 text-xs font-bold mt-0.5">Tell us about your business and stall to start selling.</p>
-                    </div>
-                </div>
-            )}
-
-            {/* Banner & Avatar */}
-            <div className="relative rounded-3xl overflow-hidden">
-                <div className="h-36 bg-gradient-to-r from-brand-600 to-brand-500">
-                    {current.banner_url && (
-                        <Image
-                            src={current.banner_url}
-                            alt="Banner"
-                            fill
-                            className="object-cover"
-                        />
-                    )}
-                    {isUploadingBanner ? (
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                            <Loader2 className="w-8 h-8 text-white animate-spin" />
-                        </div>
-                    ) : (
-                        <label className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-2 bg-black/40 text-white rounded-xl text-xs font-bold hover:bg-black/60 transition-colors backdrop-blur-sm cursor-pointer">
-                            <Camera className="w-3.5 h-3.5" /> 
-                            <span>{current.banner_url ? 'Change Banner' : 'Upload Banner'}</span>
-                            <input type="file" accept="image/*" onChange={handleBannerChange} className="hidden" />
-                        </label>
-                    )}
-                </div>
-                <div className="absolute -bottom-6 left-5">
-                    <div className="relative w-20 h-20 rounded-2xl border-4 border-white bg-brand-600/10 overflow-hidden shadow-lg group">
-                        {current.avatar_url ? (
-                            <Image
-                                src={current.avatar_url}
-                                alt="Avatar"
-                                fill
-                                className="object-cover"
-                            />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-3xl font-black text-brand-600">
-                                {current.business_name?.charAt(0) ?? '?'}
-                            </div>
-                        )}
-
-                            {isUploadingAvatar ? (
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-2xl">
-                                    <Loader2 className="w-6 h-6 text-white animate-spin" />
-                                </div>
-                            ) : (
-                                <label className="absolute inset-0 cursor-pointer bg-black/20 flex items-center justify-center rounded-2xl opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                    <div className="w-8 h-8 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/40">
-                                        <Camera className="w-4 h-4 text-white" />
-                                    </div>
-                                    <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
-                                </label>
-                            )}
-                    </div>
-                </div>
+        <div className="max-w-4xl mx-auto px-4 py-6 pb-32">
+            {/* Header / Tabs */}
+            <div className="flex items-center gap-2 mb-8 bg-gray-50 p-1.5 rounded-2xl overflow-x-auto no-scrollbar">
+                {tabs.map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-black transition-all whitespace-nowrap ${
+                            activeTab === tab.id
+                                ? 'bg-white text-brand-600 shadow-sm border border-gray-100'
+                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100/50'
+                        }`}
+                    >
+                        <tab.icon size={18} />
+                        {tab.label}
+                    </button>
+                ))}
             </div>
-            <div className="h-8" /> {/* spacer for avatar overhang */}
 
-            {/* Business Info */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-                <h2 className="flex items-center gap-2 text-sm font-black text-text-brand-600 uppercase tracking-wider">
-                    <Store className="w-4 h-4" /> {isFirstTimeSetup ? 'Registration' : 'Business Info'}
-                </h2>
-
-                {isFirstTimeSetup && (
-                    <>
-                        <div className="space-y-3">
-                            <label className="block text-sm font-bold text-text-brand-600">Where is your stall located?</label>
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    onClick={() => set('stall_type', 'managed')}
-                                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                                        (current.stall_type ?? 'managed') === 'managed'
-                                            ? 'border-brand-600 bg-brand-600/5'
-                                            : 'border-gray-100 bg-gray-50 hover:border-gray-200'
-                                    }`}
-                                >
-                                    <Store className={(current.stall_type ?? 'managed') === 'managed' ? 'text-brand-600' : 'text-gray-400'} />
-                                    <span className="text-xs font-black uppercase tracking-wider">Inside Market</span>
-                                </button>
-                                <button
-                                    onClick={() => set('stall_type', 'independent')}
-                                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                                        current.stall_type === 'independent'
-                                            ? 'border-brand-600 bg-brand-600/5'
-                                            : 'border-gray-100 bg-gray-50 hover:border-gray-200'
-                                    }`}
-                                >
-                                    <MapPin className={current.stall_type === 'independent' ? 'text-brand-600' : 'text-gray-400'} />
-                                    <span className="text-xs font-black uppercase tracking-wider">Independent</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        {(current.stall_type ?? 'managed') === 'managed' ? (
-                            <>
-                                <FormField label="Select Your Market" id="market">
-                                    <select
-                                        id="market"
-                                        value={current.market_id ?? ''}
-                                        onChange={e => set('market_id' as any, e.target.value)}
-                                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600 font-medium"
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-6"
+                >
+                    {/* Tab 1: Business Profile */}
+                    {activeTab === 'business' && (
+                        <div className="space-y-6">
+                            {/* Banner & Avatar Section */}
+                            <section className="relative bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+                                <div className="h-44 relative group">
+                                    {current.banner_url ? (
+                                        <Image src={current.banner_url} alt="Banner" fill className="object-cover" unoptimized />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-brand-600/10 via-brand-50 to-amber-50" />
+                                    )}
+                                    <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-all" />
+                                    <button 
+                                        onClick={() => bannerInputRef.current?.click()}
+                                        className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md rounded-xl text-xs font-black text-brand-600 shadow-xl hover:bg-white transition-all"
                                     >
-                                        <option value="">Choose a market...</option>
-                                        {markets?.map(m => (
-                                            <option key={m.id} value={m.id}>{m.name} - {m.estate}</option>
-                                        ))}
-                                    </select>
-                                </FormField>
-                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                                    <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider flex items-center gap-2">
-                                        <Clock size={12} /> Stall Allocation Note
-                                    </p>
-                                    <p className="text-blue-600 text-xs mt-1 font-medium">
-                                        After registration, the county admin will review your profile and allocate a physical stall for your business.
+                                        <Camera size={14} />
+                                        {isUploadingBanner ? 'Uploading...' : 'Change Cover'}
+                                    </button>
+                                    <input type="file" ref={bannerInputRef} onChange={handleBannerChange} className="hidden" accept="image/*" />
+                                </div>
+
+                                <div className="px-6 pb-8 relative">
+                                    <div className="absolute -top-12 left-6">
+                                        <div className="relative w-24 h-24 rounded-3xl border-4 border-white bg-white shadow-2xl overflow-hidden group">
+                                            {current.avatar_url ? (
+                                                <Image src={current.avatar_url} alt="Avatar" fill className="object-cover" unoptimized />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-3xl font-black text-brand-600 bg-brand-50">
+                                                    {current.business_name?.charAt(0) ?? '?'}
+                                                </div>
+                                            )}
+                                            <button 
+                                                onClick={() => avatarInputRef.current?.click()}
+                                                aria-label="Change Profile Picture"
+                                                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"
+                                            >
+                                                <Camera className="text-white" size={24} />
+                                            </button>
+                                            <input type="file" ref={avatarInputRef} onChange={handleAvatarChange} className="hidden" accept="image/*" />
+                                            {isUploadingAvatar && (
+                                                <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                                                    <Loader2 className="animate-spin text-brand-600" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="pt-16 grid md:grid-cols-2 gap-6">
+                                        <FormField label="Business Name (English)" id="bizName">
+                                            <input
+                                                id="bizName"
+                                                type="text"
+                                                value={current.business_name ?? ''}
+                                                onChange={e => set('business_name', e.target.value)}
+                                                className="w-full h-14 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-base font-bold text-green-950 focus:bg-white focus:ring-4 focus:ring-brand-600/5 focus:border-brand-600 transition-all"
+                                                placeholder="e.g. Mama Mboga Fresh"
+                                            />
+                                        </FormField>
+                                        <FormField label="Business Name (Swahili)" id="bizNameSw">
+                                            <input
+                                                id="bizNameSw"
+                                                type="text"
+                                                value={current.business_name_sw ?? ''}
+                                                onChange={e => set('business_name_sw', e.target.value)}
+                                                className="w-full h-14 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-base font-bold text-green-950 focus:bg-white focus:ring-4 focus:ring-brand-600/5 focus:border-brand-600 transition-all"
+                                                placeholder="Optional Swahili name"
+                                            />
+                                        </FormField>
+                                        <div className="md:col-span-2">
+                                            <FormField label="Business Description" id="desc">
+                                                <textarea
+                                                    id="desc"
+                                                    value={current.description ?? ''}
+                                                    onChange={e => set('description', e.target.value)}
+                                                    rows={4}
+                                                    className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-base font-medium text-green-950 focus:bg-white focus:ring-4 focus:ring-brand-600/5 focus:border-brand-600 transition-all resize-none"
+                                                    placeholder="Describe what you sell and why customers should choose you..."
+                                                />
+                                            </FormField>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Trading Hours Section */}
+                            <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8">
+                                <h3 className="text-lg font-black text-green-950 mb-6 flex items-center gap-3">
+                                    <Clock className="text-brand-600" /> Trading Schedule
+                                </h3>
+                                <div className="grid grid-cols-2 gap-6">
+                                    <FormField label="Opening Time" id="open">
+                                        <input
+                                            id="open"
+                                            type="time"
+                                            value={current.opening_time ?? ''}
+                                            onChange={e => set('opening_time', e.target.value)}
+                                            className="w-full h-14 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-base font-bold focus:bg-white transition-all"
+                                        />
+                                    </FormField>
+                                    <FormField label="Closing Time" id="close">
+                                        <input
+                                            id="close"
+                                            type="time"
+                                            value={current.closing_time ?? ''}
+                                            onChange={e => set('closing_time', e.target.value)}
+                                            className="w-full h-14 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-base font-bold focus:bg-white transition-all"
+                                        />
+                                    </FormField>
+                                </div>
+                                <div className="mt-8 p-6 bg-gray-50 rounded-3xl flex items-center justify-between">
+                                    <div>
+                                        <h4 className="text-sm font-black text-green-900 uppercase tracking-wider">Operational Status</h4>
+                                        <p className="text-xs font-bold text-gray-500 mt-0.5">Manually set if you are currently open for orders.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => set('is_open', !current.is_open)}
+                                        aria-label="Toggle operating status"
+                                        className={`relative w-16 h-8 rounded-full transition-all duration-300 ${current.is_open ? 'bg-brand-600' : 'bg-gray-300'}`}
+                                    >
+                                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300 ${current.is_open ? 'left-9' : 'left-1'}`} />
+                                    </button>
+                                </div>
+                            </section>
+                        </div>
+                    )}
+
+                    {/* Tab 2: Identity & KYC */}
+                    {activeTab === 'kyc' && (
+                        <div className="space-y-6">
+                            {/* Status Banner */}
+                            <section className={`p-6 rounded-[2.5rem] border-2 flex items-start gap-4 transition-all ${
+                                current.verification_status === 'verified' ? 'bg-green-50 border-green-100' :
+                                current.verification_status === 'rejected' ? 'bg-red-50 border-red-100' :
+                                'bg-amber-50 border-amber-100'
+                            }`}>
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                                    current.verification_status === 'verified' ? 'bg-green-600 text-white' :
+                                    current.verification_status === 'rejected' ? 'bg-red-600 text-white' :
+                                    'bg-amber-600 text-white'
+                                }`}>
+                                    {current.verification_status === 'verified' ? <BadgeCheck size={24} /> :
+                                     current.verification_status === 'rejected' ? <XCircle size={24} /> :
+                                     <AlertCircle size={24} />}
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="text-base font-black text-green-950 uppercase tracking-tight">
+                                            {current.verification_status === 'verified' ? 'Account Verified' :
+                                             current.verification_status === 'rejected' ? 'Verification Rejected' :
+                                             'Verification Pending'}
+                                        </h4>
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                                            current.verification_status === 'verified' ? 'bg-green-200 text-green-800' :
+                                            current.verification_status === 'rejected' ? 'bg-red-200 text-red-800' :
+                                            'bg-amber-200 text-amber-800'
+                                        }`}>
+                                            {current.verification_status}
+                                        </span>
+                                    </div>
+                                    <p className="text-gray-600 text-sm font-medium mt-1">
+                                        {current.verification_status === 'verified' ? 'Your business is fully verified. Customers can trust your stall.' :
+                                         current.verification_status === 'rejected' ? `Issue: ${current.rejection_reason ?? 'Invalid documents provided.'}` :
+                                         'Our team is currently reviewing your documents. This usually takes 24-48 hours.'}
                                     </p>
                                 </div>
+                            </section>
+
+                            {/* Document Grid */}
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8 space-y-6">
+                                    <h3 className="text-base font-black text-green-950 flex items-center gap-3">
+                                        <FileText className="text-brand-600" /> National ID
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {/* ID Front */}
+                                            <div className="space-y-2 text-center">
+                                                <div className="relative aspect-[4/3] bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center overflow-hidden group hover:border-brand-600 hover:bg-brand-50 transition-all">
+                                                    {kycFiles.id_front ? (
+                                                        <img src={URL.createObjectURL(kycFiles.id_front)} className="object-cover w-full h-full" alt="Preview" />
+                                                    ) : current.id_front_url ? (
+                                                        <Image src={current.id_front_url} alt="ID Front" fill className="object-cover" unoptimized />
+                                                    ) : (
+                                                        <Camera className="text-gray-300" size={32} />
+                                                    )}
+                                                    <input 
+                                                        type="file" 
+                                                        onChange={e => e.target.files?.[0] && setKycFiles(f => ({ ...f, id_front: e.target.files![0] }))}
+                                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                                        aria-label="Upload ID Front"
+                                                        accept="image/*"
+                                                    />
+                                                </div>
+                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Front Side</span>
+                                            </div>
+                                            {/* ID Back */}
+                                            <div className="space-y-2 text-center">
+                                                <div className="relative aspect-[4/3] bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center overflow-hidden group hover:border-brand-600 hover:bg-brand-50 transition-all">
+                                                    {kycFiles.id_back ? (
+                                                        <img src={URL.createObjectURL(kycFiles.id_back)} className="object-cover w-full h-full" alt="Preview" />
+                                                    ) : current.id_back_url ? (
+                                                        <Image src={current.id_back_url} alt="ID Back" fill className="object-cover" unoptimized />
+                                                    ) : (
+                                                        <Camera className="text-gray-300" size={32} />
+                                                    )}
+                                                    <input 
+                                                        type="file" 
+                                                        onChange={e => e.target.files?.[0] && setKycFiles(f => ({ ...f, id_back: e.target.files![0] }))}
+                                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                                        aria-label="Upload ID Back"
+                                                        accept="image/*"
+                                                    />
+                                                </div>
+                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Back Side</span>
+                                            </div>
+                                        </div>
+                                        {(kycFiles.id_front || kycFiles.id_back) && (
+                                            <button 
+                                                onClick={() => kycFiles.id_front && kycFiles.id_back && submitKyc({ id_front: kycFiles.id_front, id_back: kycFiles.id_back })}
+                                                disabled={!kycFiles.id_front || !kycFiles.id_back || isSubmittingKyc}
+                                                className="w-full h-12 bg-brand-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand-700 transition-all disabled:opacity-50"
+                                            >
+                                                {isSubmittingKyc ? <Loader2 className="animate-spin mx-auto" /> : 'Update Identity Docs'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </section>
+
+                                <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8 space-y-6">
+                                    <h3 className="text-base font-black text-green-950 flex items-center gap-3">
+                                        <Upload className="text-brand-600" /> Business Permit
+                                    </h3>
+                                    <FormField label="Permit Number" id="permitNum">
+                                        <input
+                                            id="permitNum"
+                                            value={current.permit_number ?? ''}
+                                            onChange={e => set('permit_number', e.target.value)}
+                                            className="w-full h-12 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:bg-white transition-all"
+                                            placeholder="Enter permit number..."
+                                        />
+                                    </FormField>
+                                    <div className="relative aspect-[16/9] bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center overflow-hidden group hover:border-brand-600 hover:bg-brand-50 transition-all">
+                                        {current.permit_image_url ? (
+                                            <Image src={current.permit_image_url} alt="Permit" fill className="object-cover" unoptimized />
+                                        ) : (
+                                            <div className="text-center p-4">
+                                                <Upload className="text-gray-300 mx-auto mb-2" size={32} />
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Upload Permit Photo</p>
+                                            </div>
+                                        )}
+                                        <input type="file" ref={permitInputRef} onChange={handlePermitChange} className="hidden" accept="image/*" />
+                                        <button 
+                                            onClick={() => permitInputRef.current?.click()}
+                                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-black uppercase tracking-widest transition-all"
+                                        >
+                                            {isUploadingPermit ? 'Uploading...' : 'Change Permit'}
+                                        </button>
+                                        {isUploadingPermit && (
+                                            <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                                                <Loader2 className="animate-spin text-brand-600" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tab 3: Account & Settings */}
+                    {activeTab === 'account' && (
+                        <div className="space-y-6">
+                            {/* Personal Info Card (Read Only) */}
+                            <section className="bg-gradient-to-br from-green-950 to-green-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+                                <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-8">
+                                    <div className="w-24 h-24 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center text-4xl font-black shrink-0 border border-white/20 shadow-2xl">
+                                        {(current.user?.name ?? authUser?.name ?? 'S').charAt(0)}
+                                    </div>
+                                    <div className="space-y-4 flex-1">
+                                        <div className="space-y-1">
+                                            <h3 className="text-2xl font-black">{current.user?.name ?? authUser?.name}</h3>
+                                            <p className="text-green-300 font-bold flex items-center gap-2">
+                                                <BadgeCheck size={16} /> Verified Soko Mtaa Partner
+                                            </p>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-6 pt-4 border-t border-white/10">
+                                            <div className="space-y-1">
+                                                <span className="text-[10px] font-black uppercase text-green-400 tracking-widest">Phone</span>
+                                                <p className="font-mono text-sm">{current.user?.phone ?? authUser?.phone}</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <span className="text-[10px] font-black uppercase text-green-400 tracking-widest">Email</span>
+                                                <p className="text-sm truncate">{current.user?.email ?? authUser?.email ?? 'Not provided'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8 space-y-6">
+                                <h3 className="text-base font-black text-green-950 flex items-center gap-3">
+                                    <Phone className="text-brand-600" /> Payment & Communication
+                                </h3>
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <FormField label="M-Pesa Number" id="mpesa">
+                                        <input
+                                            id="mpesa"
+                                            value={current.mpesa_number ?? ''}
+                                            onChange={e => set('mpesa_number', e.target.value)}
+                                            className="w-full h-12 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-mono font-bold focus:bg-white transition-all"
+                                            placeholder="+254 7XX XXX XXX"
+                                        />
+                                    </FormField>
+                                    <FormField label="Contact Email" id="email">
+                                        <input
+                                            id="email"
+                                            defaultValue={current.user?.email ?? authUser?.email ?? ''}
+                                            className="w-full h-12 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:bg-white transition-all"
+                                            placeholder="your@email.com"
+                                        />
+                                    </FormField>
+                                </div>
+                            </section>
+
+                            {/* Security Actions */}
+                            <section className="space-y-4">
+                                <button
+                                    onClick={() => setShowChangePassword(!showChangePassword)}
+                                    className="w-full py-4 px-6 bg-white border border-gray-100 rounded-3xl flex items-center justify-between group hover:border-brand-600 transition-all"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-brand-600 group-hover:bg-brand-50 transition-all">
+                                            <Key size={20} />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-sm font-black text-green-950">Security & Password</p>
+                                            <p className="text-xs font-bold text-gray-400">Update your account login credentials</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={20} className="text-gray-300 group-hover:text-brand-600 group-hover:translate-x-1 transition-all" />
+                                </button>
+
+                                <AnimatePresence>
+                                    {showChangePassword && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="bg-gray-50 rounded-[2.5rem] p-8 space-y-4 border border-gray-100 mt-2">
+                                                {(['current', 'newPw', 'confirm'] as const).map(f => (
+                                                    <FormField key={f} label={f === 'current' ? 'Current Password' : f === 'newPw' ? 'New Password' : 'Confirm New Password'} id={f}>
+                                                        <div className="relative">
+                                                            <input
+                                                                id={f}
+                                                                type={showPw[f] ? 'text' : 'password'}
+                                                                value={pwForm[f]}
+                                                                onChange={e => setPwForm(p => ({ ...p, [f]: e.target.value }))}
+                                                                className="w-full h-12 pl-5 pr-12 bg-white border border-gray-100 rounded-2xl text-sm focus:ring-4 focus:ring-brand-600/5 focus:border-brand-600 transition-all"
+                                                            />
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => setShowPw(p => ({ ...p, [f]: !p[f] }))}
+                                                                aria-label={showPw[f] ? 'Hide password' : 'Show password'}
+                                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-600"
+                                                            >
+                                                                {showPw[f] ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                            </button>
+                                                        </div>
+                                                    </FormField>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                <button
+                                    className="w-full py-4 px-6 bg-red-50/30 border border-red-100/50 rounded-3xl flex items-center justify-between group hover:bg-red-50 hover:border-red-200 transition-all"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-red-100/50 flex items-center justify-center text-red-400 group-hover:text-red-600 transition-all">
+                                            <XCircle size={20} />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-sm font-black text-red-900">Danger Zone</p>
+                                            <p className="text-xs font-bold text-red-400">Request account deletion or deactivation</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={20} className="text-red-200 group-hover:text-red-400 group-hover:translate-x-1 transition-all" />
+                                </button>
+                            </section>
+                        </div>
+                    )}
+                </motion.div>
+            </AnimatePresence>
+
+            {/* Sticky Save Button */}
+            <div className="fixed bottom-[80px] left-0 right-0 p-4 md:static md:p-0 md:mt-10 z-50">
+                <div className="max-w-4xl mx-auto">
+                    <button
+                        onClick={() => isFirstTimeSetup ? setupProfile(current) : saveProfile(current)}
+                        disabled={isPending || (!isFirstTimeSetup && Object.keys(form).length === 0)}
+                        className={`w-full h-16 rounded-[1.25rem] font-black text-base shadow-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 ${
+                            saved ? 'bg-green-600 shadow-green-200' : 'bg-brand-600 shadow-brand-200 hover:bg-brand-700'
+                        } text-white`}
+                    >
+                        {isPending ? (
+                            <Loader2 className="animate-spin" size={24} />
+                        ) : saved ? (
+                            <>
+                                <CheckCircle2 size={24} />
+                                Changes Saved Successfully!
                             </>
                         ) : (
-                            <div className="space-y-4">
-                                <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
-                                    <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-2">
-                                        <MapPin size={12} /> Independent Stall Location
-                                    </p>
-                                    <p className="text-amber-600 text-xs mt-1 font-medium">
-                                        Please provide your stall's exact location so residents can find you easily.
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        if (navigator.geolocation) {
-                                            navigator.geolocation.getCurrentPosition((pos) => {
-                                                setForm(f => ({ ...f, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
-                                                alert('Location captured successfully!');
-                                            }, (err) => {
-                                                alert('Failed to get location: ' + err.message);
-                                            });
-                                        } else {
-                                            alert('Geolocation is not supported by your browser.');
-                                        }
-                                    }}
-                                    className="w-full h-12 flex items-center justify-center gap-2 bg-green-50 text-green-700 border border-green-200 rounded-xl text-sm font-black uppercase tracking-wider hover:bg-green-100 transition-all"
-                                >
-                                    <MapPin size={18} />
-                                    {current.latitude ? 'Location Captured ✓' : 'Get Current Location'}
-                                </button>
-                                {current.latitude && (
-                                    <p className="text-center text-[10px] font-mono text-gray-400">
-                                        Lat: {current.latitude.toFixed(6)}, Lng: {current.longitude?.toFixed(6)}
-                                    </p>
-                                )}
-                            </div>
+                            <>
+                                <Save size={24} />
+                                {isFirstTimeSetup ? 'Complete Store Setup' : 'Save Profile Changes'}
+                            </>
                         )}
-                    </>
-                )}
-
-                <FormField label="Business Name (English)" id="bizName">
-                    <input
-                        id="bizName"
-                        type="text"
-                        value={(current.business_name as string) ?? ''}
-                        onChange={e => set('business_name', e.target.value)}
-                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600 font-medium"
-                    />
-                </FormField>
-                <FormField label="Business Name (Swahili)" id="bizNameSw">
-                    <input
-                        id="bizNameSw"
-                        type="text"
-                        value={(current.business_name_sw as string) ?? ''}
-                        onChange={e => set('business_name_sw', e.target.value)}
-                        placeholder="Optional — shown when Swahili is selected"
-                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"
-                    />
-                </FormField>
-                <FormField label="Description" id="description">
-                    <textarea
-                        id="description"
-                        rows={4}
-                        value={(current.description as string) ?? ''}
-                        onChange={e => set('description', e.target.value)}
-                        placeholder="Tell customers what you sell..."
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"
-                    />
-                </FormField>
-            </div>
-
-            {/* Trading Hours */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-                <h2 className="flex items-center gap-2 text-sm font-black text-text-brand-600 uppercase tracking-wider">
-                    <Clock className="w-4 h-4" /> Trading Hours
-                </h2>
-                <div className="grid grid-cols-2 gap-4">
-                    <FormField label="Opens At" id="openTime">
-                        <input id="openTime" type="time" value={(current.opening_time as string) ?? ''} onChange={e => set('opening_time', e.target.value)}
-                            className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
-                    </FormField>
-                    <FormField label="Closes At" id="closeTime">
-                        <input id="closeTime" type="time" value={(current.closing_time as string) ?? ''} onChange={e => set('closing_time', e.target.value)}
-                            className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
-                    </FormField>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                    <span className="text-sm font-semibold text-text-brand-600">Currently Open</span>
-                    <button
-                        onClick={() => set('is_open', !(current.is_open))}
-                        className={`relative w-12 h-6 rounded-full transition-colors ${current.is_open ? 'bg-green-500' : 'bg-gray-200'}`}
-                        aria-label="Toggle open status"
-                        role="switch"
-                        aria-checked={!!current.is_open}
-                    >
-                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${current.is_open ? 'translate-x-6' : ''}`} />
                     </button>
                 </div>
             </div>
-
-            {/* Payment */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-                <h2 className="flex items-center gap-2 text-sm font-black text-text-brand-600 uppercase tracking-wider">
-                    <Phone className="w-4 h-4" /> M-Pesa Details
-                </h2>
-                <FormField label="M-Pesa Number" id="mpesa">
-                    <input id="mpesa" type="tel" value={(current.mpesa_number as string) ?? ''}
-                        onChange={e => set('mpesa_number', e.target.value)}
-                        placeholder="+254 7XX XXX XXX"
-                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600 font-mono" />
-                </FormField>
-            </div>
-
-            {/* KYC Verification */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-                <h2 className="flex items-center gap-2 text-sm font-black text-text-brand-600 uppercase tracking-wider">
-                    <ShieldCheck className="w-4 h-4" /> KYC Verification
-                </h2>
-                <div className="p-4 bg-green-50 border border-green-100 rounded-xl">
-                    <p className="text-[10px] font-bold text-green-700 uppercase tracking-wider flex items-center gap-2">
-                        <FileText size={12} /> Identity Documents
-                    </p>
-                    <p className="text-green-600 text-xs mt-1 font-medium">
-                        Upload your National ID to be verified. This helps build trust with your customers.
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ID Front</label>
-                        <div className="relative aspect-[3/2] bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-brand-600 hover:bg-brand-600/5 transition-all overflow-hidden group">
-                            {current.id_front_url ? (
-                                <Image src={current.id_front_url} alt="ID Front" fill className="object-cover" />
-                            ) : (
-                                <>
-                                    <Camera className="w-6 h-6 text-gray-300 group-hover:text-brand-600 transition-colors" />
-                                    <span className="text-[10px] font-bold text-gray-400 group-hover:text-brand-600 transition-colors uppercase">Tap to Upload</span>
-                                </>
-                            )}
-                            <input
-                                type="file"
-                                accept="image/*"
-                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                onChange={(e) => {
-                                    if (e.target.files?.[0]) {
-                                        const file = e.target.files[0];
-                                        const reader = new FileReader();
-                                        reader.onload = (re) => set('id_front_url' as any, re.target?.result as string);
-                                        reader.readAsDataURL(file);
-                                        setKycFiles(prev => ({ ...prev, id_front: file }));
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ID Back</label>
-                        <div className="relative aspect-[3/2] bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-brand-600 hover:bg-brand-600/5 transition-all overflow-hidden group">
-                            {current.id_back_url ? (
-                                <Image src={current.id_back_url} alt="ID Back" fill className="object-cover" />
-                            ) : (
-                                <>
-                                    <Camera className="w-6 h-6 text-gray-300 group-hover:text-brand-600 transition-colors" />
-                                    <span className="text-[10px] font-bold text-gray-400 group-hover:text-brand-600 transition-colors uppercase">Tap to Upload</span>
-                                </>
-                            )}
-                            <input
-                                type="file"
-                                accept="image/*"
-                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                onChange={(e) => {
-                                    if (e.target.files?.[0]) {
-                                        const file = e.target.files[0];
-                                        const reader = new FileReader();
-                                        reader.onload = (re) => set('id_back_url' as any, re.target?.result as string);
-                                        reader.readAsDataURL(file);
-                                        setKycFiles(prev => ({ ...prev, id_back: file }));
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {!isFirstTimeSetup && (current.id_front_url && current.id_back_url) && (
-                    <button
-                        onClick={() => {
-                            if (kycFiles.id_front && kycFiles.id_back) {
-                                submitKyc({ id_front: kycFiles.id_front, id_back: kycFiles.id_back });
-                            } else {
-                                alert('Please select both ID Front and ID Back files to submit.');
-                            }
-                        }}
-                        disabled={isPending}
-                        className="w-full h-12 bg-brand-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-600/20 hover:bg-brand-600-light active:scale-95 transition-all disabled:opacity-50"
-                    >
-                        {isSubmittingKyc ? <Loader2 className="animate-spin mx-auto" /> : 'Submit KYC Documents'}
-                    </button>
-                )}
-            </div>
-
-            {/* Permit */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-                <h2 className="flex items-center gap-2 text-sm font-black text-text-brand-600 uppercase tracking-wider">
-                    <Upload className="w-4 h-4" /> Business Permit (Optional)
-                </h2>
-                <FormField label="Permit Number (Optional)" id="permit">
-                    <input id="permit" type="text" value={(current.permit_number as string) ?? ''}
-                        onChange={e => set('permit_number', e.target.value)}
-                        placeholder="Optional"
-                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
-                </FormField>
-                <button className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl w-full text-sm font-semibold text-text-secondary hover:border-brand-600 hover:text-brand-600 transition-colors min-h-[48px]">
-                    <Upload className="w-4 h-4" /> Upload Permit Image (Optional)
-                </button>
-            </div>
-
-            {/* Account Details */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-                <h2 className="flex items-center gap-2 text-sm font-black text-text-brand-600 uppercase tracking-wider">
-                    <User className="w-4 h-4" /> Account Details
-                </h2>
-                <FormField label="Full Name" id="fullName">
-                    <input id="fullName" type="text" value={current.user?.name ?? authUser?.name ?? ''} readOnly
-                        className="w-full h-12 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium text-text-secondary cursor-not-allowed" />
-                </FormField>
-                <FormField label="Phone Number" id="phone">
-                    <div className="flex gap-2">
-                        <div className="relative flex-1">
-                            <input id="phone" type="tel" value={current.user?.phone ?? authUser?.phone ?? ''} readOnly
-                                className="w-full h-12 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm font-mono text-text-secondary cursor-not-allowed" />
-                            {authUser?.phone_verified && (
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600">
-                                    <ShieldCheck className="w-4 h-4" />
-                                </div>
-                            )}
-                        </div>
-                        {!authUser?.phone_verified && (
-                            <button
-                                onClick={() => router.push('/verify')}
-                                className="px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-amber-500/20 whitespace-nowrap"
-                            >
-                                Verify Now
-                            </button>
-                        )}
-                    </div>
-                </FormField>
-                <FormField label="Email (optional)" id="email">
-                    <input id="email" type="email" defaultValue={current.user?.email ?? authUser?.email ?? ''}
-                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
-                </FormField>
-            </div>
-
-            {/* Change Password toggle */}
-            {showChangePassword && (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-                    <h2 className="flex items-center gap-2 text-sm font-black text-text-brand-600 uppercase tracking-wider">
-                        <Key className="w-4 h-4" /> Change Password
-                    </h2>
-                    {(['current', 'newPw', 'confirm'] as const).map(f => (
-                        <FormField key={f} label={f === 'current' ? 'Current Password' : f === 'newPw' ? 'New Password' : 'Confirm New Password'} id={f}>
-                            <div className="relative">
-                                <input id={f} type={showPw[f] ? 'text' : 'password'}
-                                    value={pwForm[f]}
-                                    onChange={e => setPwForm(p => ({ ...p, [f]: e.target.value }))}
-                                    className="w-full h-12 pl-4 pr-12 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600" />
-                                <button type="button" onClick={() => setShowPw(p => ({ ...p, [f]: !p[f] }))}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-brand-600">
-                                    {showPw[f] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                </button>
-                            </div>
-                        </FormField>
-                    ))}
-                </div>
-            )}
-
-            {/* Danger Zone */}
-            <div className="space-y-2">
-                <button onClick={() => setShowChangePassword(!showChangePassword)}
-                    className="w-full py-3.5 border border-gray-200 rounded-xl text-sm font-bold text-text-secondary hover:bg-gray-50 transition-colors min-h-[48px]">
-                    {showChangePassword ? 'Cancel Password Change' : 'Change Password'}
-                </button>
-                <button onClick={() => setShowDeleteModal(true)}
-                    className="w-full py-3.5 border border-red-100 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition-colors min-h-[48px]">
-                    Request Account Deletion
-                </button>
-            </div>
-
         </div>
-
-            {/* Save/Setup Button - Fixed at the very bottom for mobile */ }
-    <div className="fixed bottom-[72px] left-0 right-0 p-4 bg-white border-t border-gray-200 z-[100] md:static md:bg-transparent md:border-none md:p-6 md:max-w-2xl md:mx-auto">
-        <button
-            onClick={() => isFirstTimeSetup ? setupProfile(current) : saveProfile(current)}
-            disabled={isPending || (!isFirstTimeSetup && Object.keys(form).length === 0)}
-            className="w-full flex items-center justify-center gap-3 py-4 bg-brand-600 text-white rounded-2xl font-black text-base shadow-2xl shadow-brand-600/30 hover:bg-brand-600-light transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed min-h-[60px]"
-        >
-            <Save className="w-5 h-5" />
-            {saved ? 'Profile Saved! ✓' : isPending ? 'Processing...' : isFirstTimeSetup ? 'Complete Setup' : 'Save Changes'}
-        </button>
-    </div>
-        </>
     );
 }

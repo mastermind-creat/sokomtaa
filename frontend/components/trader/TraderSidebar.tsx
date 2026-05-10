@@ -144,7 +144,7 @@ export default function TraderSidebar() {
             {/* Footer Area */}
             <div className="p-6 space-y-4 border-t border-gray-100">
                 <button 
-                    onClick={() => router.push('/profile')}
+                    onClick={() => router.push('/trader/profile')}
                     className="w-full flex items-center gap-4 p-4 rounded-2xl text-text-secondary hover:bg-gray-50 transition-all font-bold text-sm"
                 >
                     <Settings size={20} className="text-gray-400" />

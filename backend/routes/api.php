@@ -72,6 +72,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/avatar', [TraderProfileController::class, 'uploadAvatar']);
         Route::post('/banner', [TraderProfileController::class, 'uploadBanner']);
         Route::post('/kyc', [TraderProfileController::class, 'submitKyc']);
+        Route::post('/kyc/update-urls', [TraderProfileController::class, 'updateKycUrls']);
+        Route::post('/permit', [TraderProfileController::class, 'uploadPermit']);
         Route::get('/stats', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'dashboardStats']);
     });
 
@@ -119,6 +121,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::patch('/', [\App\Http\Controllers\Resident\ProfileController::class, 'update']);
         Route::post('/avatar', [\App\Http\Controllers\Resident\ProfileController::class, 'uploadAvatar']);
         Route::post('/password', [\App\Http\Controllers\Resident\ProfileController::class, 'changePassword']);
+
+        // Cloudinary Direct Upload Support
+        Route::get('/cloudinary/sign', [\App\Http\Controllers\CloudinaryController::class, 'getSignature']);
     });
 
     // ── M-Pesa Payment Initiation ────────────────────────────────────────────
