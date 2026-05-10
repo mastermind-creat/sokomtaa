@@ -246,17 +246,17 @@ export default function MaintenancePage() {
                         )}
                     </div>
 
-                    <div className="bg-brand-950 text-brand-50 p-6 rounded-[2.5rem] h-[540px] font-mono text-[11px] overflow-y-auto border-4 border-brand-900 shadow-2xl relative">
+                    <div className="bg-[#0A0A0A] text-white p-6 rounded-[2.5rem] h-[540px] font-mono text-[11px] overflow-y-auto border-4 border-gray-900 shadow-2xl relative">
                         {!commandOutput && !runAction.isPending && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-brand-900/40 select-none">
-                                <Terminal size={48} className="mb-4 opacity-10" />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-800 select-none">
+                                <Terminal size={48} className="mb-4 opacity-20" />
                                 <p className="font-black uppercase tracking-widest">Waiting for command...</p>
                             </div>
                         )}
-
+ 
                         {runAction.isPending && (
-                            <div className="flex items-center gap-2 text-brand-400 animate-pulse">
-                                <span className="w-2 h-2 bg-brand-400 rounded-full" />
+                            <div className="flex items-center gap-2 text-green-400 animate-pulse">
+                                <span className="w-2 h-2 bg-green-400 rounded-full" />
                                 <p>Executing command on server...</p>
                             </div>
                         )}
@@ -266,11 +266,12 @@ export default function MaintenancePage() {
                                 <motion.div
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className="whitespace-pre-wrap break-words leading-relaxed"
+                                    className="whitespace-pre-wrap break-words leading-relaxed text-gray-100"
                                 >
-                                    <div className="flex items-center gap-2 mb-4 text-green-400 font-bold border-b border-brand-900 pb-2">
+                                    <div className="flex items-center gap-2 mb-4 text-green-400 font-bold border-b border-gray-800 pb-2">
                                         <CheckCircle2 size={14} /> Output received at {new Date().toLocaleTimeString()}
                                     </div>
+                                    <span className="text-green-500 mr-2">$</span>
                                     {commandOutput}
                                 </motion.div>
                             )}
