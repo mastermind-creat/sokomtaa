@@ -21,6 +21,8 @@ class TraderController extends Controller
     {
         $statusFilter = $request->query('verification_status');
         $unallocatedFilter = $request->query('unallocated');
+        $marketFilter = $request->query('market_id');
+        $search = $request->query('search');
 
         $traders = Trader::with(['user', 'stall', 'market'])
             ->when($statusFilter, function ($query, $status) {
@@ -28,6 +30,18 @@ class TraderController extends Controller
             })
             ->when($unallocatedFilter, function ($query) {
                 return $query->whereNull('stall_id');
+            })
+            ->when($marketFilter, function ($query, $marketId) {
+                return $query->where('market_id', $marketId);
+            })
+            ->when($search, function ($query, $search) {
+                return $query->where(function ($q) use ($search) {
+                    $q->where('business_name', 'LIKE', "%{$search}%")
+                      ->orWhereHas('user', function ($uq) use ($search) {
+                          $uq->where('name', 'LIKE', "%{$search}%")
+                             ->orWhere('phone', 'LIKE', "%{$search}%");
+                      });
+                });
             })
             ->latest()
             ->get();

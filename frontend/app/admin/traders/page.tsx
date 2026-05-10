@@ -32,24 +32,35 @@ export default function AdminTradersPage() {
     }, [setPageTitle]);
 
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState<string>('all');
+    const [selectedMarketId, setSelectedMarketId] = useState<string>('');
+
+    React.useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    const { data: marketsData } = useQuery<ApiResponse<any[]>>({
+        queryKey: ['admin-markets'],
+        queryFn: () => api.get('/admin/markets').then(res => res.data),
+    });
+    const markets = marketsData?.data || [];
 
     const { data: tradersData, isLoading } = useQuery<ApiResponse<Trader[]>>({
-        queryKey: ['admin-traders'],
-        queryFn: () => api.get('/admin/traders').then(res => res.data),
+        queryKey: ['admin-traders', filterStatus, selectedMarketId, debouncedSearch],
+        queryFn: () => {
+            const params: Record<string, string> = {};
+            if (filterStatus !== 'all') params.verification_status = filterStatus;
+            if (selectedMarketId) params.market_id = selectedMarketId;
+            if (debouncedSearch) params.search = debouncedSearch;
+            return api.get('/admin/traders', { params }).then(res => res.data);
+        },
     });
     
     const traders = tradersData?.data || [];
-
-    const filteredTraders = traders.filter(t => {
-        const matchesSearch = 
-            t.business_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (t.user?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (t.user?.phone || '').includes(searchQuery);
-            
-        const matchesStatus = filterStatus === 'all' || t.verification_status === filterStatus;
-        return matchesSearch && matchesStatus;
-    });
 
     const stats = [
         { label: 'Active', value: traders.filter(t => t.verification_status === 'verified').length, icon: CheckCircle2, color: 'text-brand-600' },
@@ -71,15 +82,31 @@ export default function AdminTradersPage() {
 
             {/* ── Governance Controls ── */}
             <div className="px-4 mb-6 space-y-4">
-                <div className="relative group">
-                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted transition-colors group-focus-within:text-brand-500" size={18} />
-                    <input 
-                        type="text" 
-                        placeholder="Search merchant or phone..." 
-                        className="w-full h-14 pl-14 pr-6 bg-white border border-gray-100 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 transition-all font-medium text-sm"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="relative group flex-1">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted transition-colors group-focus-within:text-brand-500" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="Search merchant or phone..." 
+                            className="w-full h-14 pl-14 pr-6 bg-white border border-gray-100 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 transition-all font-medium text-sm"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    
+                    <div className="flex-1 md:max-w-xs relative group">
+                        <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted transition-colors group-focus-within:text-brand-500" size={18} />
+                        <select
+                            value={selectedMarketId}
+                            onChange={(e) => setSelectedMarketId(e.target.value)}
+                            className="w-full h-14 pl-14 pr-6 bg-white border border-gray-100 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 transition-all font-medium text-sm appearance-none cursor-pointer"
+                        >
+                            <option value="">All Markets</option>
+                            {markets.map((market: any) => (
+                                <option key={market.id} value={market.id}>{market.name}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
                 
                 <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
@@ -105,7 +132,7 @@ export default function AdminTradersPage() {
             <div className="px-4 space-y-4">
                 {isLoading ? (
                     <div className="p-10 text-center opacity-30 font-black uppercase tracking-widest text-[10px]">Auditing Registry...</div>
-                ) : filteredTraders.map((trader) => (
+                ) : traders.map((trader) => (
                     <motion.div 
                         key={trader.id}
                         initial={{ opacity: 0, y: 10 }}
