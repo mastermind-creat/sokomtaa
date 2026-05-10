@@ -152,6 +152,27 @@ class SystemMaintenanceController extends Controller
     }
 
     /**
+     * Get the last 100 lines of the system log.
+     */
+    public function logs()
+    {
+        try {
+            $logPath = storage_path('logs/laravel.log');
+            if (!file_exists($logPath)) {
+                return response()->json(['message' => 'Log file not found.'], 404);
+            }
+            
+            $file = file($logPath);
+            $lines = array_slice($file, -100);
+            return response()->json([
+                'logs' => implode("", $lines)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to read logs: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Helper to check if public path exists.
      */
     private function public_exists($path)
