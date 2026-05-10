@@ -140,12 +140,30 @@ class MpesaController extends Controller
 
             // Update associated entities
             if ($payment->type === 'reservation' && $payment->reservation_id) {
-                $payment->reservation->update(['status' => 'paid']);
-                
+                $reservation = $payment->reservation;
+                $reservation->update(['status' => 'paid']);
+
+                // Credit the trader's wallet with the product amount (excluding service fee)
+                $walletService = app(WalletService::class);
+                $trader = $reservation->trader;
+                if ($trader) {
+                    $wallet = $walletService->getOrCreateForTrader($trader->id);
+                    $creditAmount = $reservation->unit_price * $reservation->quantity; // Exclude service fee
+                    $productName = $reservation->product->name ?? 'Product';
+                    $walletService->credit(
+                        $wallet,
+                        $creditAmount,
+                        "Sale: {$reservation->reservation_code} — {$productName}",
+                        'reservation',
+                        (string) $reservation->id
+                    );
+                    Log::info('Wallet credited for trader', ['trader_id' => $trader->id, 'amount' => $creditAmount]);
+                }
+
                 // Trigger Notification
                 $this->notificationService->notifyReservationUpdate(
-                    $payment->user, 
-                    $payment->reservation, 
+                    $payment->user,
+                    $reservation,
                     'paid'
                 );
             } elseif ($payment->type === 'product_boost' && $payment->product_id) {
@@ -250,11 +268,27 @@ class MpesaController extends Controller
 
         // Update associated entities (Mirroring callback logic)
         if ($payment->type === 'reservation' && $payment->reservation_id) {
-            $payment->reservation->update(['status' => 'paid']);
-            
+            $reservation = $payment->reservation;
+            $reservation->update(['status' => 'paid']);
+
+            // Credit trader wallet
+            $walletService = app(WalletService::class);
+            $trader = $reservation->trader;
+            if ($trader) {
+                $wallet = $walletService->getOrCreateForTrader($trader->id);
+                $creditAmount = $reservation->unit_price * $reservation->quantity;
+                $walletService->credit(
+                    $wallet,
+                    $creditAmount,
+                    "[Simulated] Sale: {$reservation->reservation_code}",
+                    'reservation',
+                    (string) $reservation->id
+                );
+            }
+
             $this->notificationService->notifyReservationUpdate(
-                $payment->user, 
-                $payment->reservation, 
+                $payment->user,
+                $reservation,
                 'paid'
             );
         } elseif ($payment->type === 'product_boost' && $payment->product_id) {

@@ -139,6 +139,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Trader\WalletController::class, 'index']);
             Route::get('/transactions', [\App\Http\Controllers\Trader\WalletController::class, 'transactions']);
             Route::post('/frequency', [\App\Http\Controllers\Trader\WalletController::class, 'updateFrequency']);
+            Route::post('/withdraw', [\App\Http\Controllers\Trader\WalletController::class, 'requestWithdrawal']);
         });
 
         Route::prefix('fees')->group(function () {
