@@ -18,7 +18,7 @@ jobs:
     - name: 📂 Sync Files
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
-        server: ${{ secrets.FTP_SERVER }}
+        server: da27.host-ww.net
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./backend/ # The folder in your GitHub repo
