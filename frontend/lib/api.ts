@@ -14,7 +14,18 @@ let requestCount = 0;
 // Request interceptor
 api.interceptors.request.use((config) => {
     if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('sokomtaa_token');
+        // Read token from Zustand persisted store (always in sync after page refresh)
+        let token: string | null = null;
+        try {
+            const authStorage = localStorage.getItem('sokomtaa-auth-storage');
+            if (authStorage) {
+                const parsed = JSON.parse(authStorage);
+                token = parsed?.state?.token ?? null;
+            }
+        } catch {
+            token = localStorage.getItem('sokomtaa_token');
+        }
+
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
