@@ -41,10 +41,12 @@ class TalkSasaService
 
         try {
             $phone = $this->formatPhoneNumber($to);
+            Log::info("Talk Sasa: Formatted phone as {$phone}. Sending payload...");
 
+            $baseUrl = rtrim($this->baseUrl, '/');
             $response = Http::withToken($this->apiKey)
                 ->acceptJson()
-                ->post("{$this->baseUrl}/sms/send", [
+                ->post("{$baseUrl}/sms/send", [
                     'recipient' => $phone,
                     'sender_id' => $this->senderId,
                     'message'   => $message,
