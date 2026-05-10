@@ -28,9 +28,15 @@ class TalkSasaService
      */
     public function sendSms(string $to, string $message)
     {
+        Log::info("TalkSasaService: Starting sendSms to {$to}");
+
         if (!$this->apiKey) {
-            Log::warning('Talk Sasa API key missing.');
-            return ['status' => 'error', 'message' => 'Service not configured'];
+            Log::error('Talk Sasa API FAILURE: TALKSASA_API_KEY is missing in .env');
+            return ['status' => 'error', 'message' => 'Service not configured - Missing API Key'];
+        }
+
+        if (!$this->senderId) {
+            Log::warning('Talk Sasa: TALKSASA_SENDER_ID is missing, using default.');
         }
 
         try {
