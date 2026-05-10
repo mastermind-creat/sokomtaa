@@ -158,14 +158,28 @@ class SystemMaintenanceController extends Controller
     {
         try {
             $logPath = storage_path('logs/laravel.log');
-            if (!file_exists($logPath)) {
-                return response()->json(['message' => 'Log file not found.'], 404);
-            }
             
-            $file = file($logPath);
-            $lines = array_slice($file, -100);
+            if (!file_exists($logPath)) {
+                return response()->json(['message' => 'Log file not found.', 'logs' => 'No logs yet.'], 404);
+            }
+
+            // Using tail-like logic for memory efficiency
+            $file = new \SplFileObject($logPath, 'r');
+            $file->seek(PHP_INT_MAX);
+            $lastLine = $file->key();
+            
+            $startLine = max(0, $lastLine - 100);
+            $file->seek($startLine);
+            
+            $content = "";
+            while (!$file->eof()) {
+                $content .= $file->current();
+                $file->next();
+            }
+
             return response()->json([
-                'logs' => implode("", $lines)
+                'message' => 'Logs retrieved successfully',
+                'logs' => $content ?: 'Log file is empty.'
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to read logs: ' . $e->getMessage()], 500);
