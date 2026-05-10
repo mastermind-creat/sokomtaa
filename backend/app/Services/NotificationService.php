@@ -41,9 +41,16 @@ class NotificationService
         if ($sendSms && $user->phone) {
             $smsContent = "{$title}: {$body}";
             
-            // To prevent SMS spam or cost overflow, we log and send in background
-            // In a production app, this would be queued
-            $this->smsService->sendSms($user->phone, $smsContent);
+            // Log the attempt
+            Log::info("Attempting to send SMS to {$user->phone} for notification: {$title}");
+            
+            $result = $this->smsService->sendSms($user->phone, $smsContent);
+            
+            if ($result['status'] === 'success') {
+                Log::info("SMS successfully sent to {$user->phone}");
+            } else {
+                Log::error("SMS failed for {$user->phone}", ['reason' => $result['message'] ?? 'Unknown error']);
+            }
         }
 
         return $notification;
