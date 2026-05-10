@@ -19,20 +19,40 @@ class AdminActivityController extends Controller
         $activities = new Collection();
 
         // 1. Recent Trader Registrations
-        Trader::with('user')->latest()->take(5)->get()->each(function ($trader) use ($activities) {
+        Trader::with('user')->whereNull('id_front_url')->latest()->take(5)->get()->each(function ($trader) use ($activities) {
             $activities->push([
-                'id' => 'trader_' . $trader->id,
+                'id' => 'trader_reg_' . $trader->id,
                 'type' => 'trader_signup',
                 'title' => 'New Trader Registered',
                 'description' => "{$trader->business_name} has registered for a permit.",
                 'user' => $trader->user->name ?? 'Unknown',
                 'time' => $trader->created_at->diffForHumans(),
+                'raw_time' => $trader->created_at,
                 'status' => $trader->verification_status,
                 'icon' => 'UserPlus'
             ]);
         });
 
-        // 2. Recent Complaints
+        // 2. Recent KYC Submissions (pending verification and has uploaded documents)
+        Trader::with('user')
+            ->where('verification_status', 'pending')
+            ->whereNotNull('id_front_url')
+            ->latest('updated_at')
+            ->take(5)->get()->each(function ($trader) use ($activities) {
+            $activities->push([
+                'id' => 'trader_kyc_' . $trader->id,
+                'type' => 'kyc_submitted',
+                'title' => 'KYC Documents Submitted',
+                'description' => "{$trader->business_name} has submitted identity documents for review.",
+                'user' => $trader->user->name ?? 'Unknown',
+                'time' => $trader->updated_at->diffForHumans(),
+                'raw_time' => $trader->updated_at,
+                'status' => 'pending_review',
+                'icon' => 'User'
+            ]);
+        });
+
+        // 3. Recent Complaints
         Complaint::with(['user', 'market'])->latest()->take(5)->get()->each(function ($complaint) use ($activities) {
             $activities->push([
                 'id' => 'complaint_' . $complaint->id,
@@ -41,12 +61,13 @@ class AdminActivityController extends Controller
                 'description' => "{$complaint->subject} in {$complaint->market->name}",
                 'user' => $complaint->user->name ?? 'Resident',
                 'time' => $complaint->created_at->diffForHumans(),
+                'raw_time' => $complaint->created_at,
                 'status' => $complaint->status,
                 'icon' => 'AlertCircle'
             ]);
         });
 
-        // 3. Recent Market Fee Payments
+        // 4. Recent Market Fee Payments
         MarketFee::with('trader')->where('status', 'paid')->latest()->take(5)->get()->each(function ($fee) use ($activities) {
             $activities->push([
                 'id' => 'fee_' . $fee->id,
@@ -55,18 +76,17 @@ class AdminActivityController extends Controller
                 'description' => "Ksh {$fee->amount} collected from {$fee->trader->business_name}",
                 'user' => 'System',
                 'time' => $fee->updated_at->diffForHumans(),
+                'raw_time' => $fee->updated_at,
                 'status' => 'completed',
                 'icon' => 'CheckCircle'
             ]);
         });
 
-        // Sort by time (simulated by ID/Type here, but ideally we'd sort the collection)
-        // Since we want the absolute latest first:
-        $sortedActivities = $activities->sortByDesc(function ($activity) {
-            // This is a bit hacky since we don't have the raw timestamp here, 
-            // but for a small aggregate it works. Real implementation should use timestamps.
-            return $activity['time']; 
-        })->values();
+        // Sort by actual time descending
+        $sortedActivities = $activities->sortByDesc('raw_time')->values()->map(function ($activity) {
+            unset($activity['raw_time']);
+            return $activity;
+        });
 
         return response()->json([
             'success' => true,
