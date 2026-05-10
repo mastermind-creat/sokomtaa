@@ -41,14 +41,29 @@ class SystemMaintenanceController extends Controller
     public function migrate()
     {
         try {
-            set_time_limit(300); // Increase time limit to 5 minutes
+            set_time_limit(600); // Increase time limit to 10 minutes for slow production servers
+            
+            // 1. Run migrations
             Artisan::call('migrate', ['--force' => true]);
+            $output = Artisan::output();
+            
+            // 2. Automatically clear caches to ensure the app boots with fresh state
+            Artisan::call('config:clear');
+            Artisan::call('route:clear');
+            Artisan::call('cache:clear');
+            $output .= "\n--- Post-Migration Cleanup ---\n" . Artisan::output();
+            
             return response()->json([
-                'message' => 'Migrations completed successfully.',
-                'output' => Artisan::output()
+                'message' => 'Migrations completed and system optimized.',
+                'output' => $output
             ]);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Migration failed: ' . $e->getMessage()], 500);
+            Log::error('Maintenance Migration Error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Migration failed. This is often caused by a table already existing or a missing column.',
+                'error' => $e->getMessage(),
+                'hint' => 'Check your database structure and the migrations table for sync issues.'
+            ], 500);
         }
     }
 
