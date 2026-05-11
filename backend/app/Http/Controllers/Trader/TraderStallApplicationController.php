@@ -52,9 +52,10 @@ class TraderStallApplicationController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
+            'stall_type'         => 'required|in:managed,independent',
             'preferred_zone'     => 'nullable|in:A,B,C',
             'preferred_stall_id' => 'nullable|exists:stalls,id',
-            'motivation'         => 'required|string|min:100',
+            'motivation'         => 'required|string|min:50',
         ]);
 
         /** @var \App\Models\User $user */
@@ -78,6 +79,7 @@ class TraderStallApplicationController extends Controller
         $application = StallApplication::create([
             'trader_id'          => $traderId,
             'market_id'          => $user->trader->market_id,
+            'stall_type'         => $request->stall_type,
             'preferred_stall_id' => $request->preferred_stall_id,
             'preferred_zone'     => $request->preferred_zone,
             'motivation'         => $request->motivation,

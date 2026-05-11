@@ -11,11 +11,14 @@ import {
     Store,
     RefreshCw,
     MessageSquare,
+    MapPin,
     LucideIcon
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
 
@@ -70,6 +73,25 @@ export default function TraderSidebar() {
         setMounted(true);
     }, []);
 
+    // Fetch stall application status for badge
+    const { data: stallApp } = useQuery({
+        queryKey: ['stall-application-sidebar'],
+        queryFn: async () => {
+            try {
+                const res = await api.get<never, { data: { status: string } }>('/trader/stall-application');
+                return res.data;
+            } catch { return null; }
+        },
+        staleTime: 60_000,
+    });
+
+    const stallBadge = stallApp ? ({
+        pending:    'Pending',
+        approved:   'Approved',
+        waitlisted: 'Waitlisted',
+        rejected:   'Rejected',
+    } as Record<string, string>)[stallApp.status] ?? undefined : undefined;
+
     const getActiveState = (href: string) => {
         if (!mounted) return false;
         if (href === '/trader/products') return pathname.startsWith('/trader/products');
@@ -122,7 +144,7 @@ export default function TraderSidebar() {
             <div className="flex-1 space-y-8 py-6 px-3">
                 {/* Core Dash */}
                 <div>
-                    <p className="px-3 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">Takwimu na Uhifadhi</p>
+                    <p className="px-3 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">{t('sidebar.takwimu_uhifadhi') || 'Statistics & Storage'}</p>
                     <div className="space-y-1">
                         <SidebarLink href="/trader/dashboard" icon={LayoutDashboard} label={t('nav.dawati')} active={getActiveState('/trader/dashboard')} />
                         <SidebarLink href="/trader/products" icon={Package} label={t('sidebar.products_stock')} active={getActiveState('/trader/products')} />
@@ -137,6 +159,7 @@ export default function TraderSidebar() {
                         <SidebarLink href="/trader/wallet" icon={CreditCard} label={t('sidebar.my_wallet') || 'Wallet Yangu'} active={getActiveState('/trader/wallet')} />
                         <SidebarLink href="/trader/analytics" icon={BarChart3} label={t('sidebar.store_analytics')} active={getActiveState('/trader/analytics')} />
                         <SidebarLink href="/trader/reviews" icon={MessageSquare} label={t('sidebar.reviews')} active={getActiveState('/trader/reviews')} />
+                        <SidebarLink href="/trader/apply-stall" icon={MapPin} label={t('sidebar.stall_application') || 'Stall Application'} active={getActiveState('/trader/apply-stall')} count={stallBadge} />
                     </div>
                 </div>
             </div>

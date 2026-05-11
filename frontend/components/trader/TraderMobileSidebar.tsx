@@ -13,11 +13,14 @@ import {
     Store,
     RefreshCw,
     MessageSquare,
+    MapPin,
     LogOut
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Logo } from '../shared/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -34,9 +37,28 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
     const { logout } = useAuthStore();
     const [isStoreOpen, setIsStoreOpen] = React.useState(true);
 
+    // Fetch stall application status for badge
+    const { data: stallApp } = useQuery({
+        queryKey: ['stall-application-sidebar'],
+        queryFn: async () => {
+            try {
+                const res = await api.get<never, { data: { status: string } }>('/trader/stall-application');
+                return res.data;
+            } catch { return null; }
+        },
+        staleTime: 60_000,
+    });
+
+    const stallBadge: Record<string, string> = {
+        pending:    'Pending',
+        approved:   'Approved',
+        waitlisted: 'Waitlisted',
+        rejected:   'Rejected',
+    };
+
     const menuSections = [
         {
-            title: 'Takwimu na Uhifadhi',
+            title: t('sidebar.takwimu_uhifadhi') || 'Statistics & Storage',
             items: [
                 { icon: LayoutDashboard, label: t('nav.dawati'), path: '/trader/dashboard' },
                 { icon: Package, label: t('sidebar.products_stock'), path: '/trader/products' },
@@ -49,7 +71,8 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
                 { icon: CreditCard, label: t('sidebar.my_wallet') || 'Wallet Yangu', path: '/trader/wallet' },
                 { icon: BarChart3, label: t('sidebar.store_analytics'), path: '/trader/analytics' },
                 { icon: MessageSquare, label: t('sidebar.reviews'), path: '/trader/reviews' },
-                { icon: Settings, label: t('common.settings'), path: '/profile' },
+                { icon: MapPin, label: stallApp ? `${t('sidebar.stall_application') || 'Stall App'} (${stallBadge[stallApp.status] ?? ''})` : (t('sidebar.stall_application') || 'Stall Application'), path: '/trader/apply-stall' },
+                { icon: Settings, label: t('common.settings'), path: '/trader/profile' },
             ]
         }
     ];

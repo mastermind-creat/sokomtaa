@@ -13,6 +13,7 @@ class StallApplication extends Model
     protected $fillable = [
         'trader_id',
         'market_id',
+        'stall_type',
         'preferred_stall_id',
         'preferred_zone',
         'motivation',
