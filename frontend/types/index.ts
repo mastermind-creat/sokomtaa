@@ -117,7 +117,7 @@ export interface Trader {
     mpesa_number?: string | null;
     permit_number?: string | null;
     permit_image_url?: string | null;
-    verification_status: 'pending' | 'verified' | 'rejected';
+    verification_status: 'unverified' | 'pending' | 'verified' | 'rejected';
     rejection_reason?: string | null;
     stall_type: 'managed' | 'independent';
     latitude: number | null;
