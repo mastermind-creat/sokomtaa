@@ -25,7 +25,7 @@ export const Footer = () => {
               </span>
             </Link>
             <p className="max-w-xs text-gray-500 font-medium leading-relaxed mb-8">
-              Connecting traders, residents, and administrators in Kenya&apos;s urban markets. Built with ❤️ for Kisumu County.
+              Connecting traders, residents, and administrators in Kenya&apos;s urban markets. Built with ❤️ for Kenyan Economy and Beyond.
             </p>
             <div className="flex gap-4">
               <span className="px-3 py-1 bg-brand-50 text-brand-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-brand-100/50">M-Pesa API</span>
@@ -34,29 +34,29 @@ export const Footer = () => {
           </div>
 
           {[
-            { 
-              title: "Product", 
+            {
+              title: "Product",
               links: [
                 { label: "How it works", id: "#how-it-works" },
                 { label: "Features", id: "#features" },
                 { label: "Market Preview", id: "#market-preview" }
-              ] 
+              ]
             },
-            { 
-              title: "For Traders", 
+            {
+              title: "For Traders",
               links: [
                 { label: "Register Stall", id: "/register?role=trader" },
                 { label: "Trader Portal", id: "/login" },
                 { label: "Stall Map", id: "#" }
-              ] 
+              ]
             },
-            { 
-              title: "County", 
+            {
+              title: "County",
               links: [
                 { label: "Kolenyo", id: "#" },
                 { label: "Kombewa", id: "#" },
                 { label: "Akala", id: "#" }
-              ] 
+              ]
             }
           ].map((col) => (
             <div key={col.title} className="col-span-1">
