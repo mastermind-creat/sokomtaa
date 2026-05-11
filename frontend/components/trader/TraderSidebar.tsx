@@ -75,6 +75,7 @@ export default function TraderSidebar() {
     const pathname = usePathname();
     const { logout } = useLogout();
     const { t } = useTranslation();
+    const { user } = useAuthStore();
     const [isOpen, setIsOpen] = React.useState(true);
     const [mounted, setMounted] = React.useState(false);
 
@@ -91,6 +92,7 @@ export default function TraderSidebar() {
                 return res.data;
             } catch { return null; }
         },
+        enabled: !!user && user.role === 'trader',
         staleTime: 60_000,
     });
 
@@ -101,9 +103,10 @@ export default function TraderSidebar() {
             const res = await api.get<never, ApiResponse<MenuCounts>>('/trader/analytics/menu-counts');
             return res.data;
         },
+        enabled: !!user && user.role === 'trader',
         refetchInterval: 60000 // Refetch every minute
     });
-    const counts = menuCountsRaw?.data;
+    const counts = menuCountsRaw;
 
     const stallBadge = stallApp ? ({
         pending:    'Pending',

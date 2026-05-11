@@ -36,6 +36,7 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
     const pathname = usePathname();
     const { t } = useTranslation();
     const { logout } = useLogout();
+    const { user } = useAuthStore();
     const [isStoreOpen, setIsStoreOpen] = React.useState(true);
 
     // Fetch stall application status for badge
@@ -47,6 +48,7 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
                 return res.data;
             } catch { return null; }
         },
+        enabled: !!user && user.role === 'trader',
         staleTime: 60_000,
     });
 

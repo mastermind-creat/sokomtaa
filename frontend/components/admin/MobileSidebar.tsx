@@ -36,6 +36,18 @@ interface MenuCounts {
     fees_overdue: number;
 }
 
+interface MenuItem {
+    icon: any;
+    label: string;
+    path: string;
+    badge?: number | string | null;
+}
+
+interface MenuSection {
+    title: string;
+    items: MenuItem[];
+}
+
 interface MobileSidebarProps {
     isOpen: boolean;
     onClose: () => void;
@@ -46,6 +58,7 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     const pathname = usePathname();
     const { t } = useTranslation();
     const { logout } = useLogout();
+    const { user } = useAuthStore();
     const [mounted, setMounted] = React.useState(false);
 
     React.useEffect(() => {
@@ -59,11 +72,12 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             const res = await api.get<never, ApiResponse<MenuCounts>>('/admin/menu-counts');
             return res.data;
         },
+        enabled: !!user && user.role === 'admin',
         refetchInterval: 60000 // Refetch every minute
     });
-    const counts = menuCountsRaw?.data;
+    const counts = menuCountsRaw;
 
-    const menuSections = [
+    const menuSections: MenuSection[] = [
         {
             title: 'Operations',
             items: [

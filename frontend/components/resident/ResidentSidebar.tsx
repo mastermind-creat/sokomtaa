@@ -28,11 +28,19 @@ interface MenuCounts {
     unread_notifications: number;
 }
 
+interface MenuItem {
+    icon: any;
+    label: string;
+    path: string;
+    badge?: number | string | null;
+}
+
 export default function ResidentSidebar() {
     const router = useRouter();
     const pathname = usePathname();
     const { logout } = useLogout();
     const { t } = useTranslation();
+    const { user } = useAuthStore();
     const [mounted, setMounted] = React.useState(false);
 
     React.useEffect(() => {
@@ -46,11 +54,12 @@ export default function ResidentSidebar() {
             const res = await api.get<never, ApiResponse<MenuCounts>>('/resident/menu-counts');
             return res.data;
         },
+        enabled: !!user && user.role === 'resident',
         refetchInterval: 60000 // Refetch every minute
     });
-    const counts = menuCountsRaw?.data;
+    const counts = menuCountsRaw;
 
-    const menuItems = [
+    const menuItems: MenuItem[] = [
         { icon: Home, label: t('common.dashboard'), path: '/resident/dashboard', badge: null },
         { icon: Search, label: t('nav.discover'), path: '/search', badge: null },
         { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: counts?.active_reservations || null },

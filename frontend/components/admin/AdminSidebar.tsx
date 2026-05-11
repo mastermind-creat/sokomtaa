@@ -64,11 +64,25 @@ interface MenuCounts {
     fees_overdue: number;
 }
 
+interface MenuItem {
+    icon: any;
+    label: string;
+    path: string;
+    badge?: number | string;
+}
+
+interface MenuSection {
+    title: string;
+    icon: any;
+    items: MenuItem[];
+}
+
 export default function AdminSidebar() {
     const router = useRouter();
     const pathname = usePathname();
     const { logout } = useLogout();
     const { t } = useTranslation();
+    const { user } = useAuthStore();
     const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
     const [mounted, setMounted] = useState(false);
 
@@ -99,12 +113,13 @@ export default function AdminSidebar() {
             const res = await api.get<never, ApiResponse<MenuCounts>>('/admin/menu-counts');
             return res.data;
         },
+        enabled: !!user && user.role === 'admin',
         refetchInterval: 60000 // Refetch every minute
     });
-    const counts = menuCountsRaw?.data;
+    const counts = menuCountsRaw;
 
 
-    const menuSections = [
+    const menuSections: MenuSection[] = [
         {
             title: 'Operations',
             icon: LayoutDashboard,

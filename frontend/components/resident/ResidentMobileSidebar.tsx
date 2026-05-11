@@ -29,6 +29,13 @@ interface MenuCounts {
     unread_notifications: number;
 }
 
+interface MenuItem {
+    icon: any;
+    label: string;
+    path: string;
+    badge?: number | string | null;
+}
+
 interface ResidentMobileSidebarProps {
     isOpen: boolean;
     onClose: () => void;
@@ -39,6 +46,7 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
     const pathname = usePathname();
     const { t } = useTranslation();
     const { logout } = useLogout();
+    const { user } = useAuthStore();
 
     // Fetch dynamic menu counts
     const { data: menuCountsRaw } = useQuery({
@@ -47,11 +55,12 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
             const res = await api.get<never, ApiResponse<MenuCounts>>('/resident/menu-counts');
             return res.data;
         },
+        enabled: !!user && user.role === 'resident',
         refetchInterval: 60000 // Refetch every minute
     });
-    const counts = menuCountsRaw?.data;
+    const counts = menuCountsRaw;
 
-    const menuItems = [
+    const menuItems: MenuItem[] = [
         { icon: Home, label: t('common.dashboard'), path: '/resident/dashboard', badge: null },
         { icon: Search, label: t('nav.discover'), path: '/search', badge: null },
         { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: counts?.active_reservations || null },

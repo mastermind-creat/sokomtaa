@@ -23,8 +23,15 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, title }: DashboardLayoutProps) {
     const { user } = useAuthStore();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const renderSidebar = () => {
+        if (!mounted) return <div className="hidden lg:block w-[280px] h-screen bg-[#FAFAF8] border-r border-gray-100" />;
+        
         if (!user) return <ResidentSidebar />;
         
         switch (user.role) {
@@ -40,19 +47,19 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
     return (
         <div className="flex flex-col lg:flex-row min-h-screen bg-[#FAFAF8] w-full max-w-full overflow-hidden">
             {/* Mobile Drawer */}
-            {user?.role === 'admin' && (
+            {mounted && user?.role === 'admin' && (
                 <MobileSidebar 
                     isOpen={isMobileMenuOpen} 
                     onClose={() => setIsMobileMenuOpen(false)} 
                 />
             )}
-            {user?.role === 'trader' && (
+            {mounted && user?.role === 'trader' && (
                 <TraderMobileSidebar 
                     isOpen={isMobileMenuOpen} 
                     onClose={() => setIsMobileMenuOpen(false)} 
                 />
             )}
-            {(!user || user.role === 'resident') && (
+            {mounted && (!user || user.role === 'resident') && (
                 <ResidentMobileSidebar 
                     isOpen={isMobileMenuOpen} 
                     onClose={() => setIsMobileMenuOpen(false)} 
