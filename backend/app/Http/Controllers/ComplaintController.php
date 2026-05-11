@@ -6,6 +6,8 @@ use App\Models\Complaint;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class ComplaintController extends Controller
 {
@@ -23,9 +25,68 @@ class ComplaintController extends Controller
             $query->where('user_id', $user->id);
         }
 
-        $complaints = $query->latest()->paginate(15);
+        // Filtering by status or priority if provided
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
 
-        return $this->success($complaints, 'Malalamishi yamepatikana. (Complaints retrieved.)');
+        if ($request->has('priority')) {
+            $query->where('priority', $request->priority);
+        }
+
+        $complaints = $query->latest()->get()->map(function($c) {
+            return [
+                'id' => $c->id,
+                'user_id' => $c->user_id,
+                'user_name' => $c->user->name ?? 'Unknown',
+                'market_id' => $c->market_id,
+                'market_name' => $c->market->name ?? 'N/A',
+                'trader_id' => $c->trader_id,
+                'trader' => $c->trader ? [
+                    'id' => $c->trader->id,
+                    'business_name' => $c->trader->business_name,
+                ] : null,
+                'reservation_id' => $c->reservation_id,
+                'category' => $c->category,
+                'subject' => $c->subject,
+                'description' => $c->description,
+                'status' => $c->status,
+                'priority' => $c->priority === 1 ? 'low' : ($c->priority === 2 ? 'medium' : 'high'),
+                'admin_response' => $c->admin_response,
+                'created_at' => $c->created_at->toIso8601String(),
+                'updated_at' => $c->updated_at->toIso8601String(),
+            ];
+        });
+
+        return $this->success($complaints, 'Complaints retrieved successfully.');
+    }
+
+    /**
+     * Get high-level stats for the complaints dashboard.
+     */
+    public function stats(): \Illuminate\Http\JsonResponse
+    {
+        $unresolvedCount = Complaint::whereIn('status', ['open', 'in_review'])->count();
+        
+        $resolvedCount = Complaint::where('status', 'resolved')->count();
+        $totalEnded = Complaint::whereIn('status', ['resolved', 'closed'])->count();
+        $totalComplaints = Complaint::count();
+        
+        $efficiency = $totalEnded > 0 ? round(($resolvedCount / $totalEnded) * 100, 1) : 100;
+        
+        // Sentiment - simple heuristic based on high priority counts
+        $highPriorityCount = Complaint::where('priority', 3)->where('status', 'open')->count();
+        $sentiment = $highPriorityCount > 5 ? 'Critical' : ($highPriorityCount > 0 ? 'Warning' : 'Stable');
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'unresolved' => $unresolvedCount,
+                'efficiency' => $efficiency,
+                'sentiment' => $sentiment,
+                'total' => $totalComplaints
+            ]
+        ]);
     }
 
     /**
@@ -59,7 +120,7 @@ class ComplaintController extends Controller
             'status'         => 'open',
         ]);
 
-        return $this->success($complaint, 'Lalamishi lako limepokelewa. (Your complaint has been received.)', 201);
+        return $this->success($complaint, 'Your complaint has been received successfully.', 201);
     }
 
     /**
@@ -85,9 +146,6 @@ class ComplaintController extends Controller
             'resolved_at'    => $request->status === 'resolved' ? now() : $complaint->resolved_at,
         ]);
 
-        // Note: In Phase 5A, we would trigger a notification here to the user
-        // However, we wait for NotificationService to be injected or used via trait/facade
-
-        return $this->success($complaint, 'Lalamishi limefanyiwa kazi. (Complaint updated.)');
+        return $this->success($complaint, 'Complaint status updated successfully.');
     }
 }
