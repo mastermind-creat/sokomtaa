@@ -33,3 +33,6 @@ jobs:
           **/tests/**
           .env
           vendor/
+          bootstrap/cache/config.php
+          bootstrap/cache/routes.php
+          bootstrap/cache/events.php
