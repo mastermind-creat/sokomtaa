@@ -1,5 +1,7 @@
 <?php
 
+// v2.1.0 — Flexible fee support: respects market is_fee_enabled toggle and explicit daily/weekly rates
+
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
