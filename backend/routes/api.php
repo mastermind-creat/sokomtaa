@@ -289,6 +289,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index']);
         Route::get('/reviews', [\App\Http\Controllers\Admin\ReviewController::class, 'index']);
         Route::get('/reservations', [\App\Http\Controllers\Admin\ReservationController::class, 'index']);
+        Route::get('/reservations/stats', [\App\Http\Controllers\Admin\ReservationController::class, 'stats']);
+        Route::post('/reservations/propagate-report', [\App\Http\Controllers\Admin\ReservationController::class, 'propagateReport']);
         Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index']);
         Route::get('/audit-logs', [\App\Http\Controllers\Admin\AuditLogController::class, 'index']);
 
