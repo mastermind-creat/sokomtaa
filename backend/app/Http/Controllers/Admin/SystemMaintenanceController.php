@@ -114,19 +114,21 @@ class SystemMaintenanceController extends Controller
             set_time_limit(300);
             $link = public_path('storage');
             
-            // If it's a symlink or directory, remove it first to avoid "already exists" error
-            if (is_link($link) || file_exists($link)) {
-                if (PHP_OS_FAMILY === 'Windows') {
-                    exec("rmdir /s /q \"$link\"");
-                } else {
-                    exec("rm -rf \"$link\"");
-                }
+            // If it's a symlink, remove it. If it's a directory, don't delete it automatically!
+            if (is_link($link)) {
+                unlink($link);
+            } elseif (file_exists($link) && is_dir($link)) {
+                // If it's a directory, we can't just delete it in production safely
+                return response()->json([
+                    'message' => 'The [public/storage] path exists as a directory. Please remove it manually to create a symlink.',
+                    'hint' => 'Check if you have actual files in public/storage before deleting.'
+                ], 422);
             }
 
             Artisan::call('storage:link');
             
             return response()->json([
-                'message' => 'Storage link recreated successfully.',
+                'message' => 'Storage link created successfully.',
                 'output' => Artisan::output()
             ]);
         } catch (\Exception $e) {
@@ -163,25 +165,45 @@ class SystemMaintenanceController extends Controller
                 return response()->json(['message' => 'Log file not found.', 'logs' => 'No logs yet.'], 404);
             }
 
-            // Using tail-like logic for memory efficiency
-            $file = new \SplFileObject($logPath, 'r');
-            $file->seek(PHP_INT_MAX);
-            $lastLine = $file->key();
+            // More robust tail implementation for large files
+            $lines = 100;
+            $data = [];
+            $fp = fopen($logPath, 'r');
+            fseek($fp, 0, SEEK_END);
+            $pos = ftell($fp);
+            $buffer = "";
             
-            $startLine = max(0, $lastLine - 100);
-            $file->seek($startLine);
-            
-            $content = "";
-            while (!$file->eof()) {
-                $content .= $file->current();
-                $file->next();
+            while ($pos > 0 && count($data) <= $lines) {
+                $readSize = min($pos, 4096);
+                $pos -= $readSize;
+                fseek($fp, $pos);
+                $buffer = fread($fp, $readSize) . $buffer;
+                
+                $linesArray = explode("\n", $buffer);
+                if (count($linesArray) > $lines + 1) {
+                    $data = array_slice($linesArray, -$lines);
+                    break;
+                }
             }
+            
+            if (empty($data)) {
+                $data = explode("\n", $buffer);
+                $data = array_slice($data, -$lines);
+            }
+            
+            fclose($fp);
+
+            $content = implode("\n", $data);
+            
+            // Ensure UTF-8 validity for JSON response
+            $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
 
             return response()->json([
                 'message' => 'Logs retrieved successfully',
                 'logs' => $content ?: 'Log file is empty.'
             ]);
         } catch (\Exception $e) {
+            Log::error('Log retrieval failed: ' . $e->getMessage());
             return response()->json(['message' => 'Failed to read logs: ' . $e->getMessage()], 500);
         }
     }
