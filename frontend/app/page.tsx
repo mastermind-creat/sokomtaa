@@ -6,6 +6,7 @@ import React from 'react';
 import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
 import { ProductPreview } from '@/components/landing/ProductPreview';
+import { TopTradersPreview } from '@/components/landing/TopTradersPreview';
 import { MarketPreview } from '@/components/landing/MarketPreview';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { Features } from '@/components/landing/Features';
@@ -25,6 +26,7 @@ export default function PublicLandingPage() {
       <main>
         <Hero />
         <ProductPreview />
+        <TopTradersPreview />
         <MarketPreview />
         <HowItWorks />
         <Features />
