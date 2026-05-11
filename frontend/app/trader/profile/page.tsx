@@ -357,23 +357,33 @@ export default function TraderProfilePage() {
     ] as const;
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-6 pb-32">
-            {/* Header / Tabs */}
-            <div className="flex items-center gap-2 mb-8 bg-gray-50 p-1.5 rounded-2xl overflow-x-auto no-scrollbar">
-                {tabs.map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-black transition-all whitespace-nowrap ${
-                            activeTab === tab.id
-                                ? 'bg-white text-brand-600 shadow-sm border border-gray-100'
-                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100/50'
-                        }`}
-                    >
-                        <tab.icon size={18} />
-                        {tab.label}
-                    </button>
-                ))}
+        <div className="max-w-4xl mx-auto px-4 py-6 pb-20">
+            {/* Header / Tabs - Sticky on Mobile */}
+            <div className="sticky top-0 z-40 -mx-4 px-4 py-3 bg-white/80 backdrop-blur-md border-b border-gray-100 mb-8 sm:relative sm:top-auto sm:mx-0 sm:px-0 sm:bg-transparent sm:backdrop-blur-none sm:border-none">
+                <div className="flex items-center gap-1 bg-gray-100/80 p-1 rounded-2xl">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-3.5 rounded-xl text-xs sm:text-sm font-black transition-all relative ${
+                                activeTab === tab.id
+                                    ? 'bg-white text-brand-600 shadow-sm border border-gray-100'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <tab.icon size={16} className={activeTab === tab.id ? 'text-brand-600' : 'text-gray-400'} />
+                            <span className="hidden xs:inline">{tab.label}</span>
+                            <span className="xs:hidden">{tab.id === 'business' ? 'Profile' : tab.id === 'kyc' ? 'KYC' : 'Account'}</span>
+                            
+                            {activeTab === tab.id && (
+                                <motion.div 
+                                    layoutId="activeTab"
+                                    className="absolute inset-0 bg-white rounded-xl shadow-sm border border-gray-100 -z-10"
+                                />
+                            )}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* First-time Setup Banner */}
@@ -843,41 +853,39 @@ export default function TraderProfilePage() {
                 </div>
             )}
 
-            {/* Sticky Save Button */}
-            <div className="fixed bottom-[80px] left-0 right-0 p-4 md:static md:p-0 md:mt-4 z-50">
-                <div className="max-w-4xl mx-auto">
-                    <button
-                        onClick={() => {
-                            setFormError(null);
-                            // Strip non-serialisable / server-computed fields before sending
-                            const { user: _u, verification_status: _vs, rejection_reason: _rr, ...safe } = current as TraderProfile & { market_id?: number; stall_number?: string; user?: unknown; verification_status?: string; rejection_reason?: string };
-                            void _u; void _vs; void _rr;
-                            if (isFirstTimeSetup) {
-                                setupProfile(safe as Partial<TraderProfile>);
-                            } else {
-                                saveProfile(safe as Partial<TraderProfile>);
-                            }
-                        }}
-                        disabled={isPending || (!isFirstTimeSetup && Object.keys(form).length === 0)}
-                        className={`w-full h-16 rounded-[1.25rem] font-black text-base shadow-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 ${
-                            saved ? 'bg-green-600 shadow-green-200' : 'bg-brand-600 shadow-brand-200 hover:bg-brand-700'
-                        } text-white`}
-                    >
-                        {isPending ? (
-                            <Loader2 className="animate-spin" size={24} />
-                        ) : saved ? (
-                            <>
-                                <CheckCircle2 size={24} />
-                                Changes Saved Successfully!
-                            </>
-                        ) : (
-                            <>
-                                <Save size={24} />
-                                {isFirstTimeSetup ? 'Complete Store Setup' : 'Save Profile Changes'}
-                            </>
-                        )}
-                    </button>
-                </div>
+            {/* Save Button - Non-sticky, at the bottom of the content */}
+            <div className="mt-12 mb-20 px-4 md:px-0">
+                <button
+                    onClick={() => {
+                        setFormError(null);
+                        // Strip non-serialisable / server-computed fields before sending
+                        const { user: _u, verification_status: _vs, rejection_reason: _rr, ...safe } = current as TraderProfile & { market_id?: number; stall_number?: string; user?: unknown; verification_status?: string; rejection_reason?: string };
+                        void _u; void _vs; void _rr;
+                        if (isFirstTimeSetup) {
+                            setupProfile(safe as Partial<TraderProfile>);
+                        } else {
+                            saveProfile(safe as Partial<TraderProfile>);
+                        }
+                    }}
+                    disabled={isPending || (!isFirstTimeSetup && Object.keys(form).length === 0)}
+                    className={`w-full h-16 rounded-[1.25rem] font-black text-base shadow-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 ${
+                        saved ? 'bg-green-600 shadow-green-200' : 'bg-brand-600 shadow-brand-200 hover:bg-brand-700'
+                    } text-white`}
+                >
+                    {isPending ? (
+                        <Loader2 className="animate-spin" size={24} />
+                    ) : saved ? (
+                        <>
+                            <CheckCircle2 size={24} />
+                            Changes Saved Successfully!
+                        </>
+                    ) : (
+                        <>
+                            <Save size={24} />
+                            {isFirstTimeSetup ? 'Complete Store Setup' : 'Save Profile Changes'}
+                        </>
+                    )}
+                </button>
             </div>
 
             {/* Account Deletion Confirmation Modal */}

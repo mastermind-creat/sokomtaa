@@ -16,8 +16,8 @@ export const Footer = () => {
   return (
     <footer className="pt-24 pb-12 px-6 bg-white border-t border-gray-100">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-16 mb-20">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-y-16 gap-x-8 mb-20">
+          <div className="col-span-2">
             <Link href="/" className="flex items-center gap-3 mb-8">
               <Logo variant="icon" width={24} height={24} />
               <span className="font-display font-black text-2xl tracking-tighter text-green-950 shrink-0">
@@ -53,15 +53,15 @@ export const Footer = () => {
             { 
               title: "County", 
               links: [
-                { label: "Kolenyo Market", id: "#" },
-                { label: "Kombewa Market", id: "#" },
-                { label: "Akala Market", id: "#" }
+                { label: "Kolenyo", id: "#" },
+                { label: "Kombewa", id: "#" },
+                { label: "Akala", id: "#" }
               ] 
             }
           ].map((col) => (
-            <div key={col.title}>
-              <h4 className="font-black text-xs uppercase tracking-[0.2em] text-gray-400 mb-8">{col.title}</h4>
-              <ul className="space-y-5">
+            <div key={col.title} className="col-span-1">
+              <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-6">{col.title}</h4>
+              <ul className="space-y-4">
                 {col.links.map(link => (
                   <li key={link.label}>
                     {link.id.startsWith('#') ? (
