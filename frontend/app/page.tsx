@@ -7,7 +7,6 @@ import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
 import { ProductPreview } from '@/components/landing/ProductPreview';
 import { TopTradersPreview } from '@/components/landing/TopTradersPreview';
-import { MarketPreview } from '@/components/landing/MarketPreview';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { Features } from '@/components/landing/Features';
 import { RoleCards } from '@/components/landing/RoleCards';
@@ -27,7 +26,6 @@ export default function PublicLandingPage() {
         <Hero />
         <ProductPreview />
         <TopTradersPreview />
-        <MarketPreview />
         <HowItWorks />
         <Features />
         <RoleCards />

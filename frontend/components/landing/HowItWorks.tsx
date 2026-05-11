@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion, Variants } from 'framer-motion';
 
 const STEPS = [
   {
@@ -30,6 +31,16 @@ const STEPS = [
 ];
 
 export const HowItWorks = () => {
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { y: 30, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 80, damping: 20 } }
+  };
+
   return (
     <section id="how-it-works" className="py-24 px-6 bg-gray-50">
       <div className="max-w-7xl mx-auto">
@@ -46,9 +57,15 @@ export const HowItWorks = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        >
           {STEPS.map((step) => (
-            <div key={step.num} className="group relative p-10 bg-white border border-gray-100 rounded-[40px] hover:shadow-2xl hover:shadow-green-900/5 transition-all duration-500 overflow-hidden">
+            <motion.div variants={itemVariants} key={step.num} className="group relative p-10 bg-white border border-gray-100 rounded-[40px] hover:shadow-2xl hover:shadow-green-900/5 transition-all duration-500 overflow-hidden">
               {/* Massive Number Watermark */}
               <div className="absolute -top-4 -right-2 text-9xl font-black text-gray-50 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
                 {step.num}
@@ -64,9 +81,9 @@ export const HowItWorks = () => {
               <p className="text-gray-500 text-sm font-medium leading-relaxed">
                 {step.desc}
               </p>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
