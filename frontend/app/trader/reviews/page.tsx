@@ -9,6 +9,7 @@ import { ApiResponse } from '@/types';
 
 import { useUIStore } from '@/store/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import { cn } from '@/lib/utils';
 
 interface ReviewItem {
     id: number;
@@ -108,44 +109,83 @@ export default function TraderReviewsPage() {
         },
     });
 
-    const reviews: ReviewItem[] = Array.isArray(reviewsData) ? (reviewsData as ReviewItem[]) : ((reviewsData as { data?: ReviewItem[] })?.data ?? []);
+    const reviews: ReviewItem[] = Array.isArray(reviewsData) 
+        ? (reviewsData as ReviewItem[]) 
+        : ((reviewsData as { data?: ReviewItem[] })?.data ?? []);
+
+    const avgRating = Number(summary?.average_rating ?? 0);
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-            <h1 className="text-2xl font-black text-text-primary tracking-tight">Reviews Received</h1>
+        <div className="max-w-4xl mx-auto px-4 py-8 pb-32 space-y-10">
+            <div className="flex flex-col gap-2">
+                <h1 className="text-4xl font-black text-green-950 tracking-tight">Reviews</h1>
+                <p className="text-text-secondary font-medium">What your customers are saying about your stall.</p>
+            </div>
+
             {summaryLoading ? (
-                <div className="h-32 bg-gray-100 rounded-2xl animate-pulse" />
+                <div className="h-64 bg-white rounded-[2.5rem] animate-pulse border border-gray-100" />
             ) : summary ? (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
-                    <div className="flex items-center gap-3">
-                        <span className="text-4xl font-black font-mono text-green-950">{summary.average_rating.toFixed(1)}</span>
-                        <div>
-                            <div className="flex items-center gap-0.5">
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-8 md:p-10"
+                >
+                    <div className="grid md:grid-cols-2 gap-10 items-center">
+                        <div className="flex flex-col items-center md:items-start text-center md:text-left border-b md:border-b-0 md:border-r border-gray-100 pb-10 md:pb-0 md:pr-10">
+                            <div className="text-7xl font-black text-green-950 tracking-tighter mb-2">
+                                {avgRating.toFixed(1)}
+                            </div>
+                            <div className="flex items-center gap-1 mb-4">
                                 {Array.from({ length: 5 }).map((_, i) => (
-                                    <Star key={i} className={`w-4 h-4 ${i < Math.round(summary.average_rating) ? 'fill-accent text-accent' : 'text-gray-200'}`} />
+                                    <Star 
+                                        key={i} 
+                                        className={cn(
+                                            "w-6 h-6",
+                                            i < Math.round(avgRating) ? 'fill-accent text-accent' : 'text-gray-200'
+                                        )} 
+                                    />
                                 ))}
                             </div>
-                            <p className="text-xs text-text-muted mt-0.5">{summary.total_reviews} reviews</p>
+                            <p className="text-sm font-black text-text-muted uppercase tracking-[0.2em]">
+                                Based on {summary.total_reviews} verified reviews
+                            </p>
+                        </div>
+
+                        <div className="space-y-3 flex-1">
+                            {([5,4,3,2,1] as const).map(r => (
+                                <StarRow 
+                                    key={r} 
+                                    rating={r} 
+                                    count={summary.breakdown[String(r) as '1'|'2'|'3'|'4'|'5'] ?? 0} 
+                                    total={summary.total_reviews} 
+                                />
+                            ))}
                         </div>
                     </div>
-                    <div className="space-y-1">
-                        {([5,4,3,2,1] as const).map(r => (
-                            <StarRow key={r} rating={r} count={summary.breakdown[String(r) as '1'|'2'|'3'|'4'|'5'] ?? 0} total={summary.total_reviews} />
-                        ))}
-                    </div>
-                </div>
+                </motion.div>
             ) : null}
-            <div className="space-y-4">
-                {isLoading ? (
-                    [1,2,3].map(i => <div key={i} className="h-32 bg-gray-100 rounded-2xl animate-pulse" />)
-                ) : reviews.length === 0 ? (
-                    <div className="text-center py-16 text-text-muted">
-                        <Star className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                        <p className="font-bold text-sm uppercase tracking-widest">No reviews yet</p>
-                    </div>
-                ) : (
-                    reviews.map(review => <ReviewCard key={review.id} review={review} />)
-                )}
+
+            <div className="space-y-6">
+                <div className="flex items-center gap-2 pl-2">
+                    <div className="w-1.5 h-6 bg-brand-600 rounded-full" />
+                    <h2 className="text-xl font-black text-green-950 uppercase tracking-tight">Recent Feedback</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {isLoading ? (
+                        [1,2,3,4].map(i => <div key={i} className="h-48 bg-white border border-gray-100 rounded-[2rem] animate-pulse" />)
+                    ) : reviews.length === 0 ? (
+                        <div className="col-span-full bg-white rounded-[2.5rem] border border-gray-100 border-dashed py-24 flex flex-col items-center justify-center text-center">
+                            <div className="w-20 h-20 bg-neutral-50 rounded-[2rem] flex items-center justify-center text-neutral-200 mb-6">
+                                <Star size={40} />
+                            </div>
+                            <h3 className="text-xl font-black text-green-950 uppercase tracking-tight">No reviews yet</h3>
+                            <p className="text-text-muted font-medium mt-2 max-w-xs">Reviews from customers will appear here after they pick up their orders.</p>
+                        </div>
+                    ) : (
+                        reviews.map(review => <ReviewCard key={review.id} review={review} />)
+                    )}
+                </div>
             </div>
         </div>
     );
