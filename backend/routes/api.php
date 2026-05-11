@@ -288,6 +288,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'getAnalytics']);
         Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index']);
         Route::get('/reviews', [\App\Http\Controllers\Admin\ReviewController::class, 'index']);
+        Route::get('/reviews/stats', [\App\Http\Controllers\Admin\ReviewController::class, 'stats']);
+        Route::post('/reviews/{id}/toggle-visibility', [\App\Http\Controllers\Admin\ReviewController::class, 'toggleVisibility']);
+        Route::delete('/reviews/{id}', [\App\Http\Controllers\Admin\ReviewController::class, 'destroy']);
         Route::get('/reservations', [\App\Http\Controllers\Admin\ReservationController::class, 'index']);
         Route::get('/reservations/stats', [\App\Http\Controllers\Admin\ReservationController::class, 'stats']);
         Route::post('/reservations/propagate-report', [\App\Http\Controllers\Admin\ReservationController::class, 'propagateReport']);

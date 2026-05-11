@@ -9,31 +9,40 @@ import { Reservation } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface ReviewSheetProps {
-    reservation: Reservation;
+    reservation?: Reservation;
+    trader?: any;
+    product?: any;
     onClose: () => void;
 }
 
-export default function ReviewSheet({ reservation, onClose }: ReviewSheetProps) {
+export default function ReviewSheet({ reservation, trader, product, onClose }: ReviewSheetProps) {
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState('');
     const [hoveredRating, setHoveredRating] = useState(0);
     const queryClient = useQueryClient();
 
+    const targetTrader = reservation?.trader || trader;
+    const targetProduct = reservation?.product || product;
+
     const mutation = useMutation({
-        mutationFn: (data: any) => api.post('/reviews', data),
+        mutationFn: (data: any) => api.post('/resident/reviews', data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['reservation', reservation.id.toString()] });
-            queryClient.invalidateQueries({ queryKey: ['trader-reviews', reservation.trader.id.toString()] });
+            if (reservation) {
+                queryClient.invalidateQueries({ queryKey: ['reservation', reservation.id.toString()] });
+            }
+            if (targetTrader) {
+                queryClient.invalidateQueries({ queryKey: ['trader-reviews', targetTrader.id.toString()] });
+            }
             setTimeout(onClose, 2000);
         }
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (rating === 0) return;
+        if (rating === 0 || !targetTrader) return;
         mutation.mutate({
-            trader_id: reservation.trader.id,
-            reservation_id: reservation.id,
+            trader_id: targetTrader.id,
+            reservation_id: reservation?.id,
             rating,
             comment
         });
@@ -92,7 +101,13 @@ export default function ReviewSheet({ reservation, onClose }: ReviewSheetProps) 
                     <span className="text-[10px] font-black text-brand-600 uppercase tracking-[0.3em]">Customer Feedback</span>
                     <h2 className="text-3xl font-black text-green-950 tracking-tight">Rate your experience</h2>
                     <p className="text-sm text-text-muted font-medium">
-                        How was your order of <span className="text-green-950 font-bold">{reservation.product.name}</span> from <span className="text-green-950 font-bold">{reservation.trader.business_name}</span>?
+                        {reservation ? (
+                            <>How was your order of <span className="text-green-950 font-bold">{reservation.product?.name}</span> from <span className="text-green-950 font-bold">{targetTrader?.business_name}</span>?</>
+                        ) : targetProduct ? (
+                            <>How was your experience with <span className="text-green-950 font-bold">{targetProduct.name}</span> from <span className="text-green-950 font-bold">{targetTrader?.business_name}</span>?</>
+                        ) : (
+                            <>How was your overall experience with <span className="text-green-950 font-bold">{targetTrader?.business_name}</span>?</>
+                        )}
                     </p>
                 </div>
 

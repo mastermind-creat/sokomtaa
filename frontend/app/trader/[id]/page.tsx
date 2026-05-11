@@ -339,6 +339,9 @@ export default function TraderStorefrontPage() {
 
                             {/* Review List */}
                             <div className="space-y-4">
+                                <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                                    <h3 className="font-black text-green-950 uppercase tracking-tight">Recent Feedback</h3>
+                                </div>
                                 {isReviewsLoading ? (
                                      <div className="py-12 flex justify-center">
                                          <Loader2 className="animate-spin text-brand-600" />
