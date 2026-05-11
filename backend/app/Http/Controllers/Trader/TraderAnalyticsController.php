@@ -58,16 +58,13 @@ class TraderAnalyticsController extends Controller
             $q->where('trader_id', $traderId);
         })->where('status', 'completed')->sum('amount');
 
-        // Realistic fallback for total revenue if zero
-        if ($totalRevenue == 0) $totalRevenue = 5420;
-
         $stats = [
-            'total_revenue' => $totalRevenue,
+            'total_revenue' => (float)$totalRevenue,
             'pending_reservations' => Reservation::where('trader_id', $traderId)->where('status', 'pending')->count(),
-            'completed_reservations' => Reservation::where('trader_id', $traderId)->where('status', 'completed')->count() ?: 14,
+            'completed_reservations' => Reservation::where('trader_id', $traderId)->where('status', 'completed')->count(),
             'low_stock_items' => Product::where('trader_id', $traderId)->where('stock_status', 'low')->count(),
             'out_of_stock_items' => Product::where('trader_id', $traderId)->where('stock_status', 'out_of_stock')->count(),
-            'profile_views' => $user->trader->profile_views ?: rand(100, 500),
+            'profile_views' => (int)$user->trader->profile_views,
             'growth' => ($growth >= 0 ? '+' : '') . $growth . '%',
             'has_overdue_fees' => \App\Models\MarketFee::where('trader_id', $traderId)->where('status', 'unpaid')->where('due_date', '<', now())->exists(),
         ];
@@ -101,7 +98,7 @@ class TraderAnalyticsController extends Controller
         $traderId = $user->trader->id;
 
         $days = 30;
-        $actualTrends = Payment::whereHas('reservation', function($q) use ($traderId) {
+        $trends = Payment::whereHas('reservation', function($q) use ($traderId) {
                 $q->where('trader_id', $traderId);
             })
             ->where('payments.status', 'completed')
@@ -114,19 +111,28 @@ class TraderAnalyticsController extends Controller
             ->orderBy('date')
             ->get();
 
-        // If no actual trends, provide realistic simulated data for a "full" dashboard experience
-        if ($actualTrends->isEmpty()) {
-            $simulated = [];
-            for ($i = $days; $i >= 0; $i--) {
-                $simulated[] = [
-                    'date' => now()->subDays($i)->format('Y-m-d'),
-                    'total' => rand(500, 3500) + (sin($i/2) * 500) // Realistic variance
-                ];
-            }
-            return $this->success($simulated);
+        $summary = [
+            'peak_revenue' => $trends->max('total') ?: 0,
+            'average_daily' => $trends->count() > 0 ? $trends->avg('total') : 0,
+            'total_period' => $trends->sum('total'),
+            'forecasted_growth' => 0 // Simple placeholder for now
+        ];
+
+        // Fill in missing dates with zero for a continuous graph
+        $filledTrends = [];
+        for ($i = $days; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $match = $trends->firstWhere('date', $date);
+            $filledTrends[] = [
+                'date' => $date,
+                'total' => $match ? (float)$match->total : 0
+            ];
         }
 
-        return $this->success($actualTrends);
+        return $this->success([
+            'trends' => $filledTrends,
+            'summary' => $summary
+        ]);
     }
 
     /**

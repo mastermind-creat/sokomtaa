@@ -37,11 +37,24 @@ export interface TraderDashboardStats {
     low_stock_items: number;
     out_of_stock_items: number;
     profile_views: number;
+    growth: string;
 }
 
 export interface RevenueTrend {
     date: string;
     total: number;
+}
+
+export interface RevenueSummary {
+    peak_revenue: number;
+    average_daily: number;
+    total_period: number;
+    forecasted_growth: number;
+}
+
+export interface RevenueTrendsResponse {
+    trends: RevenueTrend[];
+    summary: RevenueSummary;
 }
 
 export interface AnalyticsProduct {

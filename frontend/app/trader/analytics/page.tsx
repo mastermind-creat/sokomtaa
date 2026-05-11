@@ -4,7 +4,7 @@ import React from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { ApiResponse, TraderDashboardStats, RevenueTrend } from '@/types';
+import { ApiResponse, TraderDashboardStats, RevenueTrend, RevenueTrendsResponse } from '@/types';
 import { 
     ResponsiveContainer, AreaChart, Area
 } from 'recharts';
@@ -44,15 +44,18 @@ export default function TraderAnalyticsPage() {
         queryFn: async () => (await api.get<never, ApiResponse<TraderDashboardStats>>('/trader/analytics/stats')).data
     });
 
-    const { data: revenueData, isLoading: revenueLoading } = useQuery({
+    const { data: revenueResponse, isLoading: revenueLoading } = useQuery({
         queryKey: ['trader-revenue'],
-        queryFn: async () => (await api.get<never, ApiResponse<RevenueTrend[]>>('/trader/analytics/revenue')).data
+        queryFn: async () => (await api.get<never, ApiResponse<RevenueTrendsResponse>>('/trader/analytics/revenue')).data
     });
 
     const { data: priceInsights, isLoading: pricingLoading } = useQuery({
         queryKey: ['trader-price-insights'],
         queryFn: async () => (await api.get<never, ApiResponse<{ market_id: number; insights: PriceInsight[] }>>('/trader/analytics/price-insights')).data
     });
+
+    const revenueData = revenueResponse?.trends || [];
+    const revenueSummary = revenueResponse?.summary;
 
     const matrixStats = [
         { 
@@ -65,14 +68,14 @@ export default function TraderAnalyticsPage() {
         { 
             label: 'Orders', 
             value: stats?.completed_reservations || '0', 
-            growth: '+4.2%',
+            growth: stats?.growth || '+0%', // Fallback to revenue growth for now
             icon: Package,
             color: 'bg-blue-50 text-blue-600'
         },
         { 
             label: 'Profile Pulse', 
             value: stats?.profile_views || '0', 
-            growth: '+12%',
+            growth: '+0%', // Static for now until backend tracks historical views
             icon: Target,
             color: 'bg-purple-50 text-purple-600'
         },
@@ -141,7 +144,7 @@ export default function TraderAnalyticsPage() {
                         <div className="flex items-center gap-3">
                             <div className="px-4 py-2 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
                                 <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Avg Daily:</span>
-                                <span className="text-[10px] font-black text-white ml-2 uppercase tracking-widest">KES 1.2k</span>
+                                <span className="text-[10px] font-black text-white ml-2 uppercase tracking-widest">KES {revenueSummary?.average_daily ? Math.round(revenueSummary.average_daily).toLocaleString() : '0'}</span>
                             </div>
                             <button className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/10 active:scale-90 transition-all hover:bg-white/20">
                                 <RefreshCcw size={20} />
@@ -179,12 +182,12 @@ export default function TraderAnalyticsPage() {
                         <div className="flex items-center gap-6">
                             <div>
                                 <p className="text-[9px] font-black text-brand-400 uppercase tracking-widest mb-1">Highest Peak</p>
-                                <p className="text-2xl font-black text-white leading-none">KES 3,420</p>
+                                <p className="text-2xl font-black text-white leading-none">KES {revenueSummary?.peak_revenue?.toLocaleString() || '0'}</p>
                             </div>
                             <div className="w-px h-10 bg-white/10 hidden md:block" />
                             <div>
-                                <p className="text-[9px] font-black text-brand-400 uppercase tracking-widest mb-1">Growth Forecast</p>
-                                <p className="text-2xl font-black text-emerald-400 leading-none">+8.4%</p>
+                                <p className="text-[9px] font-black text-brand-400 uppercase tracking-widest mb-1">Period Total</p>
+                                <p className="text-2xl font-black text-emerald-400 leading-none">KES {revenueSummary?.total_period?.toLocaleString() || '0'}</p>
                             </div>
                         </div>
                         <button className="w-full md:w-auto h-14 px-8 bg-brand-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-2xl shadow-brand-900/40 active:scale-95 transition-all hover:bg-brand-700">
