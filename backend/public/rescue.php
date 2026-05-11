@@ -9,7 +9,12 @@
 
 define('LARAVEL_START', microtime(true));
 
-// 1. Load Laravel Environment
+// 1. Basic Health Check (No Laravel dependencies yet)
+if (isset($_GET['health'])) {
+    die("RESCUE_HEALTHY: " . date('Y-m-d H:i:s'));
+}
+
+// 2. Load Laravel Environment
 require __DIR__.'/../vendor/autoload.php';
 $app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
