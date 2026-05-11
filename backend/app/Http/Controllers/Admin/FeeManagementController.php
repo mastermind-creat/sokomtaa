@@ -84,48 +84,79 @@ class FeeManagementController extends Controller
     }
 
     /**
-     * Update the base monthly fee for a Market or Stall.
+     * Update the base fees for a Market or Stall.
      */
     public function updateFee(Request $request): JsonResponse
     {
         $request->validate([
             'type' => 'required|in:market,stall',
             'target_id' => 'required|integer',
-            'monthly_fee' => 'required|numeric|min:0',
+            'monthly_fee' => 'nullable|numeric|min:0',
+            'daily_fee' => 'nullable|numeric|min:0',
+            'weekly_fee' => 'nullable|numeric|min:0',
+            'is_fee_enabled' => 'nullable|boolean',
         ]);
 
-        if ($request->type === 'market') {
-            // Update the market template itself
-            Market::where('id', $request->target_id)->update([
-                'default_monthly_fee' => $request->monthly_fee
-            ]);
+        $updateData = [];
+        if ($request->has('monthly_fee')) $updateData['monthly_fee'] = $request->monthly_fee;
+        if ($request->has('daily_fee')) $updateData['daily_fee'] = $request->daily_fee;
+        if ($request->has('weekly_fee')) $updateData['weekly_fee'] = $request->weekly_fee;
 
-            // Sync all stalls in this market
-            Stall::where('market_id', $request->target_id)->update([
-                'monthly_fee' => $request->monthly_fee
-            ]);
+        if ($request->type === 'market') {
+            $marketUpdateData = [];
+            if ($request->has('monthly_fee')) $marketUpdateData['default_monthly_fee'] = $request->monthly_fee;
+            if ($request->has('daily_fee')) $marketUpdateData['default_daily_fee'] = $request->daily_fee;
+            if ($request->has('weekly_fee')) $marketUpdateData['default_weekly_fee'] = $request->weekly_fee;
+            if ($request->has('is_fee_enabled')) $marketUpdateData['is_fee_enabled'] = $request->is_fee_enabled;
+
+            Market::where('id', $request->target_id)->update($marketUpdateData);
+
+            // Sync all stalls in this market if fees were changed
+            if (!empty($updateData)) {
+                Stall::where('market_id', $request->target_id)->update($updateData);
+            }
         } else {
-            Stall::where('id', $request->target_id)->update([
-                'monthly_fee' => $request->monthly_fee
-            ]);
+            Stall::where('id', $request->target_id)->update($updateData);
         }
 
-        return $this->success(null, 'Monthly fee updated successfully. (Ada ya mwezi imesasishwa.)');
+        return $this->success(null, 'Market fees updated successfully. (Ada za soko zimesasishwa.)');
     }
     public function updateGlobalRate(Request $request): JsonResponse
     {
         $request->validate([
-            'monthly_fee' => 'required|numeric|min:0',
+            'monthly_fee' => 'nullable|numeric|min:0',
+            'daily_fee' => 'nullable|numeric|min:0',
+            'weekly_fee' => 'nullable|numeric|min:0',
+            'is_fee_enabled' => 'nullable|boolean',
         ]);
 
-        $fee = $request->monthly_fee;
+        $marketUpdateData = [];
+        $stallUpdateData = [];
 
-        // 1. Update all market defaults
-        Market::query()->update(['default_monthly_fee' => $fee]);
+        if ($request->has('monthly_fee')) {
+            $marketUpdateData['default_monthly_fee'] = $request->monthly_fee;
+            $stallUpdateData['monthly_fee'] = $request->monthly_fee;
+        }
+        if ($request->has('daily_fee')) {
+            $marketUpdateData['default_daily_fee'] = $request->daily_fee;
+            $stallUpdateData['daily_fee'] = $request->daily_fee;
+        }
+        if ($request->has('weekly_fee')) {
+            $marketUpdateData['default_weekly_fee'] = $request->weekly_fee;
+            $stallUpdateData['weekly_fee'] = $request->weekly_fee;
+        }
+        if ($request->has('is_fee_enabled')) {
+            $marketUpdateData['is_fee_enabled'] = $request->is_fee_enabled;
+        }
 
-        // 2. Sync all stalls across the entire county
-        $updatedCount = Stall::query()->update(['monthly_fee' => $fee]);
+        if (!empty($marketUpdateData)) {
+            Market::query()->update($marketUpdateData);
+        }
 
-        return $this->success(null, "Global rate updated to KES {$fee} for all markets and {$updatedCount} stalls. (Mfumo wa ada umesasishwa kote. Ada mpya ya KES {$fee} imewekwa kwa masoko yote na vibanda {$updatedCount}.)");
+        if (!empty($stallUpdateData)) {
+            Stall::query()->update($stallUpdateData);
+        }
+
+        return $this->success(null, "Global rates and system configurations updated successfully. (Vigezo vya mfumo vimesasishwa kote.)");
     }
 }

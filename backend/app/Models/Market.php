@@ -23,6 +23,9 @@ class Market extends Model
         'banner_url',
         'icon_url',
         'default_monthly_fee',
+        'default_daily_fee',
+        'default_weekly_fee',
+        'is_fee_enabled',
     ];
 
     protected $casts = [
@@ -30,6 +33,7 @@ class Market extends Model
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
         'building_config' => 'json',
+        'is_fee_enabled' => 'boolean',
     ];
 
     public function stalls(): HasMany

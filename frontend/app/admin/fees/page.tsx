@@ -50,6 +50,9 @@ const [activeTab, setActiveTab] = useState<'audit' | 'delinquents' | 'rates'>('a
 const [searchQuery, setSearchQuery] = useState('');
 const [editingMarket, setEditingMarket] = useState<Market | null>(null);
 const [newFeeValue, setNewFeeValue] = useState<string>('');
+const [newDailyFee, setNewDailyFee] = useState<string>('');
+const [newWeeklyFee, setNewWeeklyFee] = useState<string>('');
+const [isMarketFeeEnabled, setIsMarketFeeEnabled] = useState<boolean>(true);
 
 const { data: statsData, isLoading: statsLoading } = useQuery<{ total_collected: number; collection_rate: number; delinquent_count: number }>({
     queryKey: ['admin-fee-stats'],
@@ -66,6 +69,15 @@ const { data: transactions = [], isLoading: transactionsLoading } = useQuery<Mar
     queryFn: () => api.get('/admin/fees/transactions').then((res: any) => res.data),
 });
 
+React.useEffect(() => {
+    if (editingMarket) {
+        setNewFeeValue(editingMarket.default_monthly_fee?.toString() || '');
+        setNewDailyFee(editingMarket.default_daily_fee?.toString() || '');
+        setNewWeeklyFee(editingMarket.default_weekly_fee?.toString() || '');
+        setIsMarketFeeEnabled(editingMarket.is_fee_enabled);
+    }
+}, [editingMarket]);
+
 const { data: markets = [], isLoading: marketsLoading } = useQuery<Market[]>({
     queryKey: ['admin-markets-rates'],
     queryFn: () => api.get('/admin/markets').then((res: any) => res.data),
@@ -73,16 +85,20 @@ const { data: markets = [], isLoading: marketsLoading } = useQuery<Market[]>({
 });
 
 const updateFeeMutation = useMutation({
-    mutationFn: async ({ marketId, fee }: { marketId: number; fee: number }) => {
+    mutationFn: async (data: { marketId: number; fee?: number; daily_fee?: number; weekly_fee?: number; is_fee_enabled?: boolean }) => {
         return api.post('/admin/fees/update-rate', {
             type: 'market',
-            target_id: marketId,
-            monthly_fee: fee
+            target_id: data.marketId,
+            monthly_fee: data.fee,
+            daily_fee: data.daily_fee,
+            weekly_fee: data.weekly_fee,
+            is_fee_enabled: data.is_fee_enabled
         });
     },
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['admin-markets-rates'] });
-        toast.success('Ada imesasishwa. (Fee updated.)');
+        toast.success('Ada imesasishwa. (Fees updated.)');
+        setEditingMarket(null);
     }
 });
 
@@ -100,8 +116,8 @@ const propagateFeesMutation = useMutation({
     }
 });
 const updateGlobalRateMutation = useMutation({
-    mutationFn: async (fee: number) => {
-        return api.post('/admin/fees/update-global-rate', { monthly_fee: fee });
+    mutationFn: async (data: { monthly_fee?: number; daily_fee?: number; weekly_fee?: number; is_fee_enabled?: boolean }) => {
+        return api.post('/admin/fees/update-global-rate', data);
     },
     onSuccess: (res: any) => {
         toast.success(res.message || 'Global rate updated successfully');
@@ -114,13 +130,19 @@ const updateGlobalRateMutation = useMutation({
 });
 
 const [globalRate, setGlobalRate] = useState<string>('');
+const [globalDailyRate, setGlobalDailyRate] = useState<string>('');
+const [globalWeeklyRate, setGlobalWeeklyRate] = useState<string>('');
+const [isGlobalFeeEnabled, setIsGlobalFeeEnabled] = useState<boolean>(true);
 const [isUpdatingGlobal, setIsUpdatingGlobal] = useState(false);
 
 const handleUpdateGlobal = () => {
-    const fee = parseFloat(globalRate);
-    if (isNaN(fee)) return;
     setIsUpdatingGlobal(true);
-    updateGlobalRateMutation.mutate(fee, {
+    updateGlobalRateMutation.mutate({
+        monthly_fee: globalRate ? parseFloat(globalRate) : undefined,
+        daily_fee: globalDailyRate ? parseFloat(globalDailyRate) : undefined,
+        weekly_fee: globalWeeklyRate ? parseFloat(globalWeeklyRate) : undefined,
+        is_fee_enabled: isGlobalFeeEnabled
+    }, {
         onSettled: () => setIsUpdatingGlobal(false)
     });
 };
@@ -364,26 +386,97 @@ return (
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col md:flex-row gap-4 items-end bg-white/5 p-6 rounded-3xl border border-white/10">
-                                    <div className="flex-1 space-y-2 w-full">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Universal Monthly Rate (KES)</label>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-white/5 p-6 rounded-3xl border border-white/10">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Monthly (KES)</label>
                                         <input
                                             type="number"
                                             value={globalRate}
                                             onChange={(e) => setGlobalRate(e.target.value)}
-                                            placeholder="e.g. 1500"
-                                            className="w-full bg-white/10 border border-white/10 h-16 px-6 rounded-2xl font-black text-lg text-white placeholder:text-gray-600 outline-none focus:border-brand-500/50 transition-all"
+                                            placeholder="Monthly"
+                                            className="w-full bg-white/10 border border-white/10 h-14 px-4 rounded-xl font-black text-sm text-white placeholder:text-gray-600 outline-none focus:border-brand-500/50 transition-all"
                                         />
                                     </div>
-                                    <button
-                                        onClick={handleUpdateGlobal}
-                                        disabled={isUpdatingGlobal || !globalRate}
-                                        className="h-16 px-8 bg-brand-500 hover:bg-brand-400 disabled:bg-gray-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-xl shadow-brand-500/20 active:scale-95 flex items-center justify-center gap-3 whitespace-nowrap"
-                                    >
-                                        <Edit2 size={18} />
-                                    </button>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Weekly (KES)</label>
+                                        <input
+                                            type="number"
+                                            value={globalWeeklyRate}
+                                            onChange={(e) => setGlobalWeeklyRate(e.target.value)}
+                                            placeholder="Weekly"
+                                            className="w-full bg-white/10 border border-white/10 h-14 px-4 rounded-xl font-black text-sm text-white placeholder:text-gray-600 outline-none focus:border-brand-500/50 transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Daily (KES)</label>
+                                        <input
+                                            type="number"
+                                            value={globalDailyRate}
+                                            onChange={(e) => setGlobalDailyRate(e.target.value)}
+                                            placeholder="Daily"
+                                            className="w-full bg-white/10 border border-white/10 h-14 px-4 rounded-xl font-black text-sm text-white placeholder:text-gray-600 outline-none focus:border-brand-500/50 transition-all"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Fee Status</label>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setIsGlobalFeeEnabled(!isGlobalFeeEnabled)}
+                                                className={cn(
+                                                    "flex-1 h-14 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border",
+                                                    isGlobalFeeEnabled ? "bg-brand-500 border-brand-400 text-white" : "bg-white/5 border-white/10 text-gray-500"
+                                                )}
+                                            >
+                                                {isGlobalFeeEnabled ? 'Enabled' : 'Disabled'}
+                                            </button>
+                                            <button
+                                                onClick={handleUpdateGlobal}
+                                                disabled={isUpdatingGlobal}
+                                                className="w-14 h-14 bg-white text-gray-950 rounded-xl flex items-center justify-center transition-all shadow-xl active:scale-95 disabled:opacity-50"
+                                            >
+                                                <Edit2 size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* ── Markets Rates List ── */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {marketsLoading ? (
+                                Array(4).fill(0).map((_, i) => (
+                                    <div key={i} className="h-24 bg-white border border-gray-100 rounded-3xl animate-pulse" />
+                                ))
+                            ) : (
+                                markets.map((market) => (
+                                    <div key={market.id} className="bg-white border border-gray-100 p-6 rounded-[2rem] shadow-sm flex items-center justify-between group hover:border-brand-200 transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-green-50 text-green-700 rounded-2xl flex items-center justify-center font-black text-sm uppercase">
+                                                {market.name.substring(0, 2)}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-black text-green-950 uppercase tracking-tight text-sm">{market.name}</h4>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={cn(
+                                                        "w-1.5 h-1.5 rounded-full",
+                                                        market.is_fee_enabled ? "bg-green-500" : "bg-gray-300"
+                                                    )} />
+                                                    <p className="text-[9px] font-black text-text-muted uppercase tracking-widest">
+                                                        M: {market.default_monthly_fee} • W: {market.default_weekly_fee} • D: {market.default_daily_fee}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => setEditingMarket(market)}
+                                            className="w-10 h-10 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-brand-50 hover:text-brand-600"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </motion.div>
                 )}
@@ -405,18 +498,59 @@ return (
                             </DialogHeader>
                         </div>
 
-                        <div className="p-8 space-y-6 bg-white">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Monthly Stall Rate (KES)</label>
-                                <div className="relative group">
-                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 font-black text-sm">KES</span>
-                                    <Input
-                                        type="number"
-                                        value={newFeeValue}
-                                        onChange={(e) => setNewFeeValue(e.target.value)}
-                                        placeholder="0.00"
-                                        className="h-16 pl-14 pr-6 bg-gray-50 border-gray-100 rounded-2xl text-lg font-black text-green-950 focus:bg-white focus:ring-8 focus:ring-brand-50 transition-all"
-                                    />
+                        <div className="p-8 space-y-4 bg-white">
+                            <div className="grid grid-cols-1 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Monthly Rate (KES)</label>
+                                    <div className="relative group">
+                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 font-black text-sm">KES</span>
+                                        <Input
+                                            type="number"
+                                            value={newFeeValue}
+                                            onChange={(e) => setNewFeeValue(e.target.value)}
+                                            placeholder="Monthly"
+                                            className="h-14 pl-14 pr-6 bg-gray-50 border-gray-100 rounded-2xl text-md font-black text-green-950 focus:bg-white focus:ring-8 focus:ring-brand-50 transition-all"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Weekly Rate (KES)</label>
+                                    <div className="relative group">
+                                        <Input
+                                            type="number"
+                                            value={newWeeklyFee}
+                                            onChange={(e) => setNewWeeklyFee(e.target.value)}
+                                            placeholder="Weekly"
+                                            className="h-14 px-6 bg-gray-50 border-gray-100 rounded-2xl text-md font-black text-green-950 focus:bg-white focus:ring-8 focus:ring-brand-50 transition-all"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Daily Rate (KES)</label>
+                                    <div className="relative group">
+                                        <Input
+                                            type="number"
+                                            value={newDailyFee}
+                                            onChange={(e) => setNewDailyFee(e.target.value)}
+                                            placeholder="Daily"
+                                            className="h-14 px-6 bg-gray-50 border-gray-100 rounded-2xl text-md font-black text-green-950 focus:bg-white focus:ring-8 focus:ring-brand-50 transition-all"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Enable Market Fees</span>
+                                    <button
+                                        onClick={() => setIsMarketFeeEnabled(!isMarketFeeEnabled)}
+                                        className={cn(
+                                            "w-12 h-6 rounded-full transition-all relative",
+                                            isMarketFeeEnabled ? "bg-brand-500" : "bg-gray-200"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm",
+                                            isMarketFeeEnabled ? "left-7" : "left-1"
+                                        )} />
+                                    </button>
                                 </div>
                             </div>
 
@@ -430,12 +564,14 @@ return (
                                 </Button>
                                 <Button
                                     onClick={() => {
-                                        if (editingMarket && newFeeValue) {
+                                        if (editingMarket) {
                                             updateFeeMutation.mutate({
                                                 marketId: editingMarket.id,
-                                                fee: parseFloat(newFeeValue)
+                                                fee: newFeeValue ? parseFloat(newFeeValue) : undefined,
+                                                daily_fee: newDailyFee ? parseFloat(newDailyFee) : undefined,
+                                                weekly_fee: newWeeklyFee ? parseFloat(newWeeklyFee) : undefined,
+                                                is_fee_enabled: isMarketFeeEnabled
                                             });
-                                            setEditingMarket(null);
                                         }
                                     }}
                                     disabled={updateFeeMutation.isPending}

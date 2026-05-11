@@ -22,6 +22,8 @@ class Stall extends Model
         'map_y',
         'status',
         'monthly_fee',
+        'daily_fee',
+        'weekly_fee',
         'notes',
     ];
 
@@ -30,6 +32,8 @@ class Stall extends Model
         'map_x' => 'decimal:4',
         'map_y' => 'decimal:4',
         'monthly_fee' => 'decimal:2',
+        'daily_fee' => 'decimal:2',
+        'weekly_fee' => 'decimal:2',
     ];
 
     public function market(): BelongsTo

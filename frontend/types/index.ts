@@ -70,6 +70,9 @@ export interface Market {
     longitude: string | null;
     is_active: boolean;
     default_monthly_fee: number;
+    default_daily_fee: number;
+    default_weekly_fee: number;
+    is_fee_enabled: boolean;
 }
 
 export interface Notice {
@@ -97,6 +100,8 @@ export interface Stall {
     map_y: number | null;
     status: 'available' | 'occupied' | 'maintenance';
     monthly_fee: number;
+    daily_fee: number;
+    weekly_fee: number;
     market?: Market;
     current_trader?: Trader;
 }
