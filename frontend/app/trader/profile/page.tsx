@@ -877,6 +877,7 @@ export default function TraderProfilePage() {
                             </>
                         )}
                     </button>
+                </div>
             </div>
 
             {/* Account Deletion Confirmation Modal */}
