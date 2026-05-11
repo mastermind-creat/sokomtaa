@@ -35,6 +35,7 @@ export default function AdminApplicationsPage() {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [filterStatus, setFilterStatus] = useState<string>('pending');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedStallId, setSelectedStallId] = useState<number | null>(null);
 
     const { data: stats } = useQuery<ApiResponse<any>>({
         queryKey: ['admin-applications-stats'],
@@ -49,6 +50,21 @@ export default function AdminApplicationsPage() {
     const applications: any[] = appsData?.data?.data || [];
     const selectedApp = applications.find(a => a.id === selectedId);
 
+    // Reset selectedStallId when selectedId changes
+    React.useEffect(() => {
+        if (selectedApp) {
+            setSelectedStallId(selectedApp.preferred_stall_id || null);
+        }
+    }, [selectedId, selectedApp]);
+
+    const { data: stallsData } = useQuery<ApiResponse<any[]>>({
+        queryKey: ['available-stalls', selectedApp?.market_id],
+        queryFn: () => api.get('/admin/stalls', { params: { market_id: selectedApp?.market_id, status: 'available' } }),
+        enabled: !!selectedApp?.market_id,
+    });
+
+    const availableStalls = stallsData?.data || [];
+
     const reviewMutation = useMutation({
         mutationFn: ({ id, status, notes, stallId }: { id: number, status: string, notes: string, stallId?: number }) => 
             api.post(`/admin/applications/${id}/action`, { status, notes, stall_id: stallId }),
@@ -56,6 +72,7 @@ export default function AdminApplicationsPage() {
             queryClient.invalidateQueries({ queryKey: ['admin-applications'] });
             queryClient.invalidateQueries({ queryKey: ['admin-applications-stats'] });
             setSelectedId(null);
+            setSelectedStallId(null);
         }
     });
 
@@ -65,7 +82,7 @@ export default function AdminApplicationsPage() {
             id: selectedId,
             status,
             notes: status === 'approved' ? 'Stall allocated successfully.' : 'Does not meet requirements.',
-            stallId: selectedApp?.preferred_stall_id || undefined
+            stallId: status === 'approved' ? (selectedStallId || undefined) : undefined
         });
     };
 
@@ -227,6 +244,34 @@ export default function AdminApplicationsPage() {
                                             <p className="text-[9px] font-black text-text-muted uppercase tracking-widest">Motivation</p>
                                             <div className="bg-white border border-gray-100 p-5 rounded-3xl text-sm font-medium text-text-secondary leading-relaxed italic">
                                                 "{selectedApp.motivation}"
+                                            </div>
+                                        </div>
+
+                                        {/* Stall Selection */}
+                                        <div className="space-y-3">
+                                            <p className="text-[9px] font-black text-text-muted uppercase tracking-widest">Allocate Stall</p>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {availableStalls.length > 0 ? (
+                                                    availableStalls.map((stall: any) => (
+                                                        <button
+                                                            key={stall.id}
+                                                            onClick={() => setSelectedStallId(stall.id)}
+                                                            className={cn(
+                                                                "p-4 rounded-2xl border text-left transition-all",
+                                                                selectedStallId === stall.id 
+                                                                    ? "border-brand-600 bg-brand-50 shadow-sm" 
+                                                                    : "border-gray-100 bg-white hover:border-gray-200"
+                                                            )}
+                                                        >
+                                                            <div className="text-xs font-black text-green-950 uppercase tracking-tight">Stall {stall.stall_number}</div>
+                                                            <div className="text-[9px] font-bold text-text-muted uppercase tracking-widest mt-1">Zone {stall.zone} • {stall.block}</div>
+                                                        </button>
+                                                    ))
+                                                ) : (
+                                                    <div className="col-span-2 p-5 bg-amber-50 text-amber-700 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center border border-amber-100">
+                                                        No available stalls in this market.
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

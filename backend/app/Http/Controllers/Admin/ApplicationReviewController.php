@@ -53,7 +53,7 @@ class ApplicationReviewController extends Controller
     {
         $request->validate([
             'status'   => 'required|in:approved,rejected',
-            'stall_id' => 'required_if:status,approved|exists:stalls,id',
+            'stall_id' => 'nullable|exists:stalls,id',
             'notes'    => 'nullable|string',
         ]);
 
@@ -61,10 +61,16 @@ class ApplicationReviewController extends Controller
             return $this->error('This application has already been processed.', 'ALREADY_PROCESSED', 422);
         }
 
+        $stallId = $request->stall_id ?: $application->preferred_stall_id;
+
+        if ($request->status === 'approved' && !$stallId) {
+            return $this->error('A stall must be selected for approval.', 'STALL_REQUIRED', 422);
+        }
+
         DB::beginTransaction();
         try {
             if ($request->status === 'approved') {
-                $stall = Stall::findOrFail($request->stall_id);
+                $stall = Stall::findOrFail($stallId);
 
                 if ($stall->status === 'occupied') {
                     return $this->error('The selected stall is already occupied.', 'STALL_OCCUPIED', 422);
@@ -115,6 +121,20 @@ class ApplicationReviewController extends Controller
                     'reviewed_by' => Auth::id(),
                     'reviewed_at' => Carbon::now(),
                 ]);
+
+                // Notify Trader via SMS and App
+                $trader = Trader::findOrFail($application->trader_id);
+                $user = $trader->user;
+                if ($user) {
+                    $this->notificationService->send(
+                        $user,
+                        'Application Status Update',
+                        "Your stall application at {$application->market->name} has been rejected. Reason: " . ($request->notes ?: 'Does not meet requirements.'),
+                        'application',
+                        ['market_id' => $application->market_id],
+                        true
+                    );
+                }
             }
 
             DB::commit();
