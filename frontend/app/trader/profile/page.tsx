@@ -52,6 +52,110 @@ function FormField({ label, id, children, error }: { label: string; id: string; 
     );
 }
 
+// Camera Modal for Document Scanning
+function CameraModal({ onCapture, onClose }: { onCapture: (file: File) => void, onClose: () => void }) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [stream, setStream] = useState<MediaStream | null>(null);
+    const [isStarting, setIsStarting] = useState(true);
+
+    React.useEffect(() => {
+        let currentStream: MediaStream | null = null;
+        const start = async () => {
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    } 
+                });
+                currentStream = s;
+                setStream(s);
+                if (videoRef.current) videoRef.current.srcObject = s;
+                setIsStarting(false);
+            } catch (err) {
+                console.error('Camera access failed:', err);
+                onClose();
+            }
+        };
+        start();
+        return () => {
+            if (currentStream) {
+                currentStream.getTracks().forEach(t => t.stop());
+            }
+        };
+    }, [onClose]);
+
+    const capture = () => {
+        if (!videoRef.current) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        ctx.drawImage(videoRef.current, 0, 0);
+        canvas.toBlob((blob) => {
+            if (blob) {
+                const file = new File([blob], `scan_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                onCapture(file);
+                onClose();
+            }
+        }, 'image/jpeg', 0.9);
+    };
+
+    return (
+        <div className="fixed inset-0 z-[150] bg-black flex flex-col animate-in fade-in duration-300">
+            <div className="relative flex-1 flex items-center justify-center overflow-hidden">
+                {isStarting && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-4">
+                        <Loader2 className="animate-spin" size={48} />
+                        <p className="font-black tracking-widest text-xs uppercase">Initializing Camera...</p>
+                    </div>
+                )}
+                <video 
+                    ref={videoRef} 
+                    autoPlay 
+                    playsInline 
+                    className={`w-full h-full object-cover transition-opacity duration-500 ${isStarting ? 'opacity-0' : 'opacity-100'}`} 
+                />
+                
+                {/* Guide Overlay */}
+                <div className="absolute inset-0 border-[40px] border-black/40 pointer-events-none flex items-center justify-center">
+                    <div className="w-full aspect-[4/3] border-2 border-white/50 rounded-3xl relative">
+                        <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-brand-500 rounded-tl-xl" />
+                        <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-brand-500 rounded-tr-xl" />
+                        <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-brand-500 rounded-bl-xl" />
+                        <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-brand-500 rounded-br-xl" />
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-green-950 p-8 pb-12 flex items-center justify-between relative">
+                <button 
+                    onClick={onClose}
+                    className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+                >
+                    <XCircle size={24} />
+                </button>
+
+                <button 
+                    onClick={capture}
+                    className="w-20 h-20 rounded-full bg-white border-[6px] border-brand-500 shadow-2xl flex items-center justify-center active:scale-90 transition-all group"
+                >
+                    <div className="w-12 h-12 rounded-full bg-brand-500 group-hover:scale-110 transition-all" />
+                </button>
+
+                <div className="w-12" />
+
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 text-[10px] font-black text-brand-300 uppercase tracking-widest">
+                    Position Document in Frame
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // Helper: extract first readable message from a Laravel error response
 function extractError(err: unknown): string {
     const e = err as { message?: string; errors?: Record<string, string[]> };
@@ -75,6 +179,12 @@ export default function TraderProfilePage() {
     const [isUploadingAvatarSetup, setIsUploadingAvatarSetup] = useState(false);
     const [isUploadingBannerSetup, setIsUploadingBannerSetup] = useState(false);
     
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+    const [deletionPassword, setDeletionPassword] = useState('');
+    const [deletionError, setDeletionError] = useState<string | null>(null);
+
+    const [activeCamera, setActiveCamera] = useState<null | 'id_front' | 'id_back' | 'permit'>(null);
+
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const bannerInputRef = useRef<HTMLInputElement>(null);
     const permitInputRef = useRef<HTMLInputElement>(null);
@@ -129,6 +239,15 @@ export default function TraderProfilePage() {
             setForm({});
         },
         onError: (err: unknown) => setFormError(extractError(err))
+    });
+
+    const { mutate: deleteAccount, isPending: isDeleting } = useMutation({
+        mutationFn: (password: string) => api.delete('/profile', { data: { password } }),
+        onSuccess: () => {
+            useAuthStore.getState().logout();
+            router.push('/login');
+        },
+        onError: (err: unknown) => setDeletionError(extractError(err))
     });
 
     const { mutate: uploadAvatar, isPending: isUploadingAvatar } = useMutation({
@@ -468,14 +587,25 @@ export default function TraderProfilePage() {
                                                     ) : (
                                                         <Camera className="text-gray-300" size={32} />
                                                     )}
-                                                    <input 
-                                                        type="file" 
-                                                        onChange={e => e.target.files?.[0] && setKycFiles(f => ({ ...f, id_front: e.target.files![0] }))}
-                                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                                        aria-label="Upload ID Front"
-                                                        accept="image/*"
-                                                        capture="environment"
-                                                    />
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all bg-black/40 gap-2">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setActiveCamera('id_front')}
+                                                            className="px-4 py-2 bg-brand-600 text-white text-[10px] font-black uppercase rounded-full"
+                                                        >
+                                                            Take Photo
+                                                        </button>
+                                                        <span className="text-white text-[8px] font-bold uppercase">or</span>
+                                                        <label className="px-4 py-2 bg-white text-gray-900 text-[10px] font-black uppercase rounded-full cursor-pointer">
+                                                            Upload
+                                                            <input 
+                                                                type="file" 
+                                                                onChange={e => e.target.files?.[0] && setKycFiles(f => ({ ...f, id_front: e.target.files![0] }))}
+                                                                className="hidden"
+                                                                accept="image/*"
+                                                            />
+                                                        </label>
+                                                    </div>
                                                 </div>
                                                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Front Side</span>
                                             </div>
@@ -489,14 +619,25 @@ export default function TraderProfilePage() {
                                                     ) : (
                                                         <Camera className="text-gray-300" size={32} />
                                                     )}
-                                                    <input 
-                                                        type="file" 
-                                                        onChange={e => e.target.files?.[0] && setKycFiles(f => ({ ...f, id_back: e.target.files![0] }))}
-                                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                                        aria-label="Upload ID Back"
-                                                        accept="image/*"
-                                                        capture="environment"
-                                                    />
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all bg-black/40 gap-2">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setActiveCamera('id_back')}
+                                                            className="px-4 py-2 bg-brand-600 text-white text-[10px] font-black uppercase rounded-full"
+                                                        >
+                                                            Take Photo
+                                                        </button>
+                                                        <span className="text-white text-[8px] font-bold uppercase">or</span>
+                                                        <label className="px-4 py-2 bg-white text-gray-900 text-[10px] font-black uppercase rounded-full cursor-pointer">
+                                                            Upload
+                                                            <input 
+                                                                type="file" 
+                                                                onChange={e => e.target.files?.[0] && setKycFiles(f => ({ ...f, id_back: e.target.files![0] }))}
+                                                                className="hidden"
+                                                                accept="image/*"
+                                                            />
+                                                        </label>
+                                                    </div>
                                                 </div>
                                                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Back Side</span>
                                             </div>
@@ -535,13 +676,22 @@ export default function TraderProfilePage() {
                                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Upload Permit Photo</p>
                                             </div>
                                         )}
-                                        <input type="file" ref={permitInputRef} onChange={handlePermitChange} className="hidden" accept="image/*" capture="environment" />
-                                        <button 
-                                            onClick={() => permitInputRef.current?.click()}
-                                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-black uppercase tracking-widest transition-all"
-                                        >
-                                            {isUploadingPermit ? 'Uploading...' : 'Change Permit'}
-                                        </button>
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-3 transition-all">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setActiveCamera('permit')}
+                                                className="px-6 py-2 bg-brand-600 text-white text-[10px] font-black uppercase rounded-full shadow-lg"
+                                            >
+                                                Scan Permit
+                                            </button>
+                                            <button 
+                                                onClick={() => permitInputRef.current?.click()}
+                                                className="px-6 py-2 bg-white text-gray-900 text-[10px] font-black uppercase rounded-full shadow-lg"
+                                            >
+                                                Upload Photo
+                                            </button>
+                                        </div>
+                                        <input type="file" ref={permitInputRef} onChange={handlePermitChange} className="hidden" accept="image/*" />
                                         {isUploadingPermit && (
                                             <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
                                                 <Loader2 className="animate-spin text-brand-600" />
@@ -663,6 +813,7 @@ export default function TraderProfilePage() {
                                 </AnimatePresence>
 
                                 <button
+                                    onClick={() => setIsDeletingAccount(true)}
                                     className="w-full py-4 px-6 bg-red-50/30 border border-red-100/50 rounded-3xl flex items-center justify-between group hover:bg-red-50 hover:border-red-200 transition-all"
                                 >
                                     <div className="flex items-center gap-4">
@@ -726,8 +877,99 @@ export default function TraderProfilePage() {
                             </>
                         )}
                     </button>
-                </div>
             </div>
+
+            {/* Account Deletion Confirmation Modal */}
+            <AnimatePresence>
+                {isDeletingAccount && (
+                    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => !isDeleting && setIsDeletingAccount(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            className="relative w-full max-w-lg bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+                        >
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-red-50 rounded-full -translate-y-1/2 translate-x-1/2 -z-10" />
+                            
+                            <div className="space-y-6">
+                                <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
+                                    <XCircle size={32} />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <h2 className="text-2xl font-black text-gray-900">Delete Account?</h2>
+                                    <p className="text-gray-500 font-bold leading-relaxed">
+                                        This action is permanent. You will lose all your store data, products, and transaction history.
+                                        <span className="block mt-2 text-red-600">Je, una uhakika unataka kufuta akaunti yako?</span>
+                                    </p>
+                                </div>
+
+                                <div className="space-y-4 pt-4">
+                                    <FormField label="Confirm with Password" id="delPw" error={deletionError ?? undefined}>
+                                        <div className="relative">
+                                            <input
+                                                type={showPw.current ? 'text' : 'password'}
+                                                id="delPw"
+                                                value={deletionPassword}
+                                                onChange={e => setDeletionPassword(e.target.value)}
+                                                className="w-full h-14 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:bg-white focus:border-red-200 transition-all"
+                                                placeholder="Enter your password to confirm..."
+                                            />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setShowPw(p => ({ ...p, current: !p.current }))}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+                                            >
+                                                {showPw.current ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
+                                        </div>
+                                    </FormField>
+
+                                    <div className="grid grid-cols-2 gap-4 pt-4">
+                                        <button
+                                            onClick={() => !isDeleting && setIsDeletingAccount(false)}
+                                            className="h-14 rounded-2xl font-black text-gray-400 hover:bg-gray-50 transition-all"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => deleteAccount(deletionPassword)}
+                                            disabled={!deletionPassword || isDeleting}
+                                            className="h-14 rounded-2xl bg-red-600 text-white font-black shadow-lg shadow-red-100 hover:bg-red-700 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            {isDeleting ? <Loader2 className="animate-spin" size={20} /> : 'Delete Account'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Document Scanner Modal */}
+            <AnimatePresence>
+                {activeCamera && (
+                    <CameraModal 
+                        onClose={() => setActiveCamera(null)}
+                        onCapture={(file) => {
+                            if (activeCamera === 'id_front') setKycFiles(f => ({ ...f, id_front: file }));
+                            else if (activeCamera === 'id_back') setKycFiles(f => ({ ...f, id_back: file }));
+                            else if (activeCamera === 'permit') {
+                                const event = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+                                handlePermitChange(event);
+                            }
+                        }}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

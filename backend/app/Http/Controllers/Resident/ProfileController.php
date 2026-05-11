@@ -107,4 +107,30 @@ class ProfileController extends Controller
 
         return $this->error('No image provided.', 'BAD_REQUEST', 400);
     }
+    
+    /**
+     * Delete (deactivate) the authenticated user's account.
+     */
+    public function destroy(Request $request): JsonResponse
+    {
+        $request->validate([
+            'password' => 'required'
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!Hash::check($request->password, $user->password)) {
+            return $this->error('Incorrect password. (Nenosiri si sahihi.)', 422);
+        }
+
+        Log::warning('User Account Deletion Executed:', ['user_id' => $user->id, 'email' => $user->email]);
+
+        // Clear tokens
+        $user->tokens()->delete();
+        
+        $user->delete();
+
+        return $this->success(null, 'Account deactivated successfully. (Akaunti imelemazwa.)');
+    }
 }

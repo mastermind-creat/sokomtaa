@@ -126,6 +126,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::patch('/', [\App\Http\Controllers\Resident\ProfileController::class, 'update']);
         Route::post('/avatar', [\App\Http\Controllers\Resident\ProfileController::class, 'uploadAvatar']);
         Route::post('/password', [\App\Http\Controllers\Resident\ProfileController::class, 'changePassword']);
+        Route::delete('/', [\App\Http\Controllers\Resident\ProfileController::class, 'destroy']);
 
         // Cloudinary Direct Upload Support
         Route::get('/cloudinary/sign', [\App\Http\Controllers\CloudinaryController::class, 'getSignature']);
