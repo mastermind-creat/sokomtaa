@@ -52,6 +52,16 @@ function FormField({ label, id, children, error }: { label: string; id: string; 
     );
 }
 
+// Helper: extract first readable message from a Laravel error response
+function extractError(err: unknown): string {
+    const e = err as { message?: string; errors?: Record<string, string[]> };
+    if (e?.errors) {
+        const first = Object.values(e.errors)[0];
+        if (first?.length) return first[0];
+    }
+    return e?.message || 'Something went wrong. Please try again.';
+}
+
 export default function TraderProfilePage() {
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -61,6 +71,9 @@ export default function TraderProfilePage() {
     const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
     const [showPw, setShowPw] = useState({ current: false, newPw: false, confirm: false });
     const [kycFiles, setKycFiles] = useState<{ id_front?: File, id_back?: File, permit?: File }>({});
+    const [formError, setFormError] = useState<string | null>(null);
+    const [isUploadingAvatarSetup, setIsUploadingAvatarSetup] = useState(false);
+    const [isUploadingBannerSetup, setIsUploadingBannerSetup] = useState(false);
     
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -89,30 +102,33 @@ export default function TraderProfilePage() {
     const current: Partial<TraderProfile & { market_id: number; stall_number: string }> = { ...profile, ...form };
 
     const { mutate: setupProfile, isPending: isSettingUp } = useMutation({
-        mutationFn: (data: Partial<TraderProfile>) => api.post('/trader/setup', data),
+        mutationFn: (data: Partial<TraderProfile & { market_id?: number; stall_number?: string }>) =>
+            api.post('/trader/setup', data),
         onSuccess: async () => {
+            setFormError(null);
             await refreshUser();
             queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] });
             setSaved(true);
             setTimeout(() => {
                 setSaved(false);
-                if (isFirstTimeSetup) router.push('/trader/dashboard');
+                router.push('/trader/dashboard');
             }, 1500);
             setForm({});
         },
-        onError: (err: { message?: string }) => alert(err.message || 'Failed to setup profile.')
+        onError: (err: unknown) => setFormError(extractError(err))
     });
 
     const { mutate: saveProfile, isPending: isUpdating } = useMutation({
         mutationFn: (data: Partial<TraderProfile>) => api.put('/trader/update', data),
         onSuccess: () => {
+            setFormError(null);
             queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] });
             useAuthStore.getState().refreshUser();
             setSaved(true);
             setTimeout(() => setSaved(false), 2500);
             setForm({});
         },
-        onError: (err: { message?: string }) => alert(err.message || 'Failed to save profile.')
+        onError: (err: unknown) => setFormError(extractError(err))
     });
 
     const { mutate: uploadAvatar, isPending: isUploadingAvatar } = useMutation({
@@ -124,7 +140,7 @@ export default function TraderProfilePage() {
             queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] });
             useAuthStore.getState().refreshUser();
         },
-        onError: (err: { message?: string }) => alert(err.message || 'Failed to upload image.')
+        onError: (err: unknown) => setFormError(extractError(err))
     });
 
     const { mutate: uploadBanner, isPending: isUploadingBanner } = useMutation({
@@ -133,7 +149,7 @@ export default function TraderProfilePage() {
             return api.put('/trader/update', { banner_url: url });
         },
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] }),
-        onError: (err: { message?: string }) => alert(err.message || 'Failed to upload banner.')
+        onError: (err: unknown) => setFormError(extractError(err))
     });
 
     const { mutate: uploadPermit, isPending: isUploadingPermit } = useMutation({
@@ -142,46 +158,69 @@ export default function TraderProfilePage() {
             return api.put('/trader/update', { permit_image_url: url });
         },
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] }),
-        onError: (err: { message?: string }) => alert(err.message || 'Failed to upload permit.')
+        onError: (err: unknown) => setFormError(extractError(err))
     });
 
     const { mutate: submitKyc, isPending: isSubmittingKyc } = useMutation({
         mutationFn: async (data: { id_front: File; id_back: File }) => {
-            // Upload in parallel
             const [id_front_url, id_back_url] = await Promise.all([
                 uploadToCloudinary(data.id_front, 'traders/kyc'),
                 uploadToCloudinary(data.id_back, 'traders/kyc')
             ]);
-            
             return api.post('/trader/kyc/update-urls', { id_front_url, id_back_url });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] });
-            alert('KYC documents submitted successfully!');
+            setFormError(null);
             setKycFiles({});
         },
-        onError: (err: { message?: string }) => alert(err.message || 'Failed to submit KYC.')
+        onError: (err: unknown) => setFormError(extractError(err))
     });
 
-    const isPending = isSettingUp || isUpdating || isSubmittingKyc || isUploadingAvatar || isUploadingBanner || isUploadingPermit;
+    const isPending = isSettingUp || isUpdating || isSubmittingKyc || isUploadingAvatar || isUploadingBanner || isUploadingPermit || isUploadingAvatarSetup || isUploadingBannerSetup;
 
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files?.[0]) uploadAvatar(e.target.files[0]);
-    };
-
-    const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files?.[0]) uploadBanner(e.target.files[0]);
-    };
-
-    const handlePermitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files?.[0]) {
-            const file = e.target.files[0];
-            uploadPermit(file);
+    // During first-time setup, store uploaded URL in form state (no profile exists yet).
+    // For existing profiles, update backend immediately.
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (isFirstTimeSetup) {
+            setIsUploadingAvatarSetup(true);
+            try {
+                const url = await uploadToCloudinary(file, 'traders/logos');
+                setForm(f => ({ ...f, avatar_url: url }));
+            } catch (err) { setFormError(extractError(err)); }
+            finally { setIsUploadingAvatarSetup(false); }
+        } else {
+            uploadAvatar(file);
         }
     };
 
-    const set = (key: keyof TraderProfile, value: string | number | boolean | null) =>
+    const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (isFirstTimeSetup) {
+            setIsUploadingBannerSetup(true);
+            try {
+                const url = await uploadToCloudinary(file, 'traders/banners');
+                setForm(f => ({ ...f, banner_url: url }));
+            } catch (err) { setFormError(extractError(err)); }
+            finally { setIsUploadingBannerSetup(false); }
+        } else {
+            uploadBanner(file);
+        }
+    };
+
+    const handlePermitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        uploadPermit(file);
+    };
+
+    const set = (key: keyof TraderProfile, value: string | number | boolean | null) => {
+        setFormError(null);
         setForm(f => ({ ...f, [key]: value }));
+    };
 
     if (isLoading) {
         return (
@@ -218,6 +257,19 @@ export default function TraderProfilePage() {
                 ))}
             </div>
 
+            {/* First-time Setup Banner */}
+            {isFirstTimeSetup && (
+                <div className="mb-6 flex items-start gap-4 bg-brand-50 border-2 border-brand-100 rounded-[2rem] p-5">
+                    <div className="w-10 h-10 rounded-2xl bg-brand-600 text-white flex items-center justify-center shrink-0">
+                        <Store size={20} />
+                    </div>
+                    <div>
+                        <h3 className="font-black text-green-950 text-sm">Welcome! Set up your store.</h3>
+                        <p className="text-xs text-gray-500 mt-0.5 font-medium">Fill in your Business Name below and tap <strong>Complete Store Setup</strong> to get started. You can add more details later.</p>
+                    </div>
+                </div>
+            )}
+
             <AnimatePresence mode="wait">
                 <motion.div
                     key={activeTab}
@@ -244,7 +296,7 @@ export default function TraderProfilePage() {
                                         className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md rounded-xl text-xs font-black text-brand-600 shadow-xl hover:bg-white transition-all"
                                     >
                                         <Camera size={14} />
-                                        {isUploadingBanner ? 'Uploading...' : 'Change Cover'}
+                                        {(isUploadingBanner || isUploadingBannerSetup) ? 'Uploading...' : 'Change Cover'}
                                     </button>
                                     <input type="file" ref={bannerInputRef} onChange={handleBannerChange} className="hidden" accept="image/*" />
                                 </div>
@@ -267,7 +319,7 @@ export default function TraderProfilePage() {
                                                 <Camera className="text-white" size={24} />
                                             </button>
                                             <input type="file" ref={avatarInputRef} onChange={handleAvatarChange} className="hidden" accept="image/*" />
-                                            {isUploadingAvatar && (
+                                            {(isUploadingAvatar || isUploadingAvatarSetup) && (
                                                 <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
                                                     <Loader2 className="animate-spin text-brand-600" />
                                                 </div>
@@ -630,11 +682,31 @@ export default function TraderProfilePage() {
                 </motion.div>
             </AnimatePresence>
 
+            {/* Error Banner */}
+            {formError && (
+                <div className="mx-auto max-w-4xl mb-2">
+                    <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+                        <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
+                        <p className="text-red-700 text-sm font-bold">{formError}</p>
+                    </div>
+                </div>
+            )}
+
             {/* Sticky Save Button */}
-            <div className="fixed bottom-[80px] left-0 right-0 p-4 md:static md:p-0 md:mt-10 z-50">
+            <div className="fixed bottom-[80px] left-0 right-0 p-4 md:static md:p-0 md:mt-4 z-50">
                 <div className="max-w-4xl mx-auto">
                     <button
-                        onClick={() => isFirstTimeSetup ? setupProfile(current) : saveProfile(current)}
+                        onClick={() => {
+                            setFormError(null);
+                            // Strip non-serialisable / server-computed fields before sending
+                            const { user: _u, verification_status: _vs, rejection_reason: _rr, ...safe } = current as TraderProfile & { market_id?: number; stall_number?: string; user?: unknown; verification_status?: string; rejection_reason?: string };
+                            void _u; void _vs; void _rr;
+                            if (isFirstTimeSetup) {
+                                setupProfile(safe as Partial<TraderProfile>);
+                            } else {
+                                saveProfile(safe as Partial<TraderProfile>);
+                            }
+                        }}
                         disabled={isPending || (!isFirstTimeSetup && Object.keys(form).length === 0)}
                         className={`w-full h-16 rounded-[1.25rem] font-black text-base shadow-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 ${
                             saved ? 'bg-green-600 shadow-green-200' : 'bg-brand-600 shadow-brand-200 hover:bg-brand-700'
