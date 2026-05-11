@@ -69,6 +69,7 @@ export interface Market {
     latitude: string | null;
     longitude: string | null;
     is_active: boolean;
+    default_monthly_fee: number;
 }
 
 export interface Notice {

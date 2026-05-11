@@ -21,9 +21,20 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
 import { Logo } from '../shared/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { ApiResponse } from '@/types';
+
+interface MenuCounts {
+    applications: number;
+    complaints: number;
+    traders_pending: number;
+    fees_overdue: number;
+}
 
 interface MobileSidebarProps {
     isOpen: boolean;
@@ -34,12 +45,23 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     const router = useRouter();
     const pathname = usePathname();
     const { t } = useTranslation();
-    const { logout } = useAuthStore();
+    const { logout } = useLogout();
     const [mounted, setMounted] = React.useState(false);
 
     React.useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Fetch dynamic menu counts
+    const { data: menuCountsRaw } = useQuery({
+        queryKey: ['admin-menu-counts-mobile'],
+        queryFn: async () => {
+            const res = await api.get<never, ApiResponse<MenuCounts>>('/admin/menu-counts');
+            return res.data;
+        },
+        refetchInterval: 60000 // Refetch every minute
+    });
+    const counts = menuCountsRaw?.data;
 
     const menuSections = [
         {
@@ -61,8 +83,8 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
         {
             title: 'Users',
             items: [
-                { icon: FileText, label: 'Applications', path: '/admin/applications' },
-                { icon: Users, label: 'Traders', path: '/admin/traders' },
+                { icon: FileText, label: 'Applications', path: '/admin/applications', badge: counts?.applications },
+                { icon: Users, label: 'Traders', path: '/admin/traders', badge: counts?.traders_pending },
                 { icon: UsersRound, label: 'Users', path: '/admin/users' },
             ]
         },
@@ -138,7 +160,16 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                                                     <span className={`text-sm font-bold tracking-tight ${isActive ? 'text-white' : ''}`}>
                                                         {item.label}
                                                     </span>
-                                                    {isActive && <ChevronRight size={14} className="ml-auto opacity-40 text-white" />}
+                                                    
+                                                    {item.badge ? (
+                                                        <div className={`ml-auto px-2 py-0.5 rounded-md text-[8px] font-black ${
+                                                            isActive ? 'bg-white/20 text-white' : 'bg-brand-100 text-brand-700'
+                                                        }`}>
+                                                            {item.badge}
+                                                        </div>
+                                                    ) : isActive && (
+                                                        <ChevronRight size={14} className="ml-auto opacity-40 text-white" />
+                                                    )}
                                                 </button>
                                             );
                                         })}
@@ -149,10 +180,7 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
 
                         <div className="p-4 border-t border-neutral-100 bg-neutral-50/50">
                              <button 
-                                onClick={() => {
-                                    logout();
-                                    router.push('/login');
-                                }}
+                                onClick={logout}
                                 className="w-full flex items-center gap-4 p-4 rounded-2xl text-rose-600 bg-white border border-rose-100 shadow-sm font-black text-[10px] uppercase tracking-[0.2em] transition-all active:scale-95"
                              >
                                 <LogOut size={16} /> Sign Out

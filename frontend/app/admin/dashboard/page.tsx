@@ -45,7 +45,8 @@ interface DashboardStats {
     };
     traders: {
         total: number;
-        growth: number;
+        pending: number;
+        new_this_month: number;
     };
     stalls: {
         total: number;
@@ -141,7 +142,7 @@ export default function AdminDashboard() {
                         icon={Users}
                         color="bg-amber-500"
                         variant="compact"
-                        trend={{ value: stats?.traders.growth || 0, isPositive: true, label: 'New this month' }}
+                        trend={{ value: stats?.traders.new_this_month || 0, isPositive: true, label: 'New this month' }}
                         description="Verified & Active"
                     />
                     <StatCard

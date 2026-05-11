@@ -16,7 +16,9 @@ import {
     LayoutGrid,
     PieChart,
     AlertCircle,
-    Loader2
+    Loader2,
+    CreditCard,
+    RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ApiResponse, Market } from '@/types';
@@ -87,6 +89,19 @@ export default function AdminMarketsPage() {
             alert('Market infrastructure has been reset to standard template.');
         }
     });
+
+    const syncFeesMutation = useMutation({
+        mutationFn: (marketId: number) => api.post('/admin/stalls/bulk-update-fees', { market_id: marketId }),
+        onSuccess: (res: any) => {
+            alert(res.data.message || 'Stall fees updated successfully.');
+        }
+    });
+
+    const handleSyncFees = (id: number) => {
+        if (window.confirm('This will update ALL stalls in this market to the current Global Market Fee. This action is irreversible. Proceed?')) {
+            syncFeesMutation.mutate(id);
+        }
+    };
 
     const handleResetInfrastructure = (id: number) => {
         if (window.confirm('WARNING: This will delete all existing stalls in this market and regenerate them from the standard template. Active allocations will be lost. Proceed?')) {
@@ -225,6 +240,26 @@ export default function AdminMarketsPage() {
 
                                         <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                                             <div className="h-full bg-brand-500 w-[74%] rounded-full shadow-sm" />
+                                        </div>
+
+                                        <div className="pt-2 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
+                                                    <CreditCard size={14} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[8px] font-black text-text-muted uppercase tracking-widest">Global Fee</p>
+                                                    <p className="text-xs font-black text-amber-900">KES {(market.default_monthly_fee || 0).toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => handleSyncFees(market.id)}
+                                                disabled={syncFeesMutation.isPending}
+                                                className="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                                            >
+                                                {syncFeesMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                                                Sync Fees
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

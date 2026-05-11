@@ -26,6 +26,9 @@ class StallService
      */
     private function createBlockStalls(int $marketId, string $block, int $rowCount): void
     {
+        $market = Market::find($marketId);
+        $defaultFee = $market ? $market->default_monthly_fee : 1500.00;
+
         $zones = [
             'A' => ['prefix' => '', 'x' => 40],
             'B' => [
@@ -50,7 +53,7 @@ class StallService
                             'map_x' => $subConfig['x'],
                             'map_y' => $y,
                             'status' => 'available',
-                            'monthly_fee' => 1500.00, // Standard starting fee
+                            'monthly_fee' => $defaultFee,
                             'size_sqm' => 4.00,
                         ]);
                     }
@@ -63,7 +66,7 @@ class StallService
                         'map_x' => $config['x'],
                         'map_y' => $y,
                         'status' => 'available',
-                        'monthly_fee' => 1500.00,
+                        'monthly_fee' => $defaultFee,
                         'size_sqm' => 4.00,
                     ]);
                 }

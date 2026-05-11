@@ -58,7 +58,7 @@ class FeeManagementController extends Controller
             ->latest()
             ->paginate(20);
 
-        return $this->success($transactions);
+        return $this->paginated($transactions);
     }
 
     /**
@@ -95,6 +95,12 @@ class FeeManagementController extends Controller
         ]);
 
         if ($request->type === 'market') {
+            // Update the market template itself
+            Market::where('id', $request->target_id)->update([
+                'default_monthly_fee' => $request->monthly_fee
+            ]);
+
+            // Sync all stalls in this market
             Stall::where('market_id', $request->target_id)->update([
                 'monthly_fee' => $request->monthly_fee
             ]);
@@ -104,6 +110,22 @@ class FeeManagementController extends Controller
             ]);
         }
 
-        return $this->success(null, 'Ada ya mwezi imesasishwa. (Monthly fee updated.)');
+        return $this->success(null, 'Monthly fee updated successfully. (Ada ya mwezi imesasishwa.)');
+    }
+    public function updateGlobalRate(Request $request): JsonResponse
+    {
+        $request->validate([
+            'monthly_fee' => 'required|numeric|min:0',
+        ]);
+
+        $fee = $request->monthly_fee;
+
+        // 1. Update all market defaults
+        Market::query()->update(['default_monthly_fee' => $fee]);
+
+        // 2. Sync all stalls across the entire county
+        $updatedCount = Stall::query()->update(['monthly_fee' => $fee]);
+
+        return $this->success(null, "Global rate updated to KES {$fee} for all markets and {$updatedCount} stalls. (Mfumo wa ada umesasishwa kote. Ada mpya ya KES {$fee} imewekwa kwa masoko yote na vibanda {$updatedCount}.)");
     }
 }

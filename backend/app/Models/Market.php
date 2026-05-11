@@ -22,6 +22,7 @@ class Market extends Model
         'building_config',
         'banner_url',
         'icon_url',
+        'default_monthly_fee',
     ];
 
     protected $casts = [

@@ -15,9 +15,19 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
 import { Logo } from '../shared/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { ApiResponse } from '@/types';
+
+interface MenuCounts {
+    active_reservations: number;
+    watchlist: number;
+    unread_notifications: number;
+}
 
 interface ResidentMobileSidebarProps {
     isOpen: boolean;
@@ -28,13 +38,24 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
     const router = useRouter();
     const pathname = usePathname();
     const { t } = useTranslation();
-    const { logout } = useAuthStore();
+    const { logout } = useLogout();
+
+    // Fetch dynamic menu counts
+    const { data: menuCountsRaw } = useQuery({
+        queryKey: ['resident-menu-counts-mobile'],
+        queryFn: async () => {
+            const res = await api.get<never, ApiResponse<MenuCounts>>('/resident/menu-counts');
+            return res.data;
+        },
+        refetchInterval: 60000 // Refetch every minute
+    });
+    const counts = menuCountsRaw?.data;
 
     const menuItems = [
         { icon: Home, label: t('common.dashboard'), path: '/resident/dashboard', badge: null },
         { icon: Search, label: t('nav.discover'), path: '/search', badge: null },
-        { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: 2 },
-        { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: null },
+        { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: counts?.active_reservations || null },
+        { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: counts?.watchlist || null },
         { icon: MapPin, label: t('common.markets'), path: '/market/map', badge: null },
     ];
 
@@ -139,10 +160,7 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
 
                         <div className="p-4 border-t border-gray-100 bg-white">
                              <button 
-                                onClick={() => {
-                                    logout();
-                                    router.push('/login');
-                                }}
+                                onClick={logout}
                                 className="w-full h-12 flex items-center justify-center gap-3 p-3 rounded-2xl text-rose-600 bg-rose-50 border border-rose-100 shadow-sm font-black text-[10px] uppercase tracking-[0.2em] transition-all active:scale-95"
                              >
                                 <LogOut size={16} /> Sign Out

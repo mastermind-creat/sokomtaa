@@ -48,15 +48,26 @@ const Building2 = ({ size, className, strokeWidth }: { size?: number; className?
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
 import { motion, AnimatePresence } from 'framer-motion';
 import NProgress from 'nprogress';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { ApiResponse } from '@/types';
 
+interface MenuCounts {
+    applications: number;
+    complaints: number;
+    traders_pending: number;
+    fees_overdue: number;
+}
 
 export default function AdminSidebar() {
     const router = useRouter();
     const pathname = usePathname();
+    const { logout } = useLogout();
     const { t } = useTranslation();
     const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
     const [mounted, setMounted] = useState(false);
@@ -80,6 +91,17 @@ export default function AdminSidebar() {
 
     // Track which sections are expanded
     const [expandedSections, setExpandedSections] = useState<string[]>(['Operations']);
+
+    // Fetch dynamic menu counts
+    const { data: menuCountsRaw } = useQuery({
+        queryKey: ['admin-menu-counts'],
+        queryFn: async () => {
+            const res = await api.get<never, ApiResponse<MenuCounts>>('/admin/menu-counts');
+            return res.data;
+        },
+        refetchInterval: 60000 // Refetch every minute
+    });
+    const counts = menuCountsRaw?.data;
 
 
     const menuSections = [
@@ -105,8 +127,8 @@ export default function AdminSidebar() {
             title: 'Traders & Users',
             icon: Users,
             items: [
-                { icon: FileText, label: 'Applications', path: '/admin/applications', badge: 'New' },
-                { icon: Users, label: t('Traders'), path: '/admin/traders' },
+                { icon: FileText, label: 'Applications', path: '/admin/applications', badge: counts?.applications || 0 },
+                { icon: Users, label: t('Traders'), path: '/admin/traders', badge: counts?.traders_pending || 0 },
                 { icon: UsersRound, label: 'User Management', path: '/admin/users' },
             ]
         },
@@ -124,7 +146,7 @@ export default function AdminSidebar() {
             title: 'Communication',
             icon: MessageSquare,
             items: [
-                { icon: MessageSquare, label: t('Complaints'), path: '/admin/complaints', badge: 5 },
+                { icon: MessageSquare, label: t('Complaints'), path: '/admin/complaints', badge: counts?.complaints || 0 },
                 { icon: Bell, label: t('Notifications'), path: '/admin/notices' },
             ]
         },
@@ -263,11 +285,7 @@ export default function AdminSidebar() {
                     </div>
 
                     <button
-                        onClick={() => {
-                            const { logout } = useAuthStore.getState();
-                            logout();
-                            router.push('/login');
-                        }}
+                        onClick={logout}
                         className="w-full h-14 flex items-center justify-center p-3 rounded-2xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-100 active:scale-95 transition-all"
                     >
                         Sign Out

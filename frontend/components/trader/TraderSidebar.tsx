@@ -17,10 +17,18 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
+import { ApiResponse } from '@/types';
+
+interface MenuCounts {
+    reservations: number;
+    low_stock: number;
+    unread_notifications: number;
+}
 
 interface SidebarLinkProps {
     href: string;
@@ -65,6 +73,7 @@ const SidebarLink = ({ href, icon: Icon, label, active, count }: SidebarLinkProp
 export default function TraderSidebar() {
     const router = useRouter();
     const pathname = usePathname();
+    const { logout } = useLogout();
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = React.useState(true);
     const [mounted, setMounted] = React.useState(false);
@@ -84,6 +93,17 @@ export default function TraderSidebar() {
         },
         staleTime: 60_000,
     });
+
+    // Fetch dynamic menu counts
+    const { data: menuCountsRaw } = useQuery({
+        queryKey: ['trader-menu-counts'],
+        queryFn: async () => {
+            const res = await api.get<never, ApiResponse<MenuCounts>>('/trader/analytics/menu-counts');
+            return res.data;
+        },
+        refetchInterval: 60000 // Refetch every minute
+    });
+    const counts = menuCountsRaw?.data;
 
     const stallBadge = stallApp ? ({
         pending:    'Pending',
@@ -147,8 +167,8 @@ export default function TraderSidebar() {
                     <p className="px-3 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">{t('sidebar.takwimu_uhifadhi') || 'Statistics & Storage'}</p>
                     <div className="space-y-1">
                         <SidebarLink href="/trader/dashboard" icon={LayoutDashboard} label={t('nav.dawati')} active={getActiveState('/trader/dashboard')} />
-                        <SidebarLink href="/trader/products" icon={Package} label={t('sidebar.products_stock')} active={getActiveState('/trader/products')} />
-                        <SidebarLink href="/trader/reservations" icon={Ticket} label={t('sidebar.order_history')} active={getActiveState('/trader/reservations')} count={3} />
+                        <SidebarLink href="/trader/products" icon={Package} label={t('sidebar.products_stock')} active={getActiveState('/trader/products')} count={counts?.low_stock || undefined} />
+                        <SidebarLink href="/trader/reservations" icon={Ticket} label={t('sidebar.order_history')} active={getActiveState('/trader/reservations')} count={counts?.reservations || undefined} />
                     </div>
                 </div>
 
@@ -181,11 +201,7 @@ export default function TraderSidebar() {
                     </div>
                     
                     <button 
-                        onClick={() => {
-                            const { logout } = useAuthStore.getState();
-                            logout();
-                            router.push('/login');
-                        }}
+                        onClick={logout}
                         className="w-full h-12 flex items-center justify-center p-3 rounded-2xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-100 active:scale-95 transition-all"
                     >
                         Sign Out

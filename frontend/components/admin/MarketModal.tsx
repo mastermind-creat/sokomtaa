@@ -12,7 +12,8 @@ import {
     Building2, 
     ShieldCheck, 
     Save, 
-    Loader2 
+    Loader2,
+    CreditCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Market } from '@/types';
@@ -28,6 +29,7 @@ const marketSchema = z.object({
     is_active: z.boolean().default(true),
     banner_image: z.any().optional(),
     icon_image: z.any().optional(),
+    default_monthly_fee: z.string().or(z.number()).optional(),
 });
 
 type MarketFormValues = z.infer<typeof marketSchema>;
@@ -62,6 +64,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({
             latitude: '',
             longitude: '',
             is_active: true,
+            default_monthly_fee: 0,
         }
     });
 
@@ -89,6 +92,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                 latitude: initialData.latitude || '',
                 longitude: initialData.longitude || '',
                 is_active: initialData.is_active,
+                default_monthly_fee: initialData.default_monthly_fee || 0,
             });
         } else {
             reset({
@@ -99,6 +103,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                 latitude: '',
                 longitude: '',
                 is_active: true,
+                default_monthly_fee: 0,
             });
         }
     }, [initialData, reset]);
@@ -248,6 +253,27 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                                         className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
                                     />
                                 </div>
+                            </div>
+
+                            {/* Default Monthly Fee */}
+                            <div className="space-y-1.5 p-5 bg-amber-50 rounded-3xl border border-amber-100">
+                                <label className="text-[10px] font-black text-amber-900 uppercase tracking-widest ml-1">
+                                    Global Market Fee (KES)
+                                </label>
+                                <div className="relative">
+                                    <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-600" size={18} />
+                                    <input 
+                                        type="number"
+                                        {...register('default_monthly_fee')}
+                                        placeholder="e.g. 1500"
+                                        className={cn(
+                                            "w-full h-14 pl-12 pr-4 bg-white border border-transparent rounded-2xl text-lg font-black text-amber-950 focus:border-amber-400 transition-all outline-none",
+                                            errors.default_monthly_fee && "border-red-200 bg-red-50"
+                                        )}
+                                    />
+                                </div>
+                                <p className="text-[9px] font-bold text-amber-700/60 ml-1">Standard monthly fee applied to all stalls in this hub</p>
+                                {errors.default_monthly_fee && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.default_monthly_fee.message as string}</p>}
                             </div>
 
                             {/* Images Section */}

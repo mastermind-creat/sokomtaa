@@ -26,6 +26,29 @@ class TraderAnalyticsController extends Controller
         $user = Auth::user();
         $traderId = $user->trader->id;
 
+        $thisMonth = Carbon::now()->startOfMonth();
+        $lastMonth = Carbon::now()->subMonth()->startOfMonth();
+
+        $thisMonthRevenue = Payment::whereHas('reservation', function($q) use ($traderId) {
+                $q->where('trader_id', $traderId);
+            })
+            ->where('status', 'completed')
+            ->where('paid_at', '>=', $thisMonth)
+            ->sum('amount');
+
+        $lastMonthRevenue = Payment::whereHas('reservation', function($q) use ($traderId) {
+                $q->where('trader_id', $traderId);
+            })
+            ->where('status', 'completed')
+            ->where('paid_at', '>=', $lastMonth)
+            ->where('paid_at', '<', $thisMonth)
+            ->sum('amount');
+
+        $growth = 0;
+        if ($lastMonthRevenue > 0) {
+            $growth = round((($thisMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100, 1);
+        }
+
         $stats = [
             'total_revenue' => Payment::whereHas('reservation', function($q) use ($traderId) {
                 $q->where('trader_id', $traderId);
@@ -38,13 +61,28 @@ class TraderAnalyticsController extends Controller
             'low_stock_items' => Product::where('trader_id', $traderId)->where('stock_status', 'low')->count(),
             
             'out_of_stock_items' => Product::where('trader_id', $traderId)->where('stock_status', 'out_of_stock')->count(),
-
             'profile_views' => $user->trader->profile_views,
-            'growth' => '+14%', // Mock growth for now
-            'has_overdue_fees' => false, // Default to false
+            'growth' => ($growth >= 0 ? '+' : '') . $growth . '%',
+            'has_overdue_fees' => \App\Models\MarketFee::where('trader_id', $traderId)->where('status', 'unpaid')->where('due_date', '<', now())->exists(),
         ];
 
         return $this->success($stats);
+    }
+
+    /**
+     * Get menu counts for trader sidebar.
+     */
+    public function menuCounts(): JsonResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $traderId = $user->trader->id;
+
+        return $this->success([
+            'reservations' => Reservation::where('trader_id', $traderId)->where('status', 'pending')->count(),
+            'low_stock' => Product::where('trader_id', $traderId)->whereIn('stock_status', ['low', 'out_of_stock'])->count(),
+            'unread_notifications' => $user->notifications()->where('is_read', false)->count(),
+        ]);
     }
 
     /**

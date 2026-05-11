@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -50,6 +51,7 @@ function extractError(err: unknown): string {
 }
 
 export default function TraderApplyStallPage() {
+    const router = useRouter();
     const [step, setStep] = useState(0);
     const [stallType, setStallType] = useState<StallType | null>(null);
     const [selectedZone, setSelectedZone] = useState<string | null>(null);
@@ -98,7 +100,7 @@ export default function TraderApplyStallPage() {
     const canNext = () => {
         if (step === 0) return stallType !== null;
         if (step === 1 && stallType === 'managed') return selectedZone !== null;
-        return motivation.length >= 50;
+        return motivation.length >= 10;
     };
 
     const handleNext = () => {
@@ -132,7 +134,7 @@ export default function TraderApplyStallPage() {
             <p className="text-sm font-medium text-gray-500 leading-relaxed mb-10 max-w-xs">
                 Your {stallType === 'managed' ? 'managed stall' : 'independent trader'} application is being reviewed. You will be notified via SMS once processed.
             </p>
-            <button onClick={() => window.location.href = '/trader/dashboard'}
+            <button onClick={() => router.push('/trader/dashboard')}
                 className="w-full h-14 bg-green-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-xl">
                 Back to Dashboard
             </button>
@@ -302,10 +304,10 @@ export default function TraderApplyStallPage() {
                                 className="w-full min-h-[180px] bg-gray-50 border border-transparent rounded-2xl p-4 text-sm font-medium text-green-950 outline-none focus:bg-white focus:border-brand-300 focus:ring-4 focus:ring-brand-50 transition-all resize-none"
                             />
                             <div className="flex items-center justify-between mt-3">
-                                <span className={cn('text-[10px] font-black uppercase tracking-widest', motivation.length >= 50 ? 'text-brand-600' : 'text-gray-400')}>
-                                    {motivation.length} / 50 min
+                                <span className={cn('text-[10px] font-black uppercase tracking-widest', motivation.length >= 10 ? 'text-brand-600' : 'text-gray-400')}>
+                                    {motivation.length} / 10 min
                                 </span>
-                                {motivation.length >= 50 && (
+                                {motivation.length >= 10 && (
                                     <span className="flex items-center gap-1 text-[10px] font-black text-brand-600 uppercase">
                                         <CheckCircle2 size={12} /> Ready to Submit
                                     </span>
@@ -424,7 +426,7 @@ function StatusCard({ application, onWithdraw, isWithdrawing, error }: {
                     <p className="text-[12px] text-brand-100 leading-relaxed font-medium mb-4">
                         Your stall application has been approved. Visit the county market office with your permit to complete the allocation process.
                     </p>
-                    <button onClick={() => window.location.href = '/trader/dashboard'}
+                    <button onClick={() => router.push('/trader/dashboard')}
                         className="w-full h-12 bg-white text-brand-700 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">
                         Go to Dashboard
                     </button>

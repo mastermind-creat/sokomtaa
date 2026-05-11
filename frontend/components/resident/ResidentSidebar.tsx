@@ -15,12 +15,23 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { ApiResponse } from '@/types';
+
+interface MenuCounts {
+    active_reservations: number;
+    watchlist: number;
+    unread_notifications: number;
+}
 
 export default function ResidentSidebar() {
     const router = useRouter();
     const pathname = usePathname();
+    const { logout } = useLogout();
     const { t } = useTranslation();
     const [mounted, setMounted] = React.useState(false);
 
@@ -28,11 +39,22 @@ export default function ResidentSidebar() {
         setMounted(true);
     }, []);
 
+    // Fetch dynamic menu counts
+    const { data: menuCountsRaw } = useQuery({
+        queryKey: ['resident-menu-counts'],
+        queryFn: async () => {
+            const res = await api.get<never, ApiResponse<MenuCounts>>('/resident/menu-counts');
+            return res.data;
+        },
+        refetchInterval: 60000 // Refetch every minute
+    });
+    const counts = menuCountsRaw?.data;
+
     const menuItems = [
         { icon: Home, label: t('common.dashboard'), path: '/resident/dashboard', badge: null },
         { icon: Search, label: t('nav.discover'), path: '/search', badge: null },
-        { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: 2 }, // Mock badge for active orders
-        { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: null },
+        { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: counts?.active_reservations || null },
+        { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: counts?.watchlist || null },
         { icon: MapPin, label: t('common.markets'), path: '/market/map', badge: null },
     ];
 
@@ -123,11 +145,7 @@ export default function ResidentSidebar() {
                     </div>
                     
                     <button 
-                        onClick={() => {
-                            const { logout } = useAuthStore.getState();
-                            logout();
-                            router.push('/login');
-                        }}
+                        onClick={logout}
                         className="w-full h-12 flex items-center justify-center p-3 rounded-2xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-100 active:scale-95 transition-all"
                     >
                         Sign Out

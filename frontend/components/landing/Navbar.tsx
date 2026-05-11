@@ -4,13 +4,15 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
 import { LogOut } from 'lucide-react';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
+  const { logout } = useLogout();
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {

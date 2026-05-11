@@ -95,6 +95,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::patch('/{product}/notify', [\App\Http\Controllers\Resident\WatchlistController::class, 'toggleNotify']);
     });
 
+    Route::middleware(['role:resident'])->prefix('resident')->group(function () {
+        Route::get('/dashboard/stats', [\App\Http\Controllers\Resident\ResidentDashboardController::class, 'stats']);
+        Route::get('/menu-counts', [\App\Http\Controllers\Resident\ResidentDashboardController::class, 'menuCounts']);
+    });
+
     // ── Resident Reviews (create/list my reviews) ────────────────────────────
     Route::prefix('resident/reviews')->group(function () {
         Route::get('/', [\App\Http\Controllers\Resident\ReviewController::class, 'index']);
@@ -151,6 +156,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ── Trader Analytics ─────────────────────────────────────────────────────
     Route::middleware(['role:trader'])->prefix('trader/analytics')->group(function () {
         Route::get('/stats', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'dashboardStats']);
+        Route::get('/menu-counts', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'menuCounts']);
         Route::get('/revenue', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'revenueTrends']);
         Route::get('/top-products', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'topProducts']);
         Route::get('/price-insights', [\App\Http\Controllers\Trader\TraderAnalyticsController::class, 'priceInsights']);
@@ -232,6 +238,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         // Dashboard
         Route::get('/stats', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'stats']);
+        Route::get('/menu-counts', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'menuCounts']);
         Route::get('/trends', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'revenueTrends']);
         Route::get('/activity', [\App\Http\Controllers\Admin\AdminActivityController::class, 'index']);
 
@@ -243,6 +250,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::patch('/stalls/{stall}', [\App\Http\Controllers\Admin\StallController::class, 'update']);
         Route::delete('/stalls/{stall}', [\App\Http\Controllers\Admin\StallController::class, 'destroy']);
         Route::post('/stalls/bulk', [\App\Http\Controllers\Admin\StallController::class, 'bulkGenerate']);
+        Route::post('/stalls/bulk-update-fees', [\App\Http\Controllers\Admin\StallController::class, 'bulkUpdateFees']);
         Route::get('/map-data', [\App\Http\Controllers\Admin\StallMapController::class, 'getMapData']);
         Route::get('/allocations', [\App\Http\Controllers\Admin\StallAllocationController::class, 'index']);
         Route::post('/allocations', [\App\Http\Controllers\Admin\StallAllocationController::class, 'store']);
@@ -258,6 +266,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/transactions', [\App\Http\Controllers\Admin\FeeManagementController::class, 'transactions']);
             Route::get('/delinquents', [\App\Http\Controllers\Admin\FeeManagementController::class, 'delinquents']);
             Route::post('/update-rate', [\App\Http\Controllers\Admin\FeeManagementController::class, 'updateFee']);
+            Route::post('/update-global-rate', [\App\Http\Controllers\Admin\FeeManagementController::class, 'updateGlobalRate']);
         });
 
         // Traders Management
@@ -291,6 +300,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::post('/storage-link', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'storageLink']);
             Route::post('/seed', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'seed']);
             Route::get('/logs', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'logs']);
+        });
+
+        // System Settings
+        Route::prefix('settings')->group(function () {
+            Route::get('/stats', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'stats']);
+            Route::post('/security', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'updateSecurity']);
         });
     });
 });

@@ -47,6 +47,7 @@ class MarketController extends Controller
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
             'is_active' => 'boolean',
+            'default_monthly_fee' => 'nullable|numeric|min:0',
             'banner_image' => 'nullable|image|max:5120',
             'icon_image' => 'nullable|image|max:2048'
         ]);
@@ -90,6 +91,7 @@ class MarketController extends Controller
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
             'is_active' => 'boolean',
+            'default_monthly_fee' => 'nullable|numeric|min:0',
             'banner_image' => 'nullable|image|max:5120',
             'icon_image' => 'nullable|image|max:2048'
         ]);

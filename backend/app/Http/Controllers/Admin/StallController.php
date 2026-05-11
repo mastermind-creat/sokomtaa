@@ -208,4 +208,31 @@ class StallController extends Controller
             return $this->error('Failed to generate number: ' . $e->getMessage(), 'GEN_ERROR', 500);
         }
     }
+    /**
+     * Bulk update all stalls in a market to use the market's default fee.
+     */
+    public function bulkUpdateFees(Request $request): JsonResponse
+    {
+        if ($request->has('all') && $request->all) {
+            $markets = Market::all();
+            $totalUpdated = 0;
+            foreach ($markets as $market) {
+                $totalUpdated += Stall::where('market_id', $market->id)
+                    ->update(['monthly_fee' => $market->default_monthly_fee ?? 1500.00]);
+            }
+            return $this->success(null, "Global update complete. Adjusted fees for {$totalUpdated} stalls across all markets.");
+        }
+
+        $validated = $request->validate([
+            'market_id' => 'required|exists:markets,id',
+        ]);
+
+        $market = Market::find($validated['market_id']);
+        $defaultFee = $market->default_monthly_fee;
+
+        $updatedCount = Stall::where('market_id', $market->id)
+            ->update(['monthly_fee' => $defaultFee]);
+
+        return $this->success(null, "Successfully updated fees for {$updatedCount} stalls to KES {$defaultFee}.");
+    }
 }

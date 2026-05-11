@@ -187,5 +187,25 @@
     "no_reviews": "Hakuna maoni bado",
     "reserve_item": "Hifadhi Bidhaa",
     "call": "Piga Simu"
+  },
+  "dashboard": {
+    "profile_incomplete": "Wasifu Haijakamilika",
+    "profile_incomplete_desc": "Tafadhali kamilisha wasifu wako ili kuanza kuuza.",
+    "setup_now": "Kamilisha Sasa",
+    "stall_pending": "Ombi la Kibanda Linasubiri",
+    "stall_pending_desc": "Ombi lako la kibanda linapitiwa na uongozi wa kaunti.",
+    "view_status": "Angalia Hali",
+    "awaiting_assignment": "Inasubiri Ugawaji",
+    "awaiting_assignment_desc": "Ombi lako limekubaliwa! Uongozi sasa unakugawia kibanda chako.",
+    "phone_not_verified": "Simu Haijahakikiwa",
+    "phone_not_verified_desc": "Tafadhali hakiki namba yako ya simu.",
+    "verify_now": "Hakiki Sasa",
+    "kyc_pending": "Uhakiki wa Nyaraka",
+    "kyc_pending_desc": "Nyaraka zako zinapitiwa na timu ya uhakiki.",
+    "kyc_rejected": "Uhakiki Umekataliwa",
+    "kyc_rejected_desc": "Sababu: {reason}. Tafadhali pakia tena.",
+    "fee_overdue": "Ada ya Soko Imechelewa",
+    "fee_overdue_desc": "Tafadhali lipa malimbikizo ili kuepuka faini.",
+    "pay_now": "Lipa Sasa"
   }
 }

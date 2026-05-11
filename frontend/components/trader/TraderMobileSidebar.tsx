@@ -19,6 +19,7 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Logo } from '../shared/Logo';
@@ -34,7 +35,7 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
     const router = useRouter();
     const pathname = usePathname();
     const { t } = useTranslation();
-    const { logout } = useAuthStore();
+    const { logout } = useLogout();
     const [isStoreOpen, setIsStoreOpen] = React.useState(true);
 
     // Fetch stall application status for badge
@@ -182,10 +183,7 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
 
                         <div className="p-4 border-t border-gray-100 bg-gray-50/50">
                              <button 
-                                onClick={() => {
-                                    logout();
-                                    router.push('/login');
-                                }}
+                                onClick={logout}
                                 className="w-full h-12 flex items-center justify-center gap-3 p-3 rounded-2xl text-rose-600 bg-white border border-rose-100 shadow-sm font-black text-[10px] uppercase tracking-[0.2em] transition-all active:scale-95 hover:bg-rose-50"
                              >
                                 <LogOut size={16} /> Sign Out

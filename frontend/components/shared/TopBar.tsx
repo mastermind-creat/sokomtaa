@@ -11,6 +11,7 @@ import { LanguageToggle } from './LanguageToggle';
 import NotificationBell from './NotificationBell';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { useLogout } from '@/hooks/useLogout';
 
 import { Logo } from './Logo';
 
@@ -20,7 +21,8 @@ interface TopBarProps {
 }
 
 export default function TopBar({ title: propTitle, onMenuToggle }: TopBarProps) {
-    const { user, logout } = useAuthStore();
+    const { user } = useAuthStore();
+    const { logout } = useLogout();
     const { pageTitle } = useUIStore();
     const { t } = useTranslation();
     const router = useRouter();
@@ -132,7 +134,7 @@ export default function TopBar({ title: propTitle, onMenuToggle }: TopBarProps) 
                                 </button>
                                 <div className="h-[1px] bg-gray-100 my-2 mx-2" />
                                 <button 
-                                    onClick={() => logout()}
+                                    onClick={logout}
                                     className="w-full flex items-center gap-3 p-3 hover:bg-red-50 rounded-xl text-sm font-bold text-red-600 transition-colors"
                                 >
                                     <LogOut size={18} /> {t('common.logout')}

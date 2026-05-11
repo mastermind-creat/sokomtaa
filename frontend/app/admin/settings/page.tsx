@@ -26,6 +26,9 @@ import { useAuthStore } from '@/store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { ApiResponse } from '@/types';
 
 export default function AdminSettingsPage() {
     const { t } = useTranslation();
@@ -48,10 +51,19 @@ export default function AdminSettingsPage() {
         }, 800);
     };
 
+    const { data: statsData, isLoading: statsLoading } = useQuery<{ markets_count: number; traders_count: number; latency_ms: number; storage_usage: string }>({
+        queryKey: ['admin-system-stats'],
+        queryFn: async () => {
+            const res = await api.get('/admin/settings/stats');
+            return res.data;
+        },
+        refetchInterval: 30000 // Refetch every 30s
+    });
+
     const stats = [
-        { label: 'Markets', value: '12', color: 'text-brand-600', icon: Warehouse },
-        { label: 'Traders', value: '842', color: 'text-blue-600', icon: User },
-        { label: 'Latency', value: '42ms', color: 'text-orange-600', icon: Zap },
+        { label: 'Markets', value: statsLoading ? '...' : (statsData?.markets_count || '0'), color: 'text-brand-600', icon: Warehouse },
+        { label: 'Traders', value: statsLoading ? '...' : (statsData?.traders_count || '0'), color: 'text-blue-600', icon: User },
+        { label: 'Latency', value: statsLoading ? '...' : `${statsData?.latency_ms || '0'}ms`, color: 'text-orange-600', icon: Zap },
     ];
 
     return (
@@ -88,7 +100,7 @@ export default function AdminSettingsPage() {
                                 Service Control Hub
                             </h3>
                             
-                            <div className="space-y-4">
+                            <div className="space-y-4 mb-8">
                                 {[
                                     { label: 'M-Pesa Gateway', desc: 'Real-time settlement processing', icon: CreditCard, active: true },
                                     { label: 'SMS Notification Rail', desc: 'Daily trader broadcast system', icon: MessageSquare, active: true },
@@ -111,6 +123,26 @@ export default function AdminSettingsPage() {
                                     </div>
                                 ))}
                             </div>
+
+                            <div className="pt-6 border-t border-gray-50">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 ml-1">Cloud Capacity</h4>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-end mb-2">
+                                        <div>
+                                            <p className="text-[10px] font-black text-green-950 uppercase tracking-tight leading-none mb-1">Storage Cluster</p>
+                                            <p className="text-[8px] font-bold text-text-muted uppercase tracking-widest">HostAfrica Production</p>
+                                        </div>
+                                        <span className="text-[10px] font-black text-brand-600">{statsData?.storage_usage || '12%'} Used</span>
+                                    </div>
+                                    <div className="h-3 w-full bg-gray-50 rounded-full overflow-hidden border border-gray-100">
+                                        <motion.div 
+                                            initial={{ width: 0 }}
+                                            animate={{ width: statsData?.storage_usage || '12%' }}
+                                            className="h-full bg-brand-500 rounded-full shadow-lg shadow-brand-500/20" 
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </TabsContent>
 
@@ -120,7 +152,11 @@ export default function AdminSettingsPage() {
                             <div className="flex items-center gap-4">
                                 <div className="relative">
                                     <div className="w-20 h-20 bg-gray-100 rounded-[1.5rem] flex items-center justify-center border-4 border-white shadow-md overflow-hidden">
-                                        <User size={32} className="text-gray-300" />
+                                        {user?.avatar_url ? (
+                                            <img src={user.avatar_url} alt="Admin" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User size={32} className="text-gray-300" />
+                                        )}
                                     </div>
                                     <button className="absolute bottom-0 right-0 w-8 h-8 bg-brand-600 text-white rounded-xl flex items-center justify-center border-2 border-white shadow-sm active:scale-90 transition-all">
                                         <Camera size={14} />
@@ -154,6 +190,70 @@ export default function AdminSettingsPage() {
                             >
                                 <LogOut size={16} /> Disconnect Terminal
                             </button>
+                        </div>
+                    </TabsContent>
+
+                    {/* Security Hub */}
+                    <TabsContent value="security">
+                        <div className="bg-white rounded-[2.5rem] p-6 border border-gray-50 shadow-sm space-y-6">
+                            <h3 className="text-sm font-black text-green-950 uppercase tracking-tight mb-2 flex items-center gap-2">
+                                <Shield size={16} className="text-rose-600" />
+                                Fortification Settings
+                            </h3>
+
+                            <div className="space-y-4">
+                                {[
+                                    { label: 'Multi-Factor Auth', desc: 'Secure login via SMS OTP', icon: Smartphone, active: true },
+                                    { label: 'Biometric Gateway', desc: 'FaceID/Fingerprint for PWA', icon: User, active: false },
+                                    { label: 'Transaction PIN', desc: 'Require PIN for disbursements', icon: CreditCard, active: true }
+                                ].map((item, i) => (
+                                    <div key={i} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-text-secondary">
+                                                <item.icon size={18} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-[11px] font-black text-green-950 uppercase tracking-tight">{item.label}</h4>
+                                                <p className="text-[9px] font-bold text-text-muted tracking-wide">{item.desc}</p>
+                                            </div>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" className="sr-only peer" defaultChecked={item.active} />
+                                            <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="pt-4 border-t border-gray-50">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 ml-1">Terminal Persistence</h4>
+                                <div className="space-y-3">
+                                    <div className="p-4 bg-white border border-gray-100 rounded-2xl flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-green-50 text-green-600 rounded-lg flex items-center justify-center">
+                                                <Smartphone size={14} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-green-950 uppercase tracking-tight leading-none">Pixel 7 Pro (Active)</p>
+                                                <p className="text-[8px] font-bold text-text-muted uppercase tracking-widest">Nairobi, Kenya • Now</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[8px] font-black text-brand-600 uppercase">Current</span>
+                                    </div>
+                                    <div className="p-4 bg-white border border-gray-100 rounded-2xl flex items-center justify-between opacity-60">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center">
+                                                <Database size={14} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-green-950 uppercase tracking-tight leading-none">Desktop Chrome</p>
+                                                <p className="text-[8px] font-bold text-text-muted uppercase tracking-widest">Mombasa, Kenya • 2h ago</p>
+                                            </div>
+                                        </div>
+                                        <button className="text-[8px] font-black text-rose-600 uppercase hover:underline">Revoke</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </TabsContent>
                 </Tabs>

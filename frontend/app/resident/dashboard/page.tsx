@@ -48,24 +48,35 @@ interface Reservation {
     created_at: string;
 }
 
+interface DashboardStats {
+    active_reservations: number;
+    completed_reservations: number;
+    total_spent: number;
+    watchlist_count: number;
+    points: number;
+}
+
 export default function ResidentDashboard() {
     const { user } = useAuthStore();
     const router = useRouter();
     const { t } = useTranslation();
 
-    // Fetch Reservations
     const { data: resData, isLoading: resLoading } = useQuery<ApiResponse<Reservation[]>>({
         queryKey: ['my-reservations-dashboard'],
         queryFn: () => api.get('/reservations').then(res => res.data),
     });
 
+    // Fetch Stats
+    const { data: statsData } = useQuery<ApiResponse<DashboardStats>>({
+        queryKey: ['resident-dashboard-stats'],
+        queryFn: () => api.get('/resident/dashboard/stats').then(res => res.data),
+    });
+
     const reservations = resData?.data || [];
+    const stats = statsData?.data;
+    
     const activeOrders = reservations.filter(r => ['pending', 'paid', 'ready'].includes(r.status));
     const completedOrders = reservations.filter(r => ['completed'].includes(r.status));
-    
-    const totalSpent = reservations
-        .filter(r => ['paid', 'ready', 'completed'].includes(r.status))
-        .reduce((sum, r) => sum + parseFloat(r.total_amount), 0);
 
     return (
         <div className="space-y-10 pb-32">
@@ -94,7 +105,7 @@ export default function ResidentDashboard() {
                                 <Wallet size={64} />
                             </div>
                             <p className="text-green-300 text-[10px] font-black uppercase tracking-widest mb-1">Total Spent</p>
-                            <h3 className="text-2xl font-black font-mono">KES {totalSpent.toLocaleString()}</h3>
+                            <h3 className="text-2xl font-black font-mono">KES {(stats?.total_spent || 0).toLocaleString()}</h3>
                             <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-brand-400">
                                 <ArrowUpRight size={14} /> View Expenses
                             </div>
@@ -104,7 +115,7 @@ export default function ResidentDashboard() {
                                 <Star size={20} fill="currentColor" />
                             </div>
                             <p className="text-text-muted text-[10px] font-black uppercase tracking-widest mb-1">Loyalty Points</p>
-                            <h3 className="text-2xl font-black text-green-950">1,420</h3>
+                            <h3 className="text-2xl font-black text-green-950">{stats?.points?.toLocaleString() || '0'}</h3>
                         </div>
                     </div>
                 </div>
