@@ -159,15 +159,23 @@ export default function AdminApplicationsPage() {
                                                 <span className="text-[10px] font-bold uppercase tracking-widest">{app.market?.name}</span>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col items-end">
-                                            {app.preferred_stall ? (
-                                                <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[9px] font-black uppercase tracking-widest">
-                                                    Stall {app.preferred_stall.stall_number}
-                                                </span>
-                                            ) : (
-                                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[9px] font-black uppercase tracking-widest">
-                                                    {app.preferred_zone || 'Any'}
-                                                </span>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest",
+                                                app.stall_type === 'managed' ? "bg-purple-50 text-purple-700" : "bg-blue-50 text-blue-700"
+                                            )}>
+                                                {app.stall_type}
+                                            </span>
+                                            {app.stall_type === 'managed' && (
+                                                app.preferred_stall ? (
+                                                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[9px] font-black uppercase tracking-widest">
+                                                        Stall {app.preferred_stall.stall_number}
+                                                    </span>
+                                                ) : (
+                                                    <span className="px-2 py-0.5 bg-gray-50 text-gray-700 rounded-full text-[9px] font-black uppercase tracking-widest">
+                                                        {app.preferred_zone || 'Any'} Zone
+                                                    </span>
+                                                )
                                             )}
                                         </div>
                                     </div>
@@ -247,33 +255,45 @@ export default function AdminApplicationsPage() {
                                             </div>
                                         </div>
 
-                                        {/* Stall Selection */}
-                                        <div className="space-y-3">
-                                            <p className="text-[9px] font-black text-text-muted uppercase tracking-widest">Allocate Stall</p>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {availableStalls.length > 0 ? (
-                                                    availableStalls.map((stall: any) => (
-                                                        <button
-                                                            key={stall.id}
-                                                            onClick={() => setSelectedStallId(stall.id)}
-                                                            className={cn(
-                                                                "p-4 rounded-2xl border text-left transition-all",
-                                                                selectedStallId === stall.id 
-                                                                    ? "border-brand-600 bg-brand-50 shadow-sm" 
-                                                                    : "border-gray-100 bg-white hover:border-gray-200"
-                                                            )}
-                                                        >
-                                                            <div className="text-xs font-black text-green-950 uppercase tracking-tight">Stall {stall.stall_number}</div>
-                                                            <div className="text-[9px] font-bold text-text-muted uppercase tracking-widest mt-1">Zone {stall.zone} • {stall.block}</div>
-                                                        </button>
-                                                    ))
-                                                ) : (
-                                                    <div className="col-span-2 p-5 bg-amber-50 text-amber-700 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center border border-amber-100">
-                                                        No available stalls in this market.
-                                                    </div>
-                                                )}
+                                        {/* Stall Selection - Only for Managed Stalls */}
+                                        {selectedApp.stall_type === 'managed' ? (
+                                            <div className="space-y-3">
+                                                <p className="text-[9px] font-black text-text-muted uppercase tracking-widest">Allocate Stall</p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {availableStalls.length > 0 ? (
+                                                        availableStalls.map((stall: any) => (
+                                                            <button
+                                                                key={stall.id}
+                                                                onClick={() => setSelectedStallId(stall.id)}
+                                                                className={cn(
+                                                                    "p-4 rounded-2xl border text-left transition-all",
+                                                                    selectedStallId === stall.id 
+                                                                        ? "border-brand-600 bg-brand-50 shadow-sm" 
+                                                                        : "border-gray-100 bg-white hover:border-gray-200"
+                                                                )}
+                                                            >
+                                                                <div className="text-xs font-black text-green-950 uppercase tracking-tight">Stall {stall.stall_number}</div>
+                                                                <div className="text-[9px] font-bold text-text-muted uppercase tracking-widest mt-1">Zone {stall.zone} • {stall.block}</div>
+                                                            </button>
+                                                        ))
+                                                    ) : (
+                                                        <div className="col-span-2 p-5 bg-amber-50 text-amber-700 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center border border-amber-100">
+                                                            No available stalls in this market.
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
+                                        ) : (
+                                            <div className="p-5 bg-blue-50 border border-blue-100 rounded-3xl">
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    <Zap size={16} className="text-blue-600" />
+                                                    <span className="text-[10px] font-black text-blue-800 uppercase tracking-widest">Independent Trader</span>
+                                                </div>
+                                                <p className="text-[10px] font-medium text-blue-700 leading-relaxed">
+                                                    This trader operates outside the main building. No physical stall allocation is required. Approval will grant them system access as an independent trader.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -291,7 +311,7 @@ export default function AdminApplicationsPage() {
                                         className="flex-[2] h-14 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-brand-900/10 flex items-center justify-center gap-2"
                                     >
                                         {reviewMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} />}
-                                        Approve & Allocate
+                                        {selectedApp.stall_type === 'managed' ? 'Approve & Allocate' : 'Approve Application'}
                                     </button>
                                 </div>
                             </motion.div>

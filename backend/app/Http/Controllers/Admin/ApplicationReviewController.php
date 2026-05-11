@@ -63,35 +63,43 @@ class ApplicationReviewController extends Controller
 
         $stallId = $request->stall_id ?: $application->preferred_stall_id;
 
-        if ($request->status === 'approved' && !$stallId) {
-            return $this->error('A stall must be selected for approval.', 'STALL_REQUIRED', 422);
+        // Validation for managed stalls
+        if ($request->status === 'approved' && $application->stall_type === 'managed' && !$stallId) {
+            return $this->error('A stall must be selected for managed stall approval.', 'STALL_REQUIRED', 422);
         }
 
         DB::beginTransaction();
         try {
             if ($request->status === 'approved') {
-                $stall = Stall::findOrFail($stallId);
+                $trader = Trader::findOrFail($application->trader_id);
+                $stall = null;
 
-                if ($stall->status === 'occupied') {
-                    return $this->error('The selected stall is already occupied.', 'STALL_OCCUPIED', 422);
+                if ($application->stall_type === 'managed') {
+                    $stall = Stall::findOrFail($stallId);
+
+                    if ($stall->status === 'occupied') {
+                        return $this->error('The selected stall is already occupied.', 'STALL_OCCUPIED', 422);
+                    }
+
+                    // 1. Create Allocation
+                    Allocation::create([
+                        'stall_id'     => $stall->id,
+                        'trader_id'    => $application->trader_id,
+                        'allocated_by' => Auth::id(),
+                        'start_date'   => Carbon::now(),
+                        'status'       => 'active',
+                        'notes'        => $request->notes,
+                    ]);
+
+                    // 2. Update Stall Status
+                    $stall->update(['status' => 'occupied']);
                 }
 
-                // 1. Create Allocation (Indefinite until revoked)
-                Allocation::create([
-                    'stall_id'     => $stall->id,
-                    'trader_id'    => $application->trader_id,
-                    'allocated_by' => Auth::id(),
-                    'start_date'   => Carbon::now(),
-                    'status'       => 'active',
-                    'notes'        => $request->notes,
-                ]);
-
-                // 2. Update Stall Status
-                $stall->update(['status' => 'occupied']);
-
                 // 3. Update Trader Profile
-                $trader = Trader::findOrFail($application->trader_id);
-                $trader->update(['stall_id' => $stall->id]);
+                $trader->update([
+                    'stall_id'   => $stall ? $stall->id : null,
+                    'stall_type' => $application->stall_type
+                ]);
 
                 // 4. Update Application
                 $application->update([
@@ -104,12 +112,16 @@ class ApplicationReviewController extends Controller
                 // 5. Notify Trader via SMS and App
                 $user = $trader->user;
                 if ($user) {
+                    $message = $application->stall_type === 'managed' 
+                        ? "Congratulations! Your stall application at {$application->market->name} has been approved. You have been allocated Stall {$stall->stall_number}."
+                        : "Congratulations! Your application to join {$application->market->name} as an independent trader has been approved.";
+
                     $this->notificationService->send(
                         $user,
-                        'Stall Allocated',
-                        "Congratulations! Your stall application at {$application->market->name} has been approved. You have been allocated Stall {$stall->stall_number}. Please log in to your dashboard for details.",
-                        'allocation',
-                        ['stall_id' => $stall->id],
+                        'Application Approved',
+                        $message . " Please log in to your dashboard for details.",
+                        'application',
+                        ['stall_id' => $stall ? $stall->id : null],
                         true
                     );
                 }
