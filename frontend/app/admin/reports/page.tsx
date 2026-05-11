@@ -26,6 +26,11 @@ export default function AdminReportsPage() {
     const { setPageTitle } = useUIStore();
     const [searchQuery, setSearchQuery] = useState('');
 
+    const { data: statsData, isLoading: statsLoading } = useQuery({
+        queryKey: ['admin-stats'],
+        queryFn: () => api.get('/admin/stats').then(res => res.data.data),
+    });
+
     React.useEffect(() => {
         setPageTitle('Intelligence Factory');
     }, [setPageTitle]);
@@ -80,9 +85,9 @@ export default function AdminReportsPage() {
     ];
 
     const stats = [
-        { label: 'Revenue (MTD)', value: 'KES 4.2M', color: 'text-brand-600', icon: TrendingUp },
-        { label: 'Occupancy', value: '94%', color: 'text-blue-600', icon: PieChart },
-        { label: 'Health', value: 'A-', color: 'text-emerald-600', icon: ShieldCheck },
+        { label: 'Revenue (MTD)', value: `KES ${Number(statsData?.revenue?.this_month || 0).toLocaleString()}`, color: 'text-brand-600', icon: TrendingUp },
+        { label: 'Occupancy', value: `${statsData?.stalls?.occupancy_rate || 0}%`, color: 'text-blue-600', icon: PieChart },
+        { label: 'Health', value: statsData?.revenue?.percentage > 80 ? 'A+' : 'A-', color: 'text-emerald-600', icon: ShieldCheck },
     ];
 
     return (
