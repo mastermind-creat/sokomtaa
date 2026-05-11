@@ -17,8 +17,29 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Soko Mtaa | Neighbourhood Digital Marketplace",
-  description: "Connecting local traders and residents in Kenya's markets.",
+  metadataBase: new URL('https://sokomtaa.co.ke'),
+  title: {
+    default: "Soko Mtaa | Kenya's Local Neighbourhood Marketplace",
+    template: "%s | Soko Mtaa"
+  },
+  description: "Connect with local traders, reserve fresh products, and support your neighbourhood economy with Soko Mtaa. The premier digital marketplace for Kenya's urban markets.",
+  keywords: ["Soko Mtaa", "Kenya Markets", "Local Traders", "Fresh Produce", "Nairobi Markets", "Digital Marketplace", "M-Pesa Shopping"],
+  authors: [{ name: "Soko Mtaa Team" }],
+  creator: "Soko Mtaa",
+  publisher: "Soko Mtaa",
+  openGraph: {
+    type: "website",
+    locale: "en_KE",
+    url: "https://sokomtaa.co.ke",
+    title: "Soko Mtaa | Kenya's Local Neighbourhood Marketplace",
+    description: "Connect with local traders, reserve fresh products, and support your neighbourhood economy with Soko Mtaa.",
+    siteName: "Soko Mtaa",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Soko Mtaa | Kenya's Local Neighbourhood Marketplace",
+    description: "Connect with local traders, reserve fresh products, and support your neighbourhood economy with Soko Mtaa.",
+  },
   manifest: "/manifest.json",
 };
 
