@@ -18,7 +18,8 @@ import {
     PlusCircle,
     Info,
     AlertTriangle,
-    Clock
+    Clock,
+    FileText
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ApiResponse, Category } from '@/types';
