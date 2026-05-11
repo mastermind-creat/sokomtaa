@@ -103,6 +103,7 @@ export default function TraderDashboard() {
     const isPendingAllocation = user?.role === 'trader' && user?.trader && !isIndependent && !user?.trader.stall_id && stallApp?.data?.status === 'approved';
     const isApplicationPending = stallApp?.data?.status === 'pending';
     
+    const isKycMissing = user?.trader?.verification_status === 'unverified';
     const isKycPending = user?.trader?.verification_status === 'pending';
     const isKycRejected = user?.trader?.verification_status === 'rejected';
 
@@ -138,7 +139,7 @@ export default function TraderDashboard() {
             </AnimatePresence>
 
             <AnimatePresence>
-                {(isMissingProfile || isPendingVerification || isPendingAllocation || isApplicationPending || isKycPending || isKycRejected) && (
+                {(isMissingProfile || isPendingVerification || isPendingAllocation || isApplicationPending || isKycMissing || isKycPending || isKycRejected) && (
                     <div className="px-4 mb-6 space-y-3">
                         {isMissingProfile && (
                             <motion.div className="bg-rose-50 border border-rose-100 rounded-3xl p-5 flex items-center gap-4 shadow-sm">
@@ -150,6 +151,18 @@ export default function TraderDashboard() {
                                     <p className="text-rose-700 text-[10px] font-bold">{t('dashboard.profile_incomplete_desc')}</p>
                                 </div>
                                 <Link href="/trader/profile" className="px-4 py-2 bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg transition-colors hover:bg-rose-700">{t('dashboard.setup_now')}</Link>
+                            </motion.div>
+                        )}
+                        {isKycMissing && (
+                            <motion.div className="bg-brand-50 border border-brand-100 rounded-3xl p-5 flex items-center gap-4 shadow-sm">
+                                <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                                    <ShieldCheck size={20} />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="text-green-950 font-black text-xs uppercase tracking-tight">Identity Verification Required</h4>
+                                    <p className="text-brand-700 text-[10px] font-bold">Please upload your National ID and Selfie to start selling.</p>
+                                </div>
+                                <Link href="/trader/profile" className="px-4 py-2 bg-brand-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg">Upload Docs</Link>
                             </motion.div>
                         )}
                         {isApplicationPending && (

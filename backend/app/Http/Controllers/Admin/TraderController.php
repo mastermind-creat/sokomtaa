@@ -63,6 +63,15 @@ class TraderController extends Controller
             'reason' => 'required_if:status,rejected|string|nullable'
         ]);
 
+        // Prevent verification if documents are missing
+        if ($request->status === 'verified' && (!$trader->id_front_url || !$trader->id_back_url)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot verify trader: KYC documents (ID Front/Back) are missing.',
+                'error_code' => 'MISSING_DOCUMENTS'
+            ], 422);
+        }
+
         $trader->verification_status = $request->status;
         
         if ($request->status === 'rejected') {

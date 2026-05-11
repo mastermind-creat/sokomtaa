@@ -116,7 +116,7 @@ export default function AdminTradersPage() {
                 </div>
                 
                 <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                    {['all', 'verified', 'pending', 'rejected'].map((status) => (
+                    {['all', 'unverified', 'pending', 'verified', 'rejected'].map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilterStatus(status)}
@@ -171,6 +171,7 @@ export default function AdminTradersPage() {
                                 "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border",
                                 trader.verification_status === 'verified' && "bg-green-50 text-green-700 border-green-100",
                                 trader.verification_status === 'pending' && "bg-amber-50 text-amber-700 border-amber-100",
+                                trader.verification_status === 'unverified' && "bg-slate-50 text-slate-700 border-slate-100",
                                 trader.verification_status === 'rejected' && "bg-rose-50 text-rose-700 border-rose-100"
                             )}>
                                 {trader.verification_status}
@@ -289,54 +290,66 @@ export default function AdminTradersPage() {
                                 </div>
                             </div>
 
-                            <div className="p-8 bg-gray-50/50 border-t border-gray-100 flex gap-3">
-                                <button 
-                                    disabled={isReviewing}
-                                    onClick={async () => {
-                                        if(!rejectionReason) {
-                                            alert('Please provide a reason for rejection');
-                                            return;
-                                        }
-                                        setIsReviewing(true);
-                                        try {
-                                            await api.post(`/admin/traders/${reviewTrader.id}/verify`, { 
-                                                status: 'rejected',
-                                                reason: rejectionReason 
-                                            });
-                                            setReviewTrader(null);
-                                            window.location.reload();
-                                        } catch (e) {
-                                            console.error(e);
-                                        } finally {
-                                            setIsReviewing(false);
-                                        }
-                                    }}
-                                    className="flex-1 h-14 bg-white text-rose-600 border border-rose-100 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-50 transition-all disabled:opacity-50"
-                                >
-                                    Reject Application
-                                </button>
-                                <button 
-                                    disabled={isReviewing}
-                                    onClick={async () => {
-                                        setIsReviewing(true);
-                                        try {
-                                            await api.post(`/admin/traders/${reviewTrader.id}/verify`, { 
-                                                status: 'verified' 
-                                            });
-                                            setReviewTrader(null);
-                                            window.location.reload();
-                                        } catch (e) {
-                                            console.error(e);
-                                        } finally {
-                                            setIsReviewing(false);
-                                        }
-                                    }}
-                                    className="flex-[2] h-14 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand-200 hover:bg-brand-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {isReviewing ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
-                                    Approve & Verify
-                                </button>
-                            </div>
+                                {(!reviewTrader.id_front_url || !reviewTrader.id_back_url) && (
+                                    <div className="mx-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3">
+                                        <div className="w-8 h-8 bg-rose-100 text-rose-600 rounded-lg flex items-center justify-center shrink-0">
+                                            <ShieldCheck size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-rose-700 uppercase tracking-widest">Incomplete Profile</p>
+                                            <p className="text-[11px] font-medium text-rose-600/80 leading-tight mt-0.5">This merchant has not uploaded their National ID documents. Verification is disabled.</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="p-8 bg-gray-50/50 border-t border-gray-100 flex gap-3">
+                                    <button 
+                                        disabled={isReviewing}
+                                        onClick={async () => {
+                                            if(!rejectionReason) {
+                                                alert('Please provide a reason for rejection');
+                                                return;
+                                            }
+                                            setIsReviewing(true);
+                                            try {
+                                                await api.post(`/admin/traders/${reviewTrader.id}/verify`, { 
+                                                    status: 'rejected',
+                                                    reason: rejectionReason 
+                                                });
+                                                setReviewTrader(null);
+                                                window.location.reload();
+                                            } catch (e) {
+                                                console.error(e);
+                                            } finally {
+                                                setIsReviewing(false);
+                                            }
+                                        }}
+                                        className="flex-1 h-14 bg-white text-rose-600 border border-rose-100 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-50 transition-all disabled:opacity-50"
+                                    >
+                                        Reject Application
+                                    </button>
+                                    <button 
+                                        disabled={isReviewing || !reviewTrader.id_front_url || !reviewTrader.id_back_url}
+                                        onClick={async () => {
+                                            setIsReviewing(true);
+                                            try {
+                                                await api.post(`/admin/traders/${reviewTrader.id}/verify`, { 
+                                                    status: 'verified' 
+                                                });
+                                                setReviewTrader(null);
+                                                window.location.reload();
+                                            } catch (e) {
+                                                console.error(e);
+                                            } finally {
+                                                setIsReviewing(false);
+                                            }
+                                        }}
+                                        className="flex-[2] h-14 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand-200 hover:bg-brand-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        {isReviewing ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
+                                        Approve & Verify
+                                    </button>
+                                </div>
                         </motion.div>
                     </div>
                 )}
