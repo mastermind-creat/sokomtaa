@@ -1,45 +1,76 @@
 <?php
+/**
+ * Soko Mtaa - Emergency Backend Rescue Script
+ * This script fixes common production issues:
+ * 1. Missing migration records (wallet_transactions)
+ * 2. Broken storage symlinks
+ * 3. Cache corruption
+ */
+
 define('LARAVEL_START', microtime(true));
 
-// This script forces a cache clear and migration if the app is stuck in a 500 loop.
+// 1. Load Laravel Environment
 require __DIR__.'/../vendor/autoload.php';
 $app = require_once __DIR__.'/../bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
 
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Log;
-
-// Force the cache driver to 'file' before booting to bypass DB permission issues
-putenv('CACHE_STORE=file');
-putenv('CACHE_DRIVER=file');
-
-$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
-$response = $kernel->handle(
-    $request = Illuminate\Http\Request::capture()
-);
-
-echo "<h1>Soko Mtaa Rescue System</h1>";
+header('Content-Type: text/plain');
+echo "Soko Mtaa Rescue Operation Started...\n";
+echo "------------------------------------\n";
 
 try {
-    echo "Clearing Config Cache... ";
-    Artisan::call('config:clear');
-    echo "DONE<br>";
+    // 2. Fix Database Migration State
+    echo "[1/4] Checking Database Migration State...\n";
+    $tableExists = Illuminate\Support\Facades\Schema::hasTable('wallet_transactions');
+    $migrationExists = Illuminate\Support\Facades\DB::table('migrations')
+        ->where('migration', '2026_04_14_075938_create_wallet_transactions_table')
+        ->exists();
 
-    echo "Clearing Route Cache... ";
-    Artisan::call('route:clear');
-    echo "DONE<br>";
+    if ($tableExists && !$migrationExists) {
+        echo "Found orphaned 'wallet_transactions' table. Faking migration record...\n";
+        Illuminate\Support\Facades\DB::table('migrations')->insert([
+            'migration' => '2026_04_14_075938_create_wallet_transactions_table',
+            'batch' => 1
+        ]);
+        echo "SUCCESS: Migration record added.\n";
+    } else {
+        echo "Migration state for 'wallet_transactions' is correct.\n";
+    }
 
-    echo "Clearing Application Cache... ";
-    Artisan::call('cache:clear');
-    echo "DONE<br>";
+    // 3. Fix Storage Link
+    echo "[2/4] Verifying Storage Link...\n";
+    $link = public_path('storage');
+    if (is_link($link)) {
+        echo "Existing symlink found. Recreating to be safe...\n";
+        unlink($link);
+    } elseif (file_exists($link) && is_dir($link)) {
+        echo "WARNING: 'public/storage' is a real directory. Moving to 'public/storage_old'...\n";
+        rename($link, public_path('storage_old_' . time()));
+    }
+    
+    Illuminate\Support\Facades\Artisan::call('storage:link');
+    echo "SUCCESS: Storage link recreated.\n";
 
-    echo "Running Migrations... ";
-    Artisan::call('migrate', ['--force' => true]);
-    echo "DONE<br>";
+    // 4. Clear and Rebuild Cache
+    echo "[3/4] Clearing Application Cache...\n";
+    Illuminate\Support\Facades\Artisan::call('config:clear');
+    Illuminate\Support\Facades\Artisan::call('route:clear');
+    Illuminate\Support\Facades\Artisan::call('cache:clear');
+    Illuminate\Support\Facades\Artisan::call('view:clear');
+    echo "SUCCESS: All caches cleared.\n";
 
-    echo "<h2 style='color:green'>System Rescued! Try logging in now.</h2>";
-    echo "<p>Please delete this file (public/rescue.php) for security once done.</p>";
+    // 5. Run Remaining Migrations
+    echo "[4/4] Running Pending Migrations...\n";
+    Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+    echo "Artisan Output: " . Illuminate\Support\Facades\Artisan::output() . "\n";
+    echo "SUCCESS: Migrations updated.\n";
+
+    echo "------------------------------------\n";
+    echo "RESCUE COMPLETE! Please refresh your browser.\n";
+    echo "Don't forget to delete this file for security: public/rescue.php\n";
 
 } catch (\Exception $e) {
-    echo "<h2 style='color:red'>Rescue Failed</h2>";
-    echo "<pre>" . $e->getMessage() . "</pre>";
+    echo "FATAL ERROR during rescue: " . $e->getMessage() . "\n";
+    echo $e->getTraceAsString();
 }
