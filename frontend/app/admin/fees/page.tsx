@@ -16,7 +16,9 @@ import {
     ArrowRightCircle,
     Store,
     Settings,
-    Edit2
+    Edit2,
+    Globe,
+    Zap
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useUIStore } from '@/store/uiStore';
