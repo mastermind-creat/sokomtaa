@@ -55,7 +55,7 @@ class TraderStallApplicationController extends Controller
             'stall_type'         => 'required|in:managed,independent',
             'preferred_zone'     => 'nullable|in:A,B,C',
             'preferred_stall_id' => 'nullable|exists:stalls,id',
-            'motivation'         => 'required|string|min:50',
+            'motivation'         => 'required|string|min:10',
         ]);
 
         /** @var \App\Models\User $user */
@@ -66,6 +66,7 @@ class TraderStallApplicationController extends Controller
         }
 
         $traderId = $user->trader->id;
+        $marketName = $user->trader->market->name ?? 'Unknown Market';
 
         // Block if a pending or approved application already exists
         $existing = StallApplication::where('trader_id', $traderId)
@@ -92,7 +93,7 @@ class TraderStallApplicationController extends Controller
             $this->notificationService->send(
                 $admin,
                 'New Stall Application',
-                "New Stall Application from {$user->trader->business_name} for {$user->trader->market->name}",
+                "New Stall Application from {$user->trader->business_name} for {$marketName}",
                 'application',
                 ['application_id' => $application->id],
                 false
