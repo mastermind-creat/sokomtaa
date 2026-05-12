@@ -2,6 +2,9 @@
 
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { ApiResponse } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
@@ -24,12 +27,14 @@ const marketSchema = z.object({
     county: z.string().min(2, 'County is required'),
     location: z.string().min(2, 'Location is required'),
     estate: z.string().min(2, 'Estate/Street is required'),
-    latitude: z.string().optional().nullable(),
-    longitude: z.string().optional().nullable(),
-    is_active: z.boolean().default(true),
+    latitude: z.string().nullable().optional(),
+    longitude: z.string().nullable().optional(),
+    is_active: z.boolean(),
     banner_image: z.any().optional(),
     icon_image: z.any().optional(),
-    default_monthly_fee: z.string().or(z.number()).optional(),
+    default_monthly_fee: z.coerce.number().default(0),
+    region_id: z.string().or(z.number()).optional(),
+    center_id: z.string().or(z.number()),
 });
 
 type MarketFormValues = z.infer<typeof marketSchema>;
@@ -53,6 +58,8 @@ export const MarketModal: React.FC<MarketModalProps> = ({
         register,
         handleSubmit,
         reset,
+        watch,
+        setValue,
         formState: { errors }
     } = useForm<MarketFormValues>({
         resolver: zodResolver(marketSchema),
@@ -65,8 +72,30 @@ export const MarketModal: React.FC<MarketModalProps> = ({
             longitude: '',
             is_active: true,
             default_monthly_fee: 0,
+            region_id: '',
+            center_id: '',
         }
     });
+
+    const selectedRegionId = watch('region_id' as any);
+
+    // ── Queries ──
+    const { data: regions } = useQuery<ApiResponse<any[]>>({
+        queryKey: ['admin-regions-simple'],
+        queryFn: () => api.get('/admin/regions'),
+        enabled: isOpen,
+    });
+
+    const { data: centers } = useQuery<ApiResponse<any[]>>({
+        queryKey: ['admin-centers-simple'],
+        queryFn: () => api.get('/admin/centers'),
+        enabled: isOpen,
+    });
+
+    const filteredCenters = React.useMemo(() => {
+        if (!centers?.data || !selectedRegionId) return [];
+        return centers.data.filter(c => c.region_id.toString() === selectedRegionId.toString());
+    }, [centers, selectedRegionId]);
 
     const handleFormSubmit = (data: MarketFormValues) => {
         const formData = new FormData();
@@ -93,7 +122,12 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                 longitude: initialData.longitude || '',
                 is_active: initialData.is_active,
                 default_monthly_fee: initialData.default_monthly_fee || 0,
+                center_id: initialData.center_id || '',
             });
+            // Also need to set region_id for the selector
+            if (initialData.center?.region_id) {
+                setValue('region_id' as any, initialData.center.region_id);
+            }
         } else {
             reset({
                 name: '',
@@ -104,6 +138,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                 longitude: '',
                 is_active: true,
                 default_monthly_fee: 0,
+                center_id: '',
             });
         }
     }, [initialData, reset]);
@@ -171,6 +206,45 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
+                                {/* Region Selection */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                        Select Region
+                                    </label>
+                                    <select 
+                                        {...register('region_id' as any)}
+                                        className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
+                                    >
+                                        <option value="">Choose Region...</option>
+                                        {regions?.data?.map(r => (
+                                            <option key={r.id} value={r.id}>{r.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Center Selection */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                        Select Center
+                                    </label>
+                                    <select 
+                                        {...register('center_id')}
+                                        disabled={!selectedRegionId}
+                                        className={cn(
+                                            "w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
+                                            errors.center_id && "border-red-200 bg-red-50"
+                                        )}
+                                    >
+                                        <option value="">Choose Center...</option>
+                                        {filteredCenters.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                    {errors.center_id && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.center_id.message as string}</p>}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
                                 {/* County */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
@@ -193,7 +267,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                                 {/* Location */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        Location
+                                        Location / Area
                                     </label>
                                     <div className="relative">
                                         <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />

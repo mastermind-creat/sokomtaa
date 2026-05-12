@@ -91,6 +91,9 @@ export interface Market {
     stalls_count?: number;
     occupied_stalls_count?: number;
     traders_count?: number;
+    center_id?: number | null;
+    center?: Center;
+    region?: Region;
 }
 
 export interface Notice {
@@ -264,4 +267,25 @@ export interface SystemSetting {
     type: 'string' | 'integer' | 'decimal' | 'boolean';
     label: string;
     description: string;
+}
+export interface Region {
+    id: number;
+    name: string;
+    description?: string | null;
+    is_active: boolean;
+    centers_count?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Center {
+    id: number;
+    region_id: number;
+    name: string;
+    description?: string | null;
+    is_active: boolean;
+    region?: Region;
+    markets_count?: number;
+    created_at: string;
+    updated_at: string;
 }

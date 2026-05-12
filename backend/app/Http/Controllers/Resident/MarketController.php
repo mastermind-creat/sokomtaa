@@ -16,11 +16,23 @@ class MarketController extends Controller
     /**
      * List all active markets.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $markets = Market::where('is_active', true)
+        $query = Market::where('is_active', true)
             ->withCount('traders')
-            ->get();
+            ->with(['center.region']);
+
+        if ($request->has('region_id')) {
+            $query->whereHas('center', function($q) use ($request) {
+                $q->where('region_id', $request->region_id);
+            });
+        }
+
+        if ($request->has('center_id')) {
+            $query->where('center_id', $request->center_id);
+        }
+
+        $markets = $query->get();
 
         return $this->success($markets);
     }

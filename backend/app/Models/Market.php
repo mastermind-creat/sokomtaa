@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Market extends Model
 {
@@ -26,6 +28,7 @@ class Market extends Model
         'default_daily_fee',
         'default_weekly_fee',
         'is_fee_enabled',
+        'center_id',
     ];
 
     protected $casts = [
@@ -59,5 +62,15 @@ class Market extends Model
     public function complaints(): HasMany
     {
         return $this->hasMany(Complaint::class);
+    }
+
+    public function center(): BelongsTo
+    {
+        return $this->belongsTo(Center::class);
+    }
+
+    public function region(): HasOneThrough
+    {
+        return $this->hasOneThrough(Region::class, Center::class, 'id', 'id', 'center_id', 'region_id');
     }
 }

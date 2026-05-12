@@ -46,6 +46,10 @@ Route::prefix('markets')->group(function () {
     Route::get('/{market}/compare', [\App\Http\Controllers\Resident\MarketController::class, 'compare']);
 });
 
+// Location Discovery (Public)
+Route::get('/regions', [\App\Http\Controllers\Admin\RegionController::class, 'index']);
+Route::get('/centers', [\App\Http\Controllers\Admin\CenterController::class, 'index']);
+
 // Global Search & Recommendations (Public)
 Route::get('/search', [\App\Http\Controllers\SearchController::class, 'index']);
 Route::get('/recommendations', [\App\Http\Controllers\SearchController::class, 'recommendations']);
@@ -261,8 +265,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/stalls/bulk', [\App\Http\Controllers\Admin\StallController::class, 'bulkGenerate']);
         Route::post('/stalls/bulk-update-fees', [\App\Http\Controllers\Admin\StallController::class, 'bulkUpdateFees']);
         Route::get('/map-data', [\App\Http\Controllers\Admin\StallMapController::class, 'getMapData']);
-        Route::get('/allocations', [\App\Http\Controllers\Admin\StallAllocationController::class, 'index']);
         Route::post('/allocations', [\App\Http\Controllers\Admin\StallAllocationController::class, 'store']);
+
+        // Locations (Regions & Centers)
+        Route::apiResource('regions', [\App\Http\Controllers\Admin\RegionController::class]);
+        Route::apiResource('centers', [\App\Http\Controllers\Admin\CenterController::class]);
 
         // Stall Application Review
         Route::get('/applications', [\App\Http\Controllers\Admin\ApplicationReviewController::class, 'index']);
