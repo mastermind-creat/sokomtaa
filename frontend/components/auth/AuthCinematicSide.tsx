@@ -94,7 +94,7 @@ export const AuthCinematicSide: React.FC<AuthCinematicSideProps> = ({
     }, [mouseX, mouseY]);
 
     return (
-        <div className="hidden lg:flex flex-col justify-between w-1/2 bg-[#0A2E1A] p-14 relative overflow-hidden">
+        <div className="hidden lg:flex lg:flex-col justify-between w-1/2 shrink-0 bg-[#0A2E1A] p-14 relative overflow-hidden">
             {/* Cinematic Background Layers */}
             <motion.div 
                 style={{ x: bgX, y: bgY }}

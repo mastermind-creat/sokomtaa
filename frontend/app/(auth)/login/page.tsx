@@ -68,7 +68,7 @@ export default function LoginPage() {
 
             {/* Right Panel — Form */}
             <motion.div
-                className="flex-1 flex flex-col justify-center items-center px-6 py-12 lg:px-16 bg-white"
+                className="w-full lg:w-1/2 flex flex-col justify-center items-center px-6 py-12 lg:px-16 bg-white"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.4 }}

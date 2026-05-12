@@ -88,7 +88,7 @@ export default function VerifyPage() {
 
             {/* Right Panel — Verification Form */}
             <motion.div 
-                className="flex-1 flex flex-col justify-center items-center px-6 py-12 lg:px-14 bg-[#FAFAF8]"
+                className="w-full lg:w-1/2 flex flex-col justify-center items-center px-6 py-12 lg:px-14 bg-[#FAFAF8]"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.4 }}

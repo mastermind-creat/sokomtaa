@@ -82,7 +82,7 @@ export default function ForgotPasswordPage() {
             <AuthCinematicSide />
 
             {/* Right Panel — Form */}
-            <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 lg:px-16 bg-white">
+            <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-6 py-12 lg:px-16 bg-white">
                 <div className="w-full max-w-md">
                     {/* Mobile logo */}
                     <div className="lg:hidden flex flex-col items-center mb-10">
