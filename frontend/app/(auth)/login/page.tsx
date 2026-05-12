@@ -64,10 +64,7 @@ export default function LoginPage() {
         <div className="bg-white">
             <div className="min-h-screen w-full flex">
             {/* Left Panel — Cinematic Branding */}
-            <AuthCinematicSide 
-                title={<>Kenya&apos;s Neighbourhood<br />Digital Marketplace</>}
-                subtitle="Connecting local traders and residents across Kenyan markets — digitally, seamlessly, locally."
-            />
+            <AuthCinematicSide />
 
             {/* Right Panel — Form */}
             <motion.div

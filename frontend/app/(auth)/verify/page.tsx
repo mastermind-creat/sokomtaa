@@ -84,10 +84,7 @@ export default function VerifyPage() {
     return (
         <div className="min-h-screen w-full flex">
             {/* Left Panel — Cinematic Branding */}
-            <AuthCinematicSide 
-                title={<>Secure Your<br />Account</>}
-                subtitle="We take your security seriously. Verify your phone number to access all features of the Soko Mtaa marketplace."
-            />
+            <AuthCinematicSide />
 
             {/* Right Panel — Verification Form */}
             <motion.div 

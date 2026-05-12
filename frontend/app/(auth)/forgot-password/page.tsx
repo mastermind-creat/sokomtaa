@@ -79,10 +79,7 @@ export default function ForgotPasswordPage() {
     return (
         <div className="bg-white min-h-screen w-full flex">
             {/* Left Panel — Cinematic Branding */}
-            <AuthCinematicSide 
-                title={<>Account<br />Recovery</>}
-                subtitle="Regain access to your Soko Mtaa account securely and quickly."
-            />
+            <AuthCinematicSide />
 
             {/* Right Panel — Form */}
             <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 lg:px-16 bg-white">

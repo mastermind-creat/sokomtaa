@@ -9,8 +9,8 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 
 interface AuthCinematicSideProps {
-    title: string | React.ReactNode;
-    subtitle: string;
+    title?: string | React.ReactNode;
+    subtitle?: string;
     stats?: Array<{ label: string; value: string; icon?: React.ReactNode }>;
     features?: string[];
 }
@@ -135,7 +135,7 @@ export const AuthCinematicSide: React.FC<AuthCinematicSideProps> = ({
                         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                         className="text-5xl font-[1000] text-white leading-[1.1] mb-6 tracking-tighter"
                     >
-                        {title}
+                        {title || <>Kenya&apos;s Neighbourhood<br />Digital Marketplace</>}
                     </motion.h2>
                     <motion.p 
                         initial={{ opacity: 0, x: -30 }}
@@ -143,7 +143,7 @@ export const AuthCinematicSide: React.FC<AuthCinematicSideProps> = ({
                         transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
                         className="text-green-100/70 text-xl font-medium leading-relaxed"
                     >
-                        {subtitle}
+                        {subtitle || "Connecting local traders and residents across Kenyan markets — digitally, seamlessly, locally."}
                     </motion.p>
                 </div>
             </div>

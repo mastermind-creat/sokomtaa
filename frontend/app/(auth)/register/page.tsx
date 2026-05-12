@@ -55,10 +55,7 @@ export default function RegisterPage() {
         <div className="bg-white">
             <div className="min-h-screen w-full flex">
             {/* Left Panel — Cinematic Branding */}
-            <AuthCinematicSide 
-                title={<>Join the<br />Neighbourhood Marketplace</>}
-                subtitle="Create your free account and start buying, selling or managing your local market — all in one place."
-            />
+            <AuthCinematicSide />
 
             {/* Right Panel — Form */}
             <motion.div
