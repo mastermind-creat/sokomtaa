@@ -68,6 +68,81 @@ class ReservationController extends Controller
     }
 
     /**
+     * Create multiple reservations at once (Cart checkout).
+     */
+    public function bulkStore(Request $request): JsonResponse
+    {
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'trader_id' => 'required|exists:traders,id',
+        ]);
+
+        return DB::transaction(function () use ($request) {
+            $user = Auth::user();
+            $createdReservations = [];
+            $serviceFeePerItem = 10.00 / count($request->items); // Split the 10.00 service fee across items? Or one fee per item?
+            // Actually, let's stick to one fee per checkout (split it or apply to one).
+            // Usually, it's one fee per order.
+            
+            foreach ($request->items as $index => $itemData) {
+                $product = Product::findOrFail($itemData['product_id']);
+
+                // Availability check
+                if (!$product->is_active || $product->stock_status === 'out_of_stock') {
+                    throw new \Exception("Product {$product->name} is not available.");
+                }
+
+                if ($product->stock_quantity !== null && $product->stock_quantity < $itemData['quantity']) {
+                    throw new \Exception("Insufficient stock for {$product->name}.");
+                }
+
+                // Generate Unique Reservation Code
+                $code = 'SM-' . strtoupper(Str::random(6));
+                while (Reservation::where('reservation_code', $code)->exists()) {
+                    $code = 'SM-' . strtoupper(Str::random(6));
+                }
+
+                // Apply service fee only to the first item for simplicity in total calculation
+                $currentServiceFee = ($index === 0) ? 10.00 : 0.00;
+                $subtotal = $product->price * $itemData['quantity'];
+                $totalAmount = $subtotal + $currentServiceFee;
+
+                $reservation = Reservation::create([
+                    'reservation_code' => $code,
+                    'resident_id' => $user->id,
+                    'trader_id' => $request->trader_id,
+                    'product_id' => $product->id,
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $product->price,
+                    'service_fee' => $currentServiceFee,
+                    'total_amount' => $totalAmount,
+                    'status' => 'pending',
+                    'pickup_deadline' => now()->addHours(24),
+                ]);
+
+                // Update Stock
+                if ($product->stock_quantity !== null) {
+                    $product->stock_quantity -= $itemData['quantity'];
+                    if ($product->stock_quantity <= 0) {
+                        $product->stock_status = 'out_of_stock';
+                        $product->stock_quantity = 0;
+                    } elseif ($product->stock_quantity <= 5) {
+                        $product->stock_status = 'low';
+                    }
+                    $product->save();
+                }
+
+                $product->increment('total_reservations');
+                $createdReservations[] = $reservation->load('product');
+            }
+
+            return $this->success($createdReservations, 'Reservations created successfully.', 201);
+        });
+    }
+
+    /**
      * Create a new reservation.
      */
     public function store(Request $request): JsonResponse

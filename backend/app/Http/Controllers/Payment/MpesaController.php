@@ -36,7 +36,9 @@ class MpesaController extends Controller
         $request->validate([
             'phone_number' => ['required', 'string', 'regex:/^(?:254|\+254|0)?(7|1)[0-9]{8}$/'],
             'type' => 'required|in:reservation,market_fee,wallet_topup,product_boost',
-            'target_id' => 'required_if:type,reservation,market_fee,product_boost|integer',
+            'target_id' => 'required_if:type,market_fee,product_boost|integer',
+            'target_ids' => 'required_if:type,reservation|array',
+            'target_ids.*' => 'integer',
             'amount' => 'required_if:type,wallet_topup|numeric|min:1',
         ]);
 
@@ -55,12 +57,17 @@ class MpesaController extends Controller
         $ref = '';
 
         if ($request->type === 'reservation') {
-            $reservation = Reservation::findOrFail($request->target_id);
-            if ($reservation->status !== 'pending') {
-                return $this->error('This reservation has already been paid or was cancelled.', 'INVALID_STATUS', 422);
+            $reservationIds = $request->target_ids;
+            $reservations = Reservation::whereIn('id', $reservationIds)->get();
+            
+            foreach ($reservations as $reservation) {
+                if ($reservation->status !== 'pending') {
+                    return $this->error("Reservation {$reservation->reservation_code} has already been paid or cancelled.", 'INVALID_STATUS', 422);
+                }
+                $amount += $reservation->total_amount;
             }
-            $amount = $reservation->total_amount;
-            $ref = $reservation->reservation_code;
+            
+            $ref = $reservations->first()->reservation_code . ($reservations->count() > 1 ? '+' : '');
         } elseif ($request->type === 'market_fee') {
             $fee = MarketFee::findOrFail($request->target_id);
             if ($fee->status === 'paid') {
@@ -91,7 +98,7 @@ class MpesaController extends Controller
 
         // Create initial payment record
         Payment::create([
-            'reservation_id' => $request->type === 'reservation' ? $request->target_id : null,
+            'reservation_id' => $request->type === 'reservation' ? $request->target_ids[0] : null,
             'product_id' => $request->type === 'product_boost' ? $request->target_id : null,
             'user_id' => $user->id,
             'mpesa_checkout_request_id' => $stkResponse['CheckoutRequestID'],
@@ -100,6 +107,13 @@ class MpesaController extends Controller
             'type' => $request->type,
             'status' => 'pending',
         ]);
+
+        // Link reservations to this checkout request
+        if ($request->type === 'reservation') {
+            Reservation::whereIn('id', $request->target_ids)->update([
+                'mpesa_checkout_request_id' => $stkResponse['CheckoutRequestID']
+            ]);
+        }
 
         return $this->success([
             'checkout_request_id' => $stkResponse['CheckoutRequestID'],
@@ -139,33 +153,35 @@ class MpesaController extends Controller
             ]);
 
             // Update associated entities
-            if ($payment->type === 'reservation' && $payment->reservation_id) {
-                $reservation = $payment->reservation;
-                $reservation->update(['status' => 'paid']);
-
-                // Credit the trader's wallet with the product amount (excluding service fee)
+            if ($payment->type === 'reservation') {
+                $reservations = Reservation::where('mpesa_checkout_request_id', $checkoutRequestId)->get();
                 $walletService = app(WalletService::class);
-                $trader = $reservation->trader;
-                if ($trader) {
-                    $wallet = $walletService->getOrCreateForTrader($trader->id);
-                    $creditAmount = $reservation->unit_price * $reservation->quantity; // Exclude service fee
-                    $productName = $reservation->product->name ?? 'Product';
-                    $walletService->credit(
-                        $wallet,
-                        $creditAmount,
-                        "Sale: {$reservation->reservation_code} — {$productName}",
-                        'reservation',
-                        (string) $reservation->id
-                    );
-                    Log::info('Wallet credited for trader', ['trader_id' => $trader->id, 'amount' => $creditAmount]);
-                }
 
-                // Trigger Notification
-                $this->notificationService->notifyReservationUpdate(
-                    $payment->user,
-                    $reservation,
-                    'paid'
-                );
+                foreach ($reservations as $reservation) {
+                    $reservation->update(['status' => 'paid']);
+
+                    // Credit the trader's wallet
+                    $trader = $reservation->trader;
+                    if ($trader) {
+                        $wallet = $walletService->getOrCreateForTrader($trader->id);
+                        $creditAmount = $reservation->unit_price * $reservation->quantity;
+                        $productName = $reservation->product->name ?? 'Product';
+                        $walletService->credit(
+                            $wallet,
+                            $creditAmount,
+                            "Sale: {$reservation->reservation_code} — {$productName}",
+                            'reservation',
+                            (string) $reservation->id
+                        );
+                    }
+
+                    // Trigger Notification
+                    $this->notificationService->notifyReservationUpdate(
+                        $payment->user,
+                        $reservation,
+                        'paid'
+                    );
+                }
             } elseif ($payment->type === 'product_boost' && $payment->product_id) {
                 $payment->product->update([
                     'is_boosted' => true,
@@ -212,6 +228,10 @@ class MpesaController extends Controller
                 'status' => 'failed',
                 'mpesa_response' => $data,
             ]);
+
+            if ($payment->type === 'reservation') {
+                Reservation::where('mpesa_checkout_request_id', $checkoutRequestId)->update(['status' => 'cancelled']);
+            }
             Log::warning('M-Pesa Payment Failed for ' . $checkoutRequestId);
         }
 
@@ -273,30 +293,32 @@ class MpesaController extends Controller
         ]);
 
         // Update associated entities (Mirroring callback logic)
-        if ($payment->type === 'reservation' && $payment->reservation_id) {
-            $reservation = $payment->reservation;
-            $reservation->update(['status' => 'paid']);
-
-            // Credit trader wallet
+        if ($payment->type === 'reservation') {
+            $reservations = Reservation::where('mpesa_checkout_request_id', $checkoutRequestId)->get();
             $walletService = app(WalletService::class);
-            $trader = $reservation->trader;
-            if ($trader) {
-                $wallet = $walletService->getOrCreateForTrader($trader->id);
-                $creditAmount = $reservation->unit_price * $reservation->quantity;
-                $walletService->credit(
-                    $wallet,
-                    $creditAmount,
-                    "[Simulated] Sale: {$reservation->reservation_code}",
-                    'reservation',
-                    (string) $reservation->id
+
+            foreach ($reservations as $reservation) {
+                $reservation->update(['status' => 'paid']);
+
+                $trader = $reservation->trader;
+                if ($trader) {
+                    $wallet = $walletService->getOrCreateForTrader($trader->id);
+                    $creditAmount = $reservation->unit_price * $reservation->quantity;
+                    $walletService->credit(
+                        $wallet,
+                        $creditAmount,
+                        "[Simulated] Sale: {$reservation->reservation_code}",
+                        'reservation',
+                        (string) $reservation->id
+                    );
+                }
+
+                $this->notificationService->notifyReservationUpdate(
+                    $payment->user,
+                    $reservation,
+                    'paid'
                 );
             }
-
-            $this->notificationService->notifyReservationUpdate(
-                $payment->user,
-                $reservation,
-                'paid'
-            );
         } elseif ($payment->type === 'product_boost' && $payment->product_id) {
             $payment->product->update([
                 'is_boosted' => true,

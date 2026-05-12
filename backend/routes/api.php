@@ -82,6 +82,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('reservations')->group(function () {
         Route::get('/', [\App\Http\Controllers\Resident\ReservationController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\Resident\ReservationController::class, 'store']);
+        Route::post('/bulk', [\App\Http\Controllers\Resident\ReservationController::class, 'bulkStore']);
         Route::get('/{reservation}', [\App\Http\Controllers\Resident\ReservationController::class, 'show']);
         Route::patch('/{id}/status', [\App\Http\Controllers\Resident\ReservationController::class, 'updateStatus']);
         Route::get('/{reservation}/pickup-code', [\App\Http\Controllers\Resident\ReservationController::class, 'pickupCode']);
