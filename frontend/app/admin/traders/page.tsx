@@ -22,7 +22,8 @@ import {
     Send,
     ShoppingBag,
     Award,
-    Ban
+    Ban,
+    Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ApiResponse, Trader } from '@/types';
@@ -201,84 +202,87 @@ export default function AdminTradersPage() {
                         <Store size={48} className="mx-auto mb-4" />
                         <p className="text-xs font-black uppercase tracking-widest">No traders found</p>
                     </div>
-                    <motion.div 
-                        key={trader.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white rounded-[2.5rem] border border-gray-50 shadow-sm overflow-hidden group hover:shadow-md transition-all flex flex-col"
-                    >
-                        <div 
-                            className="p-6 cursor-pointer hover:bg-gray-50/30 transition-colors flex-1"
-                            onClick={() => setReviewTrader(trader)}
+                ) : (
+                    traders.map((trader) => (
+                        <motion.div 
+                            key={trader.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white rounded-[2.5rem] border border-gray-50 shadow-sm overflow-hidden group hover:shadow-md transition-all flex flex-col"
                         >
-                            <div className="flex items-start justify-between mb-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center shadow-inner shrink-0 overflow-hidden border border-brand-100">
-                                        {trader.avatar_url ? (
-                                            <img src={trader.avatar_url} className="w-full h-full object-cover" alt="" />
-                                        ) : (
-                                            <Store size={24} />
-                                        )}
+                            <div 
+                                className="p-6 cursor-pointer hover:bg-gray-50/30 transition-colors flex-1"
+                                onClick={() => setReviewTrader(trader)}
+                            >
+                                <div className="flex items-start justify-between mb-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-14 h-14 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center shadow-inner shrink-0 overflow-hidden border border-brand-100">
+                                            {trader.avatar_url ? (
+                                                <img src={trader.avatar_url} className="w-full h-full object-cover" alt="" />
+                                            ) : (
+                                                <Store size={24} />
+                                            )}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h3 className="text-base font-black text-green-950 uppercase tracking-tight leading-none mb-1.5 truncate">{trader.business_name}</h3>
+                                            <p className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-1.5 truncate">
+                                                <User size={10} className="text-brand-500" /> {trader.user.name}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="min-w-0">
-                                        <h3 className="text-base font-black text-green-950 uppercase tracking-tight leading-none mb-1.5 truncate">{trader.business_name}</h3>
-                                        <p className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-1.5 truncate">
-                                            <User size={10} className="text-brand-500" /> {trader.user.name}
-                                        </p>
+                                    <div className={cn(
+                                        "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border shrink-0",
+                                        trader.verification_status === 'verified' && "bg-green-50 text-green-700 border-green-100",
+                                        trader.verification_status === 'pending' && "bg-amber-50 text-amber-700 border-amber-100",
+                                        trader.verification_status === 'unverified' && "bg-slate-50 text-slate-700 border-slate-100",
+                                        trader.verification_status === 'rejected' && "bg-rose-50 text-rose-700 border-rose-100"
+                                    )}>
+                                        {trader.verification_status}
                                     </div>
                                 </div>
-                                <div className={cn(
-                                    "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border shrink-0",
-                                    trader.verification_status === 'verified' && "bg-green-50 text-green-700 border-green-100",
-                                    trader.verification_status === 'pending' && "bg-amber-50 text-amber-700 border-amber-100",
-                                    trader.verification_status === 'unverified' && "bg-slate-50 text-slate-700 border-slate-100",
-                                    trader.verification_status === 'rejected' && "bg-rose-50 text-rose-700 border-rose-100"
-                                )}>
-                                    {trader.verification_status}
+
+                                <div className="grid grid-cols-2 gap-3 mb-6">
+                                    <div className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                                        <span className="text-[8px] font-black text-text-muted uppercase tracking-widest mb-1 block">Location</span>
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-green-950">
+                                            <MapPin size={10} className="text-brand-500 shrink-0" />
+                                            <span className="truncate">{trader.market?.name || 'Unassigned'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                                        <span className="text-[8px] font-black text-text-muted uppercase tracking-widest mb-1 block">Reviews</span>
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-green-950">
+                                            <Star size={10} className="text-amber-500 shrink-0 fill-amber-500" />
+                                            <span>{trader.average_rating} ({trader.total_reviews})</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 mb-6">
-                                <div className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
-                                    <span className="text-[8px] font-black text-text-muted uppercase tracking-widest mb-1 block">Location</span>
-                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-green-950">
-                                        <MapPin size={10} className="text-brand-500 shrink-0" />
-                                        <span className="truncate">{trader.market?.name || 'Unassigned'}</span>
-                                    </div>
-                                </div>
-                                <div className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
-                                    <span className="text-[8px] font-black text-text-muted uppercase tracking-widest mb-1 block">Reviews</span>
-                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-green-950">
-                                        <Star size={10} className="text-amber-500 shrink-0 fill-amber-500" />
-                                        <span>{trader.average_rating} ({trader.total_reviews})</span>
-                                    </div>
-                                </div>
+                            {/* One-Handed Triage Hub */}
+                            <div className="p-6 pt-0 flex gap-2">
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSmsTrader(trader);
+                                    }}
+                                    className="flex-1 h-12 bg-gray-950 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                >
+                                    <MessageCircle size={14} /> SMS
+                                </button>
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setReviewTrader(trader);
+                                    }}
+                                    className="flex-[1.5] h-12 bg-brand-50 text-brand-700 rounded-2xl font-black text-[9px] uppercase tracking-widest border border-brand-100 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                >
+                                    <ShieldCheck size={14} /> {trader.verification_status === 'pending' ? 'Review' : 'Re-audit'}
+                                </button>
                             </div>
-                        </div>
-
-                        {/* One-Handed Triage Hub */}
-                        <div className="p-6 pt-0 flex gap-2">
-                            <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSmsTrader(trader);
-                                }}
-                                className="flex-1 h-12 bg-gray-950 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
-                            >
-                                <MessageCircle size={14} /> SMS
-                            </button>
-                            <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setReviewTrader(trader);
-                                }}
-                                className="flex-[1.5] h-12 bg-brand-50 text-brand-700 rounded-2xl font-black text-[9px] uppercase tracking-widest border border-brand-100 flex items-center justify-center gap-2 active:scale-95 transition-all"
-                            >
-                                <ShieldCheck size={14} /> {trader.verification_status === 'pending' ? 'Review' : 'Re-audit'}
-                            </button>
-                        </div>
-                    </motion.div>
-                ))}
+                        </motion.div>
+                    ))
+                )}
             </div>
 
             {/* Sticky Operational Command */}
@@ -453,5 +457,3 @@ export default function AdminTradersPage() {
         </div>
     );
 }
-
-import { Loader2 } from 'lucide-react';
