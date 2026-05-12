@@ -134,50 +134,68 @@ function SearchPageContent() {
                             {t('search.results_count').replace('{total}', searchData?.data.total.toString() || '0')}
                         </h2>
                         
-                        <div className="grid gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {results.map((result) => (
                                 <Link 
                                     key={`${result.search_type}-${result.id}`} 
                                     href={
-                                        result.search_type === 'product' ? `/resident/market/${result.trader?.market_id}/trader/${result.trader?.id}` :
-                                        result.search_type === 'trader' ? `/resident/market/${result.market?.id}/trader/${result.id}` :
-                                        `/resident/market/${result.id}`
+                                        result.search_type === 'product' ? `/trader/${result.trader?.id}` :
+                                        result.search_type === 'trader' ? `/trader/${result.id}` :
+                                        `/market/${result.id}`
                                     }
-                                    className="flex items-center gap-4 bg-surface-card p-4 rounded-3xl border border-border-default shadow-sm active:scale-[0.98] transition-all group"
+                                    className="flex flex-col bg-white rounded-3xl border border-border-default shadow-sm active:scale-[0.98] transition-all group overflow-hidden"
                                 >
-                                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden relative ${result.search_type === 'market' ? 'bg-amber-100 text-amber-600' : 'bg-brand-50 text-brand-500'}`}>
+                                    <div className={`aspect-square w-full flex items-center justify-center shrink-0 overflow-hidden relative ${result.search_type === 'market' ? 'bg-amber-50 text-amber-600' : 'bg-brand-50 text-brand-500'}`}>
                                         {(result.image_url || result.avatar_url) ? (
                                             <Image 
                                                 src={(result.image_url || result.avatar_url)!} 
                                                 alt="" 
                                                 fill
-                                                className="object-cover" 
+                                                className="object-cover group-hover:scale-105 transition-transform duration-500" 
                                             />
                                         ) : (
-                                            result.search_type === 'product' ? <Package size={24} /> :
-                                            result.search_type === 'trader' ? <Store size={24} /> :
-                                            <MapPin size={24} />
+                                            result.search_type === 'product' ? <Package size={32} className="opacity-20" /> :
+                                            result.search_type === 'trader' ? <Store size={32} className="opacity-20" /> :
+                                            <MapPin size={32} className="opacity-20" />
                                         )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-md ${
-                                                result.search_type === 'product' ? 'bg-green-100 text-green-700' :
-                                                result.search_type === 'trader' ? 'bg-blue-100 text-blue-700' :
-                                                'bg-amber-100 text-amber-700'
+                                        
+                                        <div className="absolute top-3 left-3">
+                                            <span className={`text-[8px] uppercase font-black tracking-widest px-2 py-1 rounded-lg backdrop-blur-md border ${
+                                                result.search_type === 'product' ? 'bg-green-500/10 text-green-700 border-green-200' :
+                                                result.search_type === 'trader' ? 'bg-blue-500/10 text-blue-700 border-blue-200' :
+                                                'bg-amber-500/10 text-amber-700 border-amber-200'
                                             }`}>
                                                 {t(`common.${result.search_type}`)}
                                             </span>
                                         </div>
-                                        <h3 className="font-bold text-text-primary text-base truncate group-hover:text-brand-700 transition-colors">
+                                    </div>
+                                    
+                                    <div className="p-4 flex-1 flex flex-col">
+                                        <h3 className="font-bold text-green-950 text-sm line-clamp-2 mb-1 group-hover:text-brand-700 transition-colors">
                                             {result.search_type === 'product' ? (locale === 'sw' ? (result.name_sw || result.name) : result.name) :
                                              result.search_type === 'trader' ? (locale === 'sw' ? (result.business_name_sw || result.business_name) : result.business_name) :
                                              result.name}
                                         </h3>
-                                        <div className="text-xs text-text-secondary mt-1 truncate">
-                                            {result.search_type === 'product' && `KES ${result.price} / ${result.unit}`}
-                                            {result.search_type === 'trader' && result.market?.name}
-                                            {result.search_type === 'market' && result.location}
+                                        
+                                        <div className="mt-auto pt-2">
+                                            {result.search_type === 'product' && (
+                                                <div className="flex items-baseline gap-1">
+                                                    <span className="text-xs font-black text-brand-600 font-mono">KES {result.price}</span>
+                                                    <span className="text-[10px] text-text-muted lowercase font-bold">/{result.unit}</span>
+                                                </div>
+                                            )}
+                                            {result.search_type === 'trader' && (
+                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-text-secondary">
+                                                    <MapPin size={10} className="text-amber-500" />
+                                                    <span className="truncate">{result.market?.name}</span>
+                                                </div>
+                                            )}
+                                            {result.search_type === 'market' && (
+                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-text-secondary">
+                                                    <MapPin size={10} className="text-amber-500" />
+                                                    <span className="truncate">{result.location}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </Link>
