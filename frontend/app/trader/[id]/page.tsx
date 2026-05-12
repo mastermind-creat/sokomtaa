@@ -198,15 +198,14 @@ export default function TraderStorefrontPage() {
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: -20, opacity: 0 }}
-                            className="grid gap-4"
-                            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))' }}
+                            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6"
                         >
                             {products.length > 0 ? products.map((product) => (
                                 <motion.div 
                                     key={product.id}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => setSelectedProduct(product)}
-                                    className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group cursor-pointer hover:shadow-md transition-all duration-300 flex flex-col"
+                                    className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden group cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
                                 >
                                     <div className="aspect-square bg-neutral-50 relative overflow-hidden">
                                         {product.image_url ? (
@@ -214,40 +213,44 @@ export default function TraderStorefrontPage() {
                                                 src={product.image_url} 
                                                 alt={product.name} 
                                                 fill
-                                                className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                                                className="object-cover group-hover:scale-110 transition-transform duration-700" 
                                             />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-text-muted"><ShoppingBag size={20} /></div>
+                                            <div className="w-full h-full flex items-center justify-center text-text-muted bg-gradient-to-br from-neutral-50 to-neutral-100">
+                                                <ShoppingBag size={24} className="opacity-20" />
+                                            </div>
                                         )}
                                         {/* Availability badge - Pinned top-left */}
-                                        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg shadow-sm border border-white/50 z-10">
-                                            <p className="text-[8px] font-black text-brand-600 uppercase tracking-tighter">
+                                        <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-sm border border-white/50 z-10">
+                                            <p className="text-[9px] font-black text-brand-600 uppercase tracking-tighter">
                                                 {product.stock_status === 'available' ? t('common.available') : t('common.low_stock')}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="p-3 flex-1 flex flex-col gap-2">
-                                        <div className="space-y-0.5">
-                                            <h4 className="font-bold text-green-950 text-[11px] truncate leading-tight group-hover:text-brand-600 transition-colors">{product.name}</h4>
+                                    <div className="p-4 flex-1 flex flex-col gap-3">
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-green-950 text-xs md:text-sm truncate leading-tight group-hover:text-brand-600 transition-colors">{product.name}</h4>
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-baseline gap-0.5">
-                                                    <span className="text-[7px] font-bold text-text-muted uppercase tracking-tighter">KES</span>
-                                                    <span className="text-sm font-black text-green-950 font-mono tracking-tighter">{product.price}</span>
+                                                    <span className="text-[8px] font-black text-brand-500 uppercase tracking-tighter">KES</span>
+                                                    <span className="text-base font-black text-green-950 font-mono tracking-tighter">{product.price}</span>
                                                 </div>
-                                                <span className="text-[7px] text-text-muted lowercase font-bold">/{product.unit}</span>
+                                                <span className="text-[9px] text-text-muted lowercase font-bold">/{product.unit}</span>
                                             </div>
                                         </div>
                                         <div className="mt-auto">
-                                            <button className="w-full h-9 border-2 border-brand-600 text-brand-600 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-brand-600 hover:text-white transition-all active:scale-95">
-                                                <Plus size={12} /> {t('common.reserve')}
+                                            <button className="w-full h-10 bg-brand-50 text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-600 hover:text-white transition-all active:scale-95 border border-brand-100">
+                                                <Plus size={14} /> {t('common.reserve')}
                                             </button>
                                         </div>
                                     </div>
                                 </motion.div>
                             )) : (
-                                <div className="col-span-2 py-12 text-center space-y-3">
-                                    <ShoppingBag size={48} className="mx-auto text-neutral-200" />
-                                    <p className="text-sm font-bold text-text-muted uppercase tracking-widest">{t('storefront.no_products') || 'No products yet'}</p>
+                                <div className="col-span-full py-20 text-center space-y-4">
+                                    <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-neutral-100">
+                                        <ShoppingBag size={32} className="text-neutral-200" />
+                                    </div>
+                                    <p className="text-sm font-black text-text-muted uppercase tracking-widest">{t('storefront.no_products') || 'No products yet'}</p>
                                 </div>
                             )}
                         </motion.div>

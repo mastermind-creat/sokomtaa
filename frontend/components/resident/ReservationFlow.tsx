@@ -19,17 +19,9 @@ import { useMpesa } from '@/hooks/useMpesa';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { ApiResponse, Reservation } from '@/types';
+import { ApiResponse, Reservation, Product } from '@/types';
 import api from '@/lib/api';
 
-interface Product {
-    id: number;
-    name: string;
-    price: string;
-    unit: string;
-    image_url?: string;
-    category?: { name: string };
-}
 
 interface ReservationFlowProps {
     product: Product;
@@ -196,7 +188,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                             <div className="space-y-4 pt-4 border-t border-neutral-100">
                                 <div className="flex items-center justify-between px-4">
                                     <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Subtotal</span>
-                                    <span className="text-sm font-black text-green-950 font-mono">KES {parseFloat(product.price) * quantity}</span>
+                                    <span className="text-sm font-black text-green-950 font-mono">KES {product.price * quantity}</span>
                                 </div>
                                 <div className="flex items-center justify-between px-4">
                                     <div className="flex items-center gap-1.5">
@@ -212,7 +204,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                 </div>
                                 <div className="flex items-center justify-between px-4 pt-2">
                                     <span className="text-sm font-black text-green-950 uppercase tracking-widest">Total Amount</span>
-                                    <span className="text-2xl font-black text-green-950 font-mono">KES {parseFloat(product.price) * quantity + 10}</span>
+                                    <span className="text-2xl font-black text-green-950 font-mono">KES {product.price * quantity + 10}</span>
                                 </div>
                                 <button 
                                     onClick={handleNextToPayment}
@@ -276,7 +268,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 active:scale-95 transition-all"
                                 >
                                     {isPolling ? <Loader2 className="animate-spin" /> : <ShieldCheck size={20} />}
-                                    Confirm Order (Pay KES {parseFloat(product.price) * quantity + 10})
+                                    Confirm Order (Pay KES {product.price * quantity + 10})
                                 </button>
                                 <button 
                                     onClick={() => setStep('review')}
