@@ -16,12 +16,30 @@ import {
     Phone,
     Activity,
     CheckCircle2,
-    Clock
+    Clock,
+    MoreHorizontal,
+    MessageCircle,
+    Send,
+    ShoppingBag,
+    Award,
+    Ban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ApiResponse, Trader } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { useMutation } from '@tanstack/react-query';
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle,
+    DialogDescription,
+    DialogFooter
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function AdminTradersPage() {
     const { t } = useTranslation();
@@ -38,6 +56,8 @@ export default function AdminTradersPage() {
     const [reviewTrader, setReviewTrader] = useState<Trader | null>(null);
     const [isReviewing, setIsReviewing] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
+    const [smsTrader, setSmsTrader] = useState<Trader | null>(null);
+    const [smsMessage, setSmsMessage] = useState('');
 
     const queryClient = useQueryClient();
 
@@ -67,6 +87,39 @@ export default function AdminTradersPage() {
     });
     
     const traders: Trader[] = Array.isArray(tradersData) ? tradersData : (tradersData as any)?.data || [];
+
+    const sendSmsMutation = useMutation({
+        mutationFn: async ({ userId, message }: { userId: number; message: string }) => {
+            return api.post(`/admin/users/${userId}/sms`, { message });
+        },
+        onSuccess: () => {
+            toast.success('SMS sent successfully!');
+            setSmsTrader(null);
+            setSmsMessage('');
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Failed to send SMS');
+        }
+    });
+
+    const verifyTraderMutation = useMutation({
+        mutationFn: async ({ id, status, reason }: { id: number; status: string; reason?: string }) => {
+            return api.post(`/admin/traders/${id}/verify`, { status, reason });
+        },
+        onSuccess: () => {
+            toast.success('Merchant status updated');
+            queryClient.invalidateQueries({ queryKey: ['admin-traders'] });
+            setReviewTrader(null);
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Verification failed');
+        }
+    });
+
+    const handleSendSms = () => {
+        if (!smsMessage.trim() || !smsTrader) return;
+        sendSmsMutation.mutate({ userId: smsTrader.user_id, message: smsMessage });
+    };
 
     const stats = [
         { label: 'Active', value: traders.filter(t => t.verification_status === 'verified').length, icon: CheckCircle2, color: 'text-brand-600' },
@@ -134,8 +187,8 @@ export default function AdminTradersPage() {
                 </div>
             </div>
 
-            {/* ── Merchant Ecosystem Hub ── */}
-            <div className="px-4 space-y-4">
+            {/* ── Merchant Ecosystem Grid ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
                 {isLoading ? (
                     <div className="p-10 text-center opacity-30 font-black uppercase tracking-widest text-[10px]">Auditing Registry...</div>
                 ) : isError ? (
@@ -148,63 +201,80 @@ export default function AdminTradersPage() {
                         <Store size={48} className="mx-auto mb-4" />
                         <p className="text-xs font-black uppercase tracking-widest">No traders found</p>
                     </div>
-                ) : traders.map((trader) => (
                     <motion.div 
                         key={trader.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white rounded-[2.5rem] border border-gray-50 shadow-sm overflow-hidden p-6 relative group active:scale-[0.98] transition-all"
+                        className="bg-white rounded-[2.5rem] border border-gray-50 shadow-sm overflow-hidden group hover:shadow-md transition-all flex flex-col"
                     >
-                        <div className="flex items-start justify-between mb-6">
-                            <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 bg-brand-50 text-brand-600 rounded-[1.25rem] flex items-center justify-center shadow-inner">
-                                    <Store size={24} />
+                        <div 
+                            className="p-6 cursor-pointer hover:bg-gray-50/30 transition-colors flex-1"
+                            onClick={() => setReviewTrader(trader)}
+                        >
+                            <div className="flex items-start justify-between mb-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center shadow-inner shrink-0 overflow-hidden border border-brand-100">
+                                        {trader.avatar_url ? (
+                                            <img src={trader.avatar_url} className="w-full h-full object-cover" alt="" />
+                                        ) : (
+                                            <Store size={24} />
+                                        )}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h3 className="text-base font-black text-green-950 uppercase tracking-tight leading-none mb-1.5 truncate">{trader.business_name}</h3>
+                                        <p className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-1.5 truncate">
+                                            <User size={10} className="text-brand-500" /> {trader.user.name}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-base font-black text-green-950 uppercase tracking-tight leading-none mb-1.5">{trader.business_name}</h3>
-                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-1.5">
-                                        <User size={10} className="text-brand-500" /> {trader.user.name}
-                                    </p>
+                                <div className={cn(
+                                    "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border shrink-0",
+                                    trader.verification_status === 'verified' && "bg-green-50 text-green-700 border-green-100",
+                                    trader.verification_status === 'pending' && "bg-amber-50 text-amber-700 border-amber-100",
+                                    trader.verification_status === 'unverified' && "bg-slate-50 text-slate-700 border-slate-100",
+                                    trader.verification_status === 'rejected' && "bg-rose-50 text-rose-700 border-rose-100"
+                                )}>
+                                    {trader.verification_status}
                                 </div>
                             </div>
-                            <div className={cn(
-                                "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border",
-                                trader.verification_status === 'verified' && "bg-green-50 text-green-700 border-green-100",
-                                trader.verification_status === 'pending' && "bg-amber-50 text-amber-700 border-amber-100",
-                                trader.verification_status === 'unverified' && "bg-slate-50 text-slate-700 border-slate-100",
-                                trader.verification_status === 'rejected' && "bg-rose-50 text-rose-700 border-rose-100"
-                            )}>
-                                {trader.verification_status}
-                            </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
-                                <span className="text-[8px] font-black text-text-muted uppercase tracking-widest mb-1 block">Infrastructure</span>
-                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-green-950">
-                                    <MapPin size={10} className="text-brand-500" />
-                                    <span className="truncate">{trader.market?.name || 'Unassigned'}</span>
+                            <div className="grid grid-cols-2 gap-3 mb-6">
+                                <div className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                                    <span className="text-[8px] font-black text-text-muted uppercase tracking-widest mb-1 block">Location</span>
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-green-950">
+                                        <MapPin size={10} className="text-brand-500 shrink-0" />
+                                        <span className="truncate">{trader.market?.name || 'Unassigned'}</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
-                                <span className="text-[8px] font-black text-text-muted uppercase tracking-widest mb-1 block">Operational Hub</span>
-                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-green-950">
-                                    <Phone size={10} className="text-brand-500" />
-                                    <span>{trader.user.phone}</span>
+                                <div className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+                                    <span className="text-[8px] font-black text-text-muted uppercase tracking-widest mb-1 block">Reviews</span>
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-green-950">
+                                        <Star size={10} className="text-amber-500 shrink-0 fill-amber-500" />
+                                        <span>{trader.average_rating} ({trader.total_reviews})</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* One-Handed Triage Hub */}
-                        <div className="flex gap-2">
+                        <div className="p-6 pt-0 flex gap-2">
                             <button 
-                                onClick={() => setReviewTrader(trader)}
-                                className="flex-1 h-14 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand-100 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSmsTrader(trader);
+                                }}
+                                className="flex-1 h-12 bg-gray-950 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
                             >
-                                <ShieldCheck size={16} /> {trader.verification_status === 'pending' ? 'Review KYC' : 'Re-audit KYC'}
+                                <MessageCircle size={14} /> SMS
                             </button>
-                            <button className="w-14 h-14 bg-gray-100 text-green-950 rounded-2xl flex items-center justify-center active:scale-95 transition-all hover:bg-gray-200">
-                                <ChevronRight size={20} />
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setReviewTrader(trader);
+                                }}
+                                className="flex-[1.5] h-12 bg-brand-50 text-brand-700 rounded-2xl font-black text-[9px] uppercase tracking-widest border border-brand-100 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                            >
+                                <ShieldCheck size={14} /> {trader.verification_status === 'pending' ? 'Review' : 'Re-audit'}
                             </button>
                         </div>
                     </motion.div>
@@ -213,13 +283,50 @@ export default function AdminTradersPage() {
 
             {/* Sticky Operational Command */}
             <div className="fixed bottom-24 right-4 left-4 lg:hidden z-40">
-                <button className="w-full h-16 bg-gray-950 text-white rounded-2xl shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all">
-                    <div className="w-8 h-8 bg-brand-500 text-green-950 rounded-lg flex items-center justify-center">
-                        <Users size={18} />
+                <button className="w-full h-16 bg-green-950 text-white rounded-3xl shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all border-4 border-white">
+                    <div className="w-10 h-10 bg-brand-500 text-green-950 rounded-xl flex items-center justify-center">
+                        <Users size={20} />
                     </div>
-                    <span className="font-black text-[10px] uppercase tracking-[0.2em]">Onboard New Merchant</span>
+                    <span className="font-black text-xs uppercase tracking-[0.2em]">Onboard Merchant</span>
                 </button>
             </div>
+
+            {/* ── SMS Modal ── */}
+            <Dialog open={!!smsTrader} onOpenChange={(open) => !open && setSmsTrader(null)}>
+                <DialogContent className="sm:max-w-md bg-white p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl">
+                    <DialogHeader className="p-8 pb-4">
+                        <DialogTitle className="text-xl font-black text-green-950 uppercase tracking-tight flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600">
+                                <MessageCircle size={20} />
+                            </div>
+                            Message {smsTrader?.business_name?.split(' ')[0]}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs font-bold text-text-muted uppercase tracking-widest mt-1">
+                            Direct communication with merchant
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="p-8 pt-2">
+                        <div className="mb-6">
+                            <label className="block text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-3">Your Message</label>
+                            <Textarea 
+                                placeholder="Write your message here..."
+                                value={smsMessage}
+                                onChange={(e) => setSmsMessage(e.target.value)}
+                                className="min-h-[120px] rounded-2xl border-gray-100 bg-gray-50 font-bold focus:border-brand-300 focus:ring-0 transition-all resize-none"
+                                maxLength={160}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <Button variant="outline" onClick={() => setSmsTrader(null)} className="h-12 rounded-2xl border-gray-100 text-[10px] font-black uppercase tracking-widest">Cancel</Button>
+                            <Button onClick={handleSendSms} disabled={sendSmsMutation.isPending || !smsMessage.trim()} className="h-12 rounded-2xl bg-green-950 hover:bg-green-900 text-white text-[10px] font-black uppercase tracking-widest gap-2 shadow-lg">
+                                {sendSmsMutation.isPending ? 'Sending...' : <><Send size={14} /> Send SMS</>}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
             {/* ── KYC Review Modal ── */}
             <AnimatePresence>
                 {reviewTrader && (
@@ -321,7 +428,7 @@ export default function AdminTradersPage() {
                                             } catch (e) {
                                                 console.error(e);
                                             } finally {
-                                                setIsReviewing(false);
+                                                // setIsReviewing(false);
                                             }
                                         }}
                                         className="flex-1 h-14 bg-white text-rose-600 border border-rose-100 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-50 transition-all disabled:opacity-50"
@@ -329,24 +436,13 @@ export default function AdminTradersPage() {
                                         Reject Application
                                     </button>
                                     <button 
-                                        disabled={isReviewing || !reviewTrader.id_front_url || !reviewTrader.id_back_url}
-                                        onClick={async () => {
-                                            setIsReviewing(true);
-                                            try {
-                                                await api.post(`/admin/traders/${reviewTrader.id}/verify`, { 
-                                                    status: 'verified' 
-                                                });
-                                                setReviewTrader(null);
-                                                window.location.reload();
-                                            } catch (e) {
-                                                console.error(e);
-                                            } finally {
-                                                setIsReviewing(false);
-                                            }
+                                        disabled={verifyTraderMutation.isPending || !reviewTrader.id_front_url || !reviewTrader.id_back_url}
+                                        onClick={() => {
+                                            verifyTraderMutation.mutate({ id: reviewTrader.id, status: 'verified' });
                                         }}
                                         className="flex-[2] h-14 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-brand-200 hover:bg-brand-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
-                                        {isReviewing ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
+                                        {verifyTraderMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
                                         Approve & Verify
                                     </button>
                                 </div>
