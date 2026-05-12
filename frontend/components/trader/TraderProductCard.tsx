@@ -103,6 +103,12 @@ export default function TraderProductCard({
                 )}
 
                 {/* Reservation Count Overlay */}
+                <div className="absolute bottom-3 left-3 px-3 py-1.5 bg-black/60 backdrop-blur-md text-white rounded-full flex items-center gap-1.5 shadow-sm">
+                    <Package size={12} className="text-brand-400" />
+                    <span className="text-[10px] font-black tracking-tight">{product.stock_quantity || 0} left</span>
+                </div>
+
+                {/* Reservation Count Overlay */}
                 <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/60 backdrop-blur-md text-white rounded-full flex items-center gap-1.5 shadow-sm">
                     <TrendingUp size={12} className="text-brand-400" />
                     <span className="text-[10px] font-black tracking-tight">{product.total_reservations || 0}</span>

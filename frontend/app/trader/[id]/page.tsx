@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { ApiResponse, Trader, Product, Review } from '@/types';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 import ReservationFlow from '@/components/resident/ReservationFlow';
 import CartFlow from '@/components/resident/CartFlow';
 import ReviewCard from '@/components/shared/ReviewCard';
@@ -225,9 +226,19 @@ export default function TraderStorefrontPage() {
                                             </div>
                                         )}
                                         {/* Availability badge - Pinned top-left */}
-                                        <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-sm border border-white/50 z-10">
-                                            <p className="text-[9px] font-black text-brand-600 uppercase tracking-tighter">
-                                                {product.stock_status === 'available' ? t('common.available') : t('common.low_stock')}
+                                        <div className={cn(
+                                            "absolute top-3 left-3 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-sm border z-10",
+                                            product.stock_status === 'available' ? 'bg-white/80 border-white/50' :
+                                            product.stock_status === 'low' ? 'bg-amber-500/90 border-amber-400 text-white' :
+                                            'bg-rose-500/90 border-rose-400 text-white'
+                                        )}>
+                                            <p className={cn(
+                                                "text-[9px] font-black uppercase tracking-tighter",
+                                                product.stock_status === 'available' ? 'text-brand-600' : 'text-white'
+                                            )}>
+                                                {product.stock_status === 'available' ? t('common.available') : 
+                                                 product.stock_status === 'low' ? `${product.stock_quantity} ${t('common.low_stock')}` : 
+                                                 t('common.out_of_stock') || 'Out of Stock'}
                                             </p>
                                         </div>
                                     </div>
@@ -244,13 +255,23 @@ export default function TraderStorefrontPage() {
                                         </div>
                                         <div className="mt-auto">
                                             <button 
+                                                disabled={product.stock_status === 'out_of_stock'}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     addItem(product, trader.id, trader.business_name);
                                                 }}
-                                                className="w-full h-10 bg-brand-50 text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-600 hover:text-white transition-all active:scale-95 border border-brand-100"
+                                                className={cn(
+                                                    "w-full h-10 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 border",
+                                                    product.stock_status === 'out_of_stock' 
+                                                        ? "bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed"
+                                                        : "bg-brand-50 text-brand-700 border-brand-100 hover:bg-brand-600 hover:text-white"
+                                                )}
                                             >
-                                                <Plus size={14} /> {t('common.add_to_cart') || 'Add to Cart'}
+                                                {product.stock_status === 'out_of_stock' ? (
+                                                    t('common.sold_out') || 'Sold Out'
+                                                ) : (
+                                                    <><Plus size={14} /> {t('common.add_to_cart') || 'Add to Cart'}</>
+                                                )}
                                             </button>
                                         </div>
                                     </div>

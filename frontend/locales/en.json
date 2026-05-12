@@ -28,6 +28,8 @@
     "verification": "Verification",
     "available": "Available",
     "low_stock": "Low Stock",
+    "out_of_stock": "Out of Stock",
+    "sold_out": "Sold Out",
     "orders": "Orders",
     "product": "Product",
     "trader": "Trader",

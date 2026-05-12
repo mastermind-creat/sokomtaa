@@ -28,6 +28,8 @@
     "verification": "Uhakiki",
     "available": "Inapatikana",
     "low_stock": "Iko Kidogo",
+    "out_of_stock": "Imeisha",
+    "sold_out": "Imeuzwa Yote",
     "orders": "Oda",
     "product": "Bidhaa",
     "trader": "Mfanyabiashara",

@@ -35,6 +35,7 @@ interface AddProductForm {
     category_id: string;
     price: string;
     unit: string;
+    stock_quantity: number;
     description: string;
     image: FileList;
 }
@@ -158,6 +159,7 @@ export default function AddProductPage() {
         formData.append('category_id', data.category_id);
         formData.append('price', data.price);
         formData.append('unit', data.unit);
+        formData.append('stock_quantity', String(data.stock_quantity || 0));
         formData.append('description', data.description || '');
         
         if (data.image && data.image[0]) {
@@ -277,24 +279,45 @@ export default function AddProductPage() {
                             {errors.name && <p className="text-xs font-bold text-rose-500 flex items-center gap-1"><Info size={12} /> {errors.name.message}</p>}
                         </div>
 
-                        {/* Price Row */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2">
-                                <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
-                                    <Coins size={18} />
+                        {/* Price & Stock Row */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
+                                        <Coins size={18} />
+                                    </div>
+                                    <label className="text-sm font-black text-green-950 uppercase tracking-wider">Price</label>
                                 </div>
-                                <label className="text-sm font-black text-green-950 uppercase tracking-wider">Price (KES)</label>
+                                <div className="relative">
+                                    <input 
+                                        type="number"
+                                        {...register('price', { required: 'Price is required' })}
+                                        className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl font-black text-xl text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
+                                        placeholder="0.00"
+                                    />
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-neutral-400">KES</div>
+                                </div>
+                                {errors.price && <p className="text-xs font-bold text-rose-500 flex items-center gap-1"><Info size={12} /> {errors.price.message}</p>}
                             </div>
-                            <div className="relative">
-                                <input 
-                                    type="number"
-                                    {...register('price', { required: 'Price is required' })}
-                                    className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl font-black text-xl text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
-                                    placeholder="0.00"
-                                />
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-neutral-400">KES</div>
+
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
+                                        <Package size={18} />
+                                    </div>
+                                    <label className="text-sm font-black text-green-950 uppercase tracking-wider">Initial Stock</label>
+                                </div>
+                                <div className="relative">
+                                    <input 
+                                        type="number"
+                                        {...register('stock_quantity', { required: 'Quantity is required', min: 0 })}
+                                        className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl font-black text-xl text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
+                                        placeholder="0"
+                                    />
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-neutral-400 uppercase">Items</div>
+                                </div>
+                                {errors.stock_quantity && <p className="text-xs font-bold text-rose-500 flex items-center gap-1"><Info size={12} /> {errors.stock_quantity.message}</p>}
                             </div>
-                            {errors.price && <p className="text-xs font-bold text-rose-500 flex items-center gap-1"><Info size={12} /> {errors.price.message}</p>}
                         </div>
                     </div>
                 </div>

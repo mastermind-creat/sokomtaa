@@ -68,7 +68,20 @@ class ProductController extends Controller
 
         $data = $request->validated();
         $data['trader_id'] = $trader->id;
-        $data['stock_status'] = 'available';
+        
+        // Automatic Stock Status
+        if (isset($data['stock_quantity'])) {
+            $qty = (int) $data['stock_quantity'];
+            if ($qty === 0) {
+                $data['stock_status'] = 'out_of_stock';
+            } elseif ($qty <= 5) {
+                $data['stock_status'] = 'low';
+            } else {
+                $data['stock_status'] = 'available';
+            }
+        } else {
+            $data['stock_status'] = 'available';
+        }
 
         // Handle Image Upload
         if ($request->hasFile('image')) {
@@ -96,6 +109,18 @@ class ProductController extends Controller
         }
 
         $data = $request->validated();
+
+        // Automatic Stock Status
+        if (isset($data['stock_quantity'])) {
+            $qty = (int) $data['stock_quantity'];
+            if ($qty === 0) {
+                $data['stock_status'] = 'out_of_stock';
+            } elseif ($qty <= 5) {
+                $data['stock_status'] = 'low';
+            } else {
+                $data['stock_status'] = 'available';
+            }
+        }
 
         // Handle Image Update
         if ($request->hasFile('image')) {
