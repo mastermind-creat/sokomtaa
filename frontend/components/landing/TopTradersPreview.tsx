@@ -55,7 +55,7 @@ export const TopTradersPreview = () => {
             </p>
           </div>
           <Link
-            href={hasHydrated && isAuthenticated ? "/search" : "/login"}
+            href={hasHydrated && isAuthenticated ? "/resident/search" : "/login"}
             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-surface-base border border-gray-200 text-green-950 font-black uppercase tracking-widest text-xs rounded-xl shadow-sm group hover:border-brand-300 hover:text-brand-600 transition-all"
           >
             Find More Traders

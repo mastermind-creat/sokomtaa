@@ -42,7 +42,7 @@ export const CategoryGrid = () => {
   };
 
   return (
-    <section className="py-16 px-6 bg-white relative overflow-hidden">
+    <section id="categories" className="py-16 px-6 bg-white relative overflow-hidden">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
           <div>
@@ -52,7 +52,7 @@ export const CategoryGrid = () => {
             </h2>
           </div>
           <Link 
-            href="/search" 
+            href="/resident/search" 
             className="text-brand-600 font-black uppercase tracking-widest text-xs hover:opacity-70 transition-opacity flex items-center gap-2"
           >
             View All Categories <Icons.ArrowRight size={14} />
@@ -80,7 +80,7 @@ export const CategoryGrid = () => {
                 whileHover={{ y: -5, transition: { duration: 0.2 } }}
               >
                 <Link 
-                  href={`/search?category=${cat.id}`}
+                  href={`/resident/search?category=${cat.id}`}
                   className="group flex flex-col items-center justify-center p-8 bg-surface-base border border-gray-100 rounded-[32px] hover:bg-white hover:shadow-xl hover:shadow-brand-500/10 hover:border-brand-100 transition-all duration-300"
                 >
                   <div 

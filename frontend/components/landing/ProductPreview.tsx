@@ -37,7 +37,7 @@ export const ProductPreview = () => {
   };
 
   return (
-    <section id="product-preview" className="py-20 px-6 bg-surface-base relative overflow-hidden">
+    <section id="products" className="py-20 px-6 bg-surface-base relative overflow-hidden">
       {/* Decorative background blur */}
       <div className="absolute top-40 right-0 w-[500px] h-[500px] bg-brand-500/5 blur-[100px] rounded-full pointer-events-none" />
 
@@ -53,7 +53,7 @@ export const ProductPreview = () => {
             </h2>
           </div>
           <Link
-            href={hasHydrated && isAuthenticated ? "/search" : "/login"}
+            href={hasHydrated && isAuthenticated ? "/resident/search" : "/login"}
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-green-950 font-black uppercase tracking-widest text-[10px] rounded-xl shadow-sm group hover:border-brand-300 hover:text-brand-600 transition-all"
           >
             Explore Marketplace

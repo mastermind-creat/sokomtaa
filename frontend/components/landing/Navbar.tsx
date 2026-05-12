@@ -50,7 +50,7 @@ export const Navbar = () => {
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
-            {['How it works', 'Features', 'For traders'].map((item) => (
+            {['Categories', 'Products', 'Markets', 'How it works'].map((item) => (
               <a
                 key={item}
                 href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
@@ -109,7 +109,7 @@ export const Navbar = () => {
       {/* Mobile Menu */}
       <div className={`fixed inset-0 z-[90] md:hidden transition-all duration-500 ${menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <div className="absolute inset-0 bg-white/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 gap-8">
-          {['How it works', 'Features', 'For traders'].map((item) => (
+          {['Categories', 'Products', 'Markets', 'How it works'].map((item) => (
             <a
               key={item}
               href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}

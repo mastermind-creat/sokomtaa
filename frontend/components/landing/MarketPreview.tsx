@@ -29,7 +29,7 @@ export const MarketPreview = () => {
   if (!isLoading && markets.length === 0) return null;
 
   return (
-    <section className="py-24 px-6 bg-surface-base relative overflow-hidden">
+    <section id="markets" className="py-24 px-6 bg-surface-base relative overflow-hidden">
       {/* Abstract Background Element */}
       <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-brand-500/5 blur-[100px] rounded-full pointer-events-none" />
 
@@ -45,7 +45,7 @@ export const MarketPreview = () => {
               We&apos;re starting with the heart of our neighborhoods. Find your local market and support traders you know.
             </p>
             <Link
-              href="/search"
+              href="/resident/search"
               className="inline-flex items-center gap-3 px-8 py-4 bg-green-950 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-600 transition-all shadow-xl shadow-green-950/20"
             >
               Explore All Markets <ArrowRight size={16} />
