@@ -13,7 +13,8 @@ import {
     Activity,
     Map as MapIcon,
     Filter,
-    ShieldCheck
+    ShieldCheck,
+    Coins
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -42,6 +43,8 @@ interface DashboardStats {
         total: number;
         target: number;
         percentage: number;
+        service_fees_total: number;
+        service_fees_month: number;
     };
     traders: {
         total: number;
@@ -60,8 +63,10 @@ interface DashboardStats {
 }
 
 interface RevenueTrend {
-    total: number;
     month: string;
+    market_fees: number;
+    service_fees: number;
+    total: number;
 }
 
 export default function AdminDashboard() {
@@ -126,15 +131,24 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 1. TOP: High-Density Metrics Row */}
-                <div className="grid grid-cols-3 xl:grid-cols-4 gap-2 md:gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-6">
                     <StatCard
-                        title={`Fees`}
+                        title={`Market Fees`}
                         value={`KES ${stats?.revenue?.total !== undefined ? (stats.revenue.total >= 1000 ? (stats.revenue.total / 1000).toFixed(1) + 'k' : stats.revenue.total) : '0'}`}
                         icon={TrendingUp}
                         color="bg-brand-600"
                         variant="compact"
                         trend={{ value: stats?.revenue.percentage || 0, isPositive: true, label: "VS Target" }}
-                        description={t('admin.revenue_subtitle')}
+                        description="Stall Collection"
+                    />
+                    <StatCard
+                        title={`Platform Revenue`}
+                        value={`KES ${stats?.revenue?.service_fees_total !== undefined ? (stats.revenue.service_fees_total >= 1000 ? (stats.revenue.service_fees_total / 1000).toFixed(1) + 'k' : stats.revenue.service_fees_total) : '0'}`}
+                        icon={Coins}
+                        color="bg-blue-600"
+                        variant="compact"
+                        trend={{ value: stats?.revenue.service_fees_month || 0, isPositive: true, label: 'This Month' }}
+                        description="Resident Service Fees"
                     />
                     <StatCard
                         title={t('common.traders')}
@@ -149,7 +163,7 @@ export default function AdminDashboard() {
                         title="Occupancy"
                         value={`${stats?.stalls.occupancy_rate || 0}%`}
                         icon={Home}
-                        color="bg-blue-600"
+                        color="bg-indigo-600"
                         variant="compact"
                         description={`${stats?.stalls.occupied} / ${stats?.stalls.total} units filled`}
                     />
@@ -159,7 +173,7 @@ export default function AdminDashboard() {
                                 title="Pending KYC"
                                 value={stats?.traders.pending?.toString() || '0'}
                                 icon={ShieldCheck}
-                                color="bg-amber-600"
+                                color="bg-rose-600"
                                 variant="compact"
                                 trend={{ value: stats?.traders.pending || 0, isPositive: true, label: 'Awaiting Review' }}
                                 description="Merchant Verifications"
@@ -192,6 +206,10 @@ export default function AdminDashboard() {
                                             <stop offset="5%" stopColor="#1B6B3A" stopOpacity={0.1} />
                                             <stop offset="95%" stopColor="#1B6B3A" stopOpacity={0} />
                                         </linearGradient>
+                                        <linearGradient id="colorFees" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#2563EB" stopOpacity={0.1} />
+                                            <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                                        </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FAFAFA" />
                                     <XAxis
@@ -218,11 +236,22 @@ export default function AdminDashboard() {
                                     />
                                     <Area
                                         type="monotone"
-                                        dataKey="total"
+                                        dataKey="market_fees"
+                                        name="Market Fees"
                                         stroke="#1B6B3A"
                                         strokeWidth={4}
                                         fillOpacity={1}
                                         fill="url(#colorRevenue)"
+                                        animationDuration={1500}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="service_fees"
+                                        name="Platform Revenue"
+                                        stroke="#2563EB"
+                                        strokeWidth={4}
+                                        fillOpacity={1}
+                                        fill="url(#colorFees)"
                                         animationDuration={1500}
                                     />
                                 </AreaChart>

@@ -256,3 +256,12 @@ export interface Allocation {
 
 
 
+export interface SystemSetting {
+    id: number;
+    key: string;
+    value: string;
+    group: string;
+    type: 'string' | 'integer' | 'decimal' | 'boolean';
+    label: string;
+    description: string;
+}

@@ -7,6 +7,7 @@ use App\Models\Reservation;
 use App\Models\Product;
 use App\Services\NotificationService;
 use App\Traits\ApiResponse;
+use App\Models\SystemSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -81,10 +82,15 @@ class ReservationController extends Controller
 
         return DB::transaction(function () use ($request) {
             $user = Auth::user();
-            $createdReservations = [];
-            $serviceFeePerItem = 10.00 / count($request->items); // Split the 10.00 service fee across items? Or one fee per item?
-            // Actually, let's stick to one fee per checkout (split it or apply to one).
-            // Usually, it's one fee per order.
+            $totalCartAmount = 0;
+            foreach ($request->items as $itemData) {
+                $product = Product::findOrFail($itemData['product_id']);
+                $totalCartAmount += $product->price * $itemData['quantity'];
+            }
+
+            $serviceFeeAmount = SystemSetting::get('resident_service_fee', 10.00);
+            $serviceFeeThreshold = SystemSetting::get('service_fee_threshold', 200.00);
+            $applyFee = $totalCartAmount > $serviceFeeThreshold;
             
             foreach ($request->items as $index => $itemData) {
                 $product = Product::findOrFail($itemData['product_id']);
@@ -104,8 +110,8 @@ class ReservationController extends Controller
                     $code = 'SM-' . strtoupper(Str::random(6));
                 }
 
-                // Apply service fee only to the first item for simplicity in total calculation
-                $currentServiceFee = ($index === 0) ? 10.00 : 0.00;
+                // Apply service fee only to the first item if total > threshold
+                $currentServiceFee = ($index === 0 && $applyFee) ? $serviceFeeAmount : 0.00;
                 $subtotal = $product->price * $itemData['quantity'];
                 $totalAmount = $subtotal + $currentServiceFee;
 
@@ -173,8 +179,11 @@ class ReservationController extends Controller
                 $code = 'SM-' . strtoupper(Str::random(6));
             }
 
-            $serviceFee = 10.00; // Resident Convenience Fee
+            $serviceFeeAmount = SystemSetting::get('resident_service_fee', 10.00);
+            $serviceFeeThreshold = SystemSetting::get('service_fee_threshold', 200.00);
             $subtotal = $product->price * $request->quantity;
+            
+            $serviceFee = ($subtotal > $serviceFeeThreshold) ? $serviceFeeAmount : 0.00;
             $totalAmount = $subtotal + $serviceFee;
 
             // 3. Create Reservation

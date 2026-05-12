@@ -21,6 +21,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { ApiResponse, Reservation, Product } from '@/types';
 import api from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { SystemSetting } from '@/types';
 
 
 interface ReservationFlowProps {
@@ -51,6 +53,22 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
             setPhoneNumber(user.phone);
         }
     }, [user]);
+
+    // Fetch Settings for Fee Logic
+    const { data: settings } = useQuery<Record<string, SystemSetting[]>>({
+        queryKey: ['system-settings-public'],
+        queryFn: async () => {
+            const res = await api.get('/admin/settings'); // Note: In a real app, this might be a public endpoint or cached
+            return res.data.data;
+        }
+    });
+
+    const feeAmount = parseFloat(settings?.fees?.find(s => s.key === 'resident_service_fee')?.value || '10');
+    const threshold = parseFloat(settings?.fees?.find(s => s.key === 'service_fee_threshold')?.value || '200');
+    
+    const subtotal = product.price * quantity;
+    const activeFee = subtotal > threshold ? feeAmount : 0;
+    const totalWithFee = subtotal + activeFee;
 
     // Timer for processing step
     useEffect(() => {
@@ -200,11 +218,13 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                             </div>
                                         </div>
                                     </div>
-                                    <span className="text-sm font-black text-brand-600 font-mono">KES 10.00</span>
+                                    <span className="text-sm font-black text-brand-600 font-mono">
+                                        {activeFee > 0 ? `KES ${activeFee.toFixed(2)}` : 'FREE'}
+                                    </span>
                                 </div>
                                 <div className="flex items-center justify-between px-4 pt-2">
                                     <span className="text-sm font-black text-green-950 uppercase tracking-widest">Total Amount</span>
-                                    <span className="text-2xl font-black text-green-950 font-mono">KES {product.price * quantity + 10}</span>
+                                    <span className="text-2xl font-black text-green-950 font-mono">KES {totalWithFee.toFixed(2)}</span>
                                 </div>
                                 <button 
                                     onClick={handleNextToPayment}
@@ -268,7 +288,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 active:scale-95 transition-all"
                                 >
                                     {isPolling ? <Loader2 className="animate-spin" /> : <ShieldCheck size={20} />}
-                                    Confirm Order (Pay KES {product.price * quantity + 10})
+                                    Confirm Order (Pay KES {totalWithFee.toFixed(2)})
                                 </button>
                                 <button 
                                     onClick={() => setStep('review')}

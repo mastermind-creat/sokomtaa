@@ -245,6 +245,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/trends', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'revenueTrends']);
         Route::get('/activity', [\App\Http\Controllers\Admin\AdminActivityController::class, 'index']);
 
+        // System Settings
+        Route::prefix('settings')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\AdminSettingController::class, 'index']);
+            Route::post('/bulk-update', [\App\Http\Controllers\Admin\AdminSettingController::class, 'updateBulk']);
+        });
+
         // Stalls Management
         Route::get('/stalls', [\App\Http\Controllers\Admin\StallController::class, 'index']);
         Route::get('/stalls/summary', [\App\Http\Controllers\Admin\StallController::class, 'summary']);

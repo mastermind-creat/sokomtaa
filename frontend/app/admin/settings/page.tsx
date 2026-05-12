@@ -18,7 +18,8 @@ import {
     ChevronRight,
     Activity,
     Layers,
-    Warehouse
+    Warehouse,
+    Coins
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useUIStore } from '@/store/uiStore';
@@ -26,9 +27,10 @@ import { useAuthStore } from '@/store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { ApiResponse } from '@/types';
+import { ApiResponse, SystemSetting } from '@/types';
+import { toast } from 'sonner';
 
 export default function AdminSettingsPage() {
     const { t } = useTranslation();
@@ -39,16 +41,53 @@ export default function AdminSettingsPage() {
         setPageTitle('System Infrastructure');
     }, [setPageTitle]);
 
+    const queryClient = useQueryClient();
     const [isSaving, setIsSaving] = useState(false);
     const [savedState, setSavedState] = useState(false);
 
-    const handleSave = () => {
-        setIsSaving(true);
-        setTimeout(() => {
-            setIsSaving(false);
+    // Fetch Settings
+    const { data: settingsData, isLoading: settingsLoading } = useQuery<Record<string, SystemSetting[]>>({
+        queryKey: ['admin-system-settings'],
+        queryFn: async () => {
+            const res = await api.get('/admin/settings');
+            return res.data.data;
+        }
+    });
+
+    const [localSettings, setLocalSettings] = useState<Record<string, string>>({});
+
+    React.useEffect(() => {
+        if (settingsData) {
+            const initial: Record<string, string> = {};
+            Object.values(settingsData).flat().forEach(s => {
+                initial[s.key] = s.value;
+            });
+            setLocalSettings(initial);
+        }
+    }, [settingsData]);
+
+    const updateMutation = useMutation({
+        mutationFn: async (payload: { key: string; value: string }[]) => {
+            return api.post('/admin/settings/bulk-update', { settings: payload });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-system-settings'] });
             setSavedState(true);
             setTimeout(() => setSavedState(false), 3000);
-        }, 800);
+            toast.success('System configuration updated successfully');
+        },
+        onError: () => {
+            toast.error('Failed to update configuration');
+        }
+    });
+
+    const handleSave = () => {
+        const payload = Object.entries(localSettings).map(([key, value]) => ({ key, value }));
+        updateMutation.mutate(payload);
+    };
+
+    const handleSettingChange = (key: string, value: string) => {
+        setLocalSettings(prev => ({ ...prev, [key]: value }));
     };
 
     const { data: statsData, isLoading: statsLoading } = useQuery<{ markets_count: number; traders_count: number; latency_ms: number; storage_usage: string }>({
@@ -83,6 +122,9 @@ export default function AdminSettingsPage() {
                     <TabsList className="bg-white p-1 rounded-2xl border border-gray-100 flex overflow-x-auto no-scrollbar shadow-sm">
                         <TabsTrigger value="infrastructure" className="rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-gray-950 data-[state=active]:text-white flex-1 whitespace-nowrap">
                             Infrastructure
+                        </TabsTrigger>
+                        <TabsTrigger value="fiscal" className="rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-gray-950 data-[state=active]:text-white flex-1 whitespace-nowrap">
+                            Fiscal Policies
                         </TabsTrigger>
                         <TabsTrigger value="account" className="rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-gray-950 data-[state=active]:text-white flex-1 whitespace-nowrap">
                             Account
@@ -143,6 +185,58 @@ export default function AdminSettingsPage() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </TabsContent>
+
+                    {/* Fiscal Policies Hub */}
+                    <TabsContent value="fiscal" className="space-y-4">
+                        <div className="bg-white rounded-[2.5rem] p-6 border border-gray-50 shadow-sm">
+                            <h3 className="text-sm font-black text-green-950 uppercase tracking-tight mb-6 flex items-center gap-2">
+                                <Coins size={16} className="text-amber-600" />
+                                Revenue & Fee Logic
+                            </h3>
+
+                            {settingsLoading ? (
+                                <div className="py-12 flex flex-col items-center justify-center gap-4">
+                                    <div className="w-8 h-8 border-4 border-gray-100 border-t-brand-600 rounded-full animate-spin" />
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loading Fiscal Directives...</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {settingsData?.fees?.map((setting) => (
+                                        <div key={setting.key} className="space-y-2 px-2">
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
+                                                    {setting.label}
+                                                </label>
+                                                <span className="text-[8px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">KES</span>
+                                            </div>
+                                            <input 
+                                                type="number"
+                                                step="0.01"
+                                                value={localSettings[setting.key] || ''}
+                                                onChange={(e) => handleSettingChange(setting.key, e.target.value)}
+                                                className="w-full bg-gray-50/50 border border-gray-100 h-14 px-5 rounded-2xl font-black text-lg text-green-950 outline-none focus:border-brand-500 focus:bg-white transition-all"
+                                            />
+                                            <p className="text-[9px] font-bold text-text-muted/60 tracking-wide px-1">
+                                                {setting.description}
+                                            </p>
+                                        </div>
+                                    ))}
+
+                                    <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
+                                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm shrink-0">
+                                            <Zap size={14} className="text-amber-600" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h4 className="text-[10px] font-black text-amber-900 uppercase tracking-tight">Active Policy Notice</h4>
+                                            <p className="text-[9px] font-bold text-amber-800/70 leading-relaxed">
+                                                Changes to service fees apply immediately to all new reservations. Existing pending reservations will retain their original fee structure to maintain financial integrity.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </TabsContent>
 
@@ -263,7 +357,7 @@ export default function AdminSettingsPage() {
             <div className="fixed bottom-24 left-4 right-4 lg:hidden z-40">
                 <button 
                     onClick={handleSave}
-                    disabled={isSaving || savedState}
+                    disabled={updateMutation.isPending || savedState}
                     className={cn(
                         "w-full h-16 rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3",
                         savedState 
@@ -271,7 +365,7 @@ export default function AdminSettingsPage() {
                             : "bg-gray-950 text-white shadow-gray-950/20 active:scale-95"
                     )}
                 >
-                    {isSaving ? (
+                    {updateMutation.isPending ? (
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : savedState ? (
                         <><CheckCircle2 size={20} /> Integrity Verified</>

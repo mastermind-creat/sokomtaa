@@ -8,6 +8,8 @@ use App\Models\Stall;
 use App\Models\MarketFee;
 use App\Models\Complaint;
 use App\Models\StallApplication;
+use App\Models\Reservation;
+use App\Models\Payment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -28,6 +30,12 @@ class AdminDashboardController extends Controller
         $thisMonthRevenue = MarketFee::where('status', 'paid')
             ->where('paid_at', '>=', Carbon::now()->startOfMonth())
             ->sum('amount');
+        
+        // Service Fees (Resident)
+        $totalServiceFees = Reservation::whereIn('status', ['paid', 'ready', 'completed'])->sum('service_fee');
+        $thisMonthServiceFees = Reservation::whereIn('status', ['paid', 'ready', 'completed'])
+            ->where('updated_at', '>=', Carbon::now()->startOfMonth())
+            ->sum('service_fee');
         
         $target = 100000.00; // Realistic monthly target
         
@@ -52,6 +60,8 @@ class AdminDashboardController extends Controller
                 'revenue' => [
                     'total' => (float) $totalRevenue,
                     'this_month' => (float) $thisMonthRevenue,
+                    'service_fees_total' => (float) $totalServiceFees,
+                    'service_fees_month' => (float) $thisMonthServiceFees,
                     'target' => $target,
                     'percentage' => $target > 0 ? round(($thisMonthRevenue / $target) * 100, 1) : 0
                 ],
@@ -96,19 +106,36 @@ class AdminDashboardController extends Controller
      */
     public function revenueTrends(): JsonResponse
     {
-        $trends = MarketFee::where('status', 'paid')
-            ->select(
-                DB::raw("SUM(amount) as total"),
-                DB::raw("period as month")
-            )
-            ->groupBy('month')
-            ->orderBy('month', 'asc')
-            ->take(6)
-            ->get();
+        $months = collect(range(5, 0))->map(function($i) {
+            return Carbon::now()->subMonths($i)->format('Y-m');
+        })->reverse();
+
+        $data = $months->map(function($month) {
+            $date = Carbon::createFromFormat('Y-m', $month);
+            
+            // Market Fees (Stall Revenue)
+            $marketFees = MarketFee::where('status', 'paid')
+                ->where('period', $month)
+                ->sum('amount');
+
+            // Service Fees (Platform Revenue)
+            $serviceFees = Payment::where('type', 'reservation')
+                ->where('status', 'completed')
+                ->whereMonth('paid_at', $date->month)
+                ->whereYear('paid_at', $date->year)
+                ->sum('amount');
+
+            return [
+                'month' => $date->format('M'),
+                'market_fees' => (float)$marketFees,
+                'service_fees' => (float)$serviceFees,
+                'total' => (float)($marketFees + $serviceFees)
+            ];
+        })->values();
 
         return response()->json([
             'success' => true,
-            'data' => $trends
+            'data' => $data
         ]);
     }
 }
