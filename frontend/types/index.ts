@@ -86,6 +86,11 @@ export interface Market {
     default_daily_fee: number;
     default_weekly_fee: number;
     is_fee_enabled: boolean;
+    banner_url?: string | null;
+    icon_url?: string | null;
+    stalls_count?: number;
+    occupied_stalls_count?: number;
+    traders_count?: number;
 }
 
 export interface Notice {

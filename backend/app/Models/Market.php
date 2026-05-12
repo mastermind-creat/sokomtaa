@@ -41,6 +41,11 @@ class Market extends Model
         return $this->hasMany(Stall::class);
     }
 
+    public function occupiedStalls(): HasMany
+    {
+        return $this->hasMany(Stall::class)->where('status', 'occupied');
+    }
+
     public function traders(): HasMany
     {
         return $this->hasMany(Trader::class);

@@ -30,7 +30,7 @@ class MarketController extends Controller
      */
     public function index(): JsonResponse
     {
-        $markets = Market::withCount(['traders', 'stalls'])->get();
+        $markets = Market::withCount(['traders', 'stalls', 'occupiedStalls'])->get();
         return $this->success($markets);
     }
 

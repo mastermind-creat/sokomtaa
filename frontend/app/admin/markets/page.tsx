@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUIStore } from '@/store/uiStore';
+import { useRouter } from 'next/navigation';
 import { 
     MapPin, 
     Plus, 
@@ -28,6 +29,7 @@ import { MarketModal } from '@/components/admin/MarketModal';
 export default function AdminMarketsPage() {
     const { setPageTitle } = useUIStore();
     const queryClient = useQueryClient();
+    const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     
     // Modal state
@@ -128,10 +130,18 @@ export default function AdminMarketsPage() {
         }
     };
 
+    const avgOccupancy = markets.length > 0
+        ? Math.round(markets.reduce((sum, m) => {
+            const total = m.stalls_count ?? 0;
+            const occupied = m.occupied_stalls_count ?? 0;
+            return sum + (total > 0 ? (occupied / total) * 100 : 0);
+        }, 0) / markets.length)
+        : 0;
+
     const stats = [
         { label: 'Market sites', value: markets.length, color: 'text-brand-600' },
         { label: 'Active Hubs', value: markets.filter(m => m.is_active).length, color: 'text-blue-600' },
-        { label: 'Capacity Avg', value: '74%', color: 'text-orange-600' },
+        { label: 'Avg Occupancy', value: isLoading ? '...' : `${avgOccupancy}%`, color: 'text-orange-600' },
     ];
 
     const filteredMarkets = markets.filter(m => 
@@ -227,20 +237,35 @@ export default function AdminMarketsPage() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <div className="flex justify-between items-end">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Estate Location</span>
-                                                <span className="text-xs font-bold text-text-secondary">{market.estate}, {market.location}</span>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1 block">Live Occupancy</span>
-                                                <span className="text-sm font-black text-green-950 tracking-tighter">74% Capacity</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-brand-500 w-[74%] rounded-full shadow-sm" />
-                                        </div>
+                                        {(() => {
+                                            const total = market.stalls_count ?? 0;
+                                            const occupied = market.occupied_stalls_count ?? 0;
+                                            const pct = total > 0 ? Math.round((occupied / total) * 100) : 0;
+                                            const barColor = pct >= 80 ? 'bg-rose-500' : pct >= 50 ? 'bg-amber-500' : 'bg-brand-500';
+                                            const textColor = pct >= 80 ? 'text-rose-700' : pct >= 50 ? 'text-amber-700' : 'text-green-700';
+                                            return (
+                                                <>
+                                                    <div className="flex justify-between items-end">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Estate Location</span>
+                                                            <span className="text-xs font-bold text-text-secondary">{market.estate}, {market.location}</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1 block">Live Occupancy</span>
+                                                            <span className={`text-sm font-black tracking-tighter ${textColor}`}>
+                                                                {total > 0 ? `${pct}% · ${occupied}/${total} stalls` : 'No stalls'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className={`h-full rounded-full shadow-sm transition-all duration-700 ${barColor}`}
+                                                            style={{ width: `${pct}%` }}
+                                                        />
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
 
                                         <div className="pt-2 flex items-center justify-between">
                                             <div className="flex items-center gap-2">
@@ -271,7 +296,10 @@ export default function AdminMarketsPage() {
                                     >
                                         <Edit3 size={16} /> Edit
                                     </button>
-                                    <button className="flex items-center justify-center gap-2 bg-white text-text-muted border-r border-gray-50 active:bg-gray-50 transition-all font-black text-[10px] uppercase tracking-widest">
+                                    <button 
+                                        onClick={() => router.push(`/admin/stalls?market_id=${market.id}`)}
+                                        className="flex items-center justify-center gap-2 bg-white text-text-muted border-r border-gray-50 active:bg-gray-50 transition-all font-black text-[10px] uppercase tracking-widest hover:text-brand-600 hover:bg-brand-50 transition-all"
+                                    >
                                         <LayoutGrid size={16} /> Stalls
                                     </button>
                                     <button 
