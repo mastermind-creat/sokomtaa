@@ -51,4 +51,35 @@ class UserController extends Controller
             'data'    => $users
         ]);
     }
+
+    /**
+     * Send an SMS to a specific user.
+     */
+    public function sendSms(Request $request, User $user, \App\Services\AfricasTalkingService $smsService): JsonResponse
+    {
+        $request->validate([
+            'message' => 'required|string|max:160',
+        ]);
+
+        if (!$user->phone) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User does not have a valid phone number.'
+            ], 422);
+        }
+
+        $result = $smsService->sendSms($user->phone, $request->message);
+
+        if ($result['status'] === 'success') {
+            return response()->json([
+                'success' => true,
+                'message' => 'SMS sent successfully.'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $result['message'] ?? 'Failed to send SMS.'
+        ], 500);
+    }
 }

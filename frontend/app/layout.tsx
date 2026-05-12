@@ -67,7 +67,7 @@ export default function RootLayout({
           {/* TV/Large Screen Background Elements */}
           <div className="hidden lg:block fixed inset-0 z-[-1] bg-[radial-gradient(circle_at_top_right,rgba(45,150,83,0.05),transparent),radial-gradient(circle_at_bottom_left,rgba(245,166,35,0.03),transparent)]" />
           
-          <div className="w-full min-h-screen bg-white lg:flex lg:flex-row relative">
+          <div className="w-full min-h-screen bg-white relative">
             <OfflineBanner />
             {children}
           </div>

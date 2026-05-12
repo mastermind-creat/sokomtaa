@@ -296,6 +296,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/reservations/stats', [\App\Http\Controllers\Admin\ReservationController::class, 'stats']);
         Route::post('/reservations/propagate-report', [\App\Http\Controllers\Admin\ReservationController::class, 'propagateReport']);
         Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index']);
+        Route::post('/users/{user}/sms', [\App\Http\Controllers\Admin\UserController::class, 'sendSms']);
         Route::get('/audit-logs', [\App\Http\Controllers\Admin\AuditLogController::class, 'index']);
 
         // System Maintenance
