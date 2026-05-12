@@ -40,6 +40,8 @@ interface TraderProfile {
     verification_status: 'unverified' | 'pending' | 'verified' | 'rejected';
     rejection_reason: string | null;
     user: { name: string; phone: string; email: string; };
+    market?: { id: number; name: string };
+    stall?: { stall_number: string };
 }
 
 function FormField({ label, id, children, error }: { label: string; id: string; children: React.ReactNode; error?: string }) {
@@ -206,10 +208,29 @@ export default function TraderProfilePage() {
         retry: false
     });
 
+    // Fetch markets for the dropdown
+    const { data: markets } = useQuery({
+        queryKey: ['markets-list'],
+        queryFn: async () => {
+            const res = await api.get<never, ApiResponse<Array<{ id: number; name: string }>>>('/markets');
+            return res.data;
+        }
+    });
+
     const isFirstTimeSetup = profileError?.code === 'NOT_FOUND';
 
     const [form, setForm] = useState<Partial<TraderProfile & { market_id: number; stall_number: string }>>({});
-    const current: Partial<TraderProfile & { market_id: number; stall_number: string }> = { ...profile, ...form };
+    
+    // Default values from profile when available
+    const initialMarketId = profile?.market?.id;
+    const initialStallNumber = profile?.stall?.stall_number;
+
+    const current: Partial<TraderProfile & { market_id: number; stall_number: string }> = { 
+        ...profile, 
+        market_id: initialMarketId,
+        stall_number: initialStallNumber,
+        ...form 
+    };
 
     const { mutate: setupProfile, isPending: isSettingUp } = useMutation({
         mutationFn: (data: Partial<TraderProfile & { market_id?: number; stall_number?: string }>) =>
@@ -229,7 +250,7 @@ export default function TraderProfilePage() {
     });
 
     const { mutate: saveProfile, isPending: isUpdating } = useMutation({
-        mutationFn: (data: Partial<TraderProfile>) => api.put('/trader/update', data),
+        mutationFn: (data: Partial<TraderProfile & { market_id?: number; stall_number?: string }>) => api.put('/trader/update', data),
         onSuccess: () => {
             setFormError(null);
             queryClient.invalidateQueries({ queryKey: ['trader-profile-full'] });
@@ -336,7 +357,7 @@ export default function TraderProfilePage() {
         uploadPermit(file);
     };
 
-    const set = (key: keyof TraderProfile, value: string | number | boolean | null) => {
+    const set = (key: keyof (TraderProfile & { market_id: number; stall_number: string }), value: string | number | boolean | null) => {
         setFormError(null);
         setForm(f => ({ ...f, [key]: value }));
     };
@@ -488,6 +509,55 @@ export default function TraderProfilePage() {
                                                     placeholder="Describe what you sell and why customers should choose you..."
                                                 />
                                             </FormField>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Market & Stall Section */}
+                            <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8">
+                                <h3 className="text-lg font-black text-green-950 mb-6 flex items-center gap-3">
+                                    <Store className="text-brand-600" /> Market & Stall Location
+                                </h3>
+                                
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <FormField label="Assigned Market" id="marketId">
+                                        <div className="relative">
+                                            <select
+                                                id="marketId"
+                                                value={current.market_id ?? ''}
+                                                onChange={e => set('market_id', parseInt(e.target.value))}
+                                                className="w-full h-14 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-base font-bold text-green-950 focus:bg-white focus:ring-4 focus:ring-brand-600/5 focus:border-brand-600 transition-all appearance-none"
+                                            >
+                                                <option value="">Select a market</option>
+                                                {markets?.map(m => (
+                                                    <option key={m.id} value={m.id}>{m.name}</option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                                <ChevronRight className="rotate-90" size={16} />
+                                            </div>
+                                        </div>
+                                    </FormField>
+
+                                    <FormField label="Stall Number" id="stallNum">
+                                        <input
+                                            id="stallNum"
+                                            type="text"
+                                            value={current.stall_number ?? ''}
+                                            onChange={e => set('stall_number', e.target.value)}
+                                            className="w-full h-14 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-base font-bold text-green-950 focus:bg-white focus:ring-4 focus:ring-brand-600/5 focus:border-brand-600 transition-all"
+                                            placeholder="e.g. A1, B12"
+                                        />
+                                    </FormField>
+                                    
+                                    <div className="md:col-span-2">
+                                        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 flex gap-3 items-start">
+                                            <AlertCircle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                                            <p className="text-sm text-amber-900 font-medium">
+                                                Changing your stall or market may require administrative re-verification. 
+                                                Ensure you select the correct physical location.
+                                            </p>
                                         </div>
                                     </div>
                                 </div>

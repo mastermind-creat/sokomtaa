@@ -41,19 +41,20 @@ function SearchPageContent() {
     const router = useRouter();
     const { t, locale } = useTranslation();
     const query = searchParams.get('q') || '';
+    const categoryId = searchParams.get('category') || '';
     
     const [inputValue, setInputValue] = useState(query);
 
     const { data: searchData, isLoading, isError } = useQuery<ApiResponse<SearchResponse>>({
-        queryKey: ['search', query],
-        queryFn: () => api.get(`/search?q=${encodeURIComponent(query)}`),
-        enabled: query.length >= 2,
+        queryKey: ['search', query, categoryId],
+        queryFn: () => api.get(`/search?q=${encodeURIComponent(query)}&category=${categoryId}`),
+        enabled: query.length >= 2 || categoryId.length > 0,
     });
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        if (inputValue.trim().length >= 2) {
-            router.push(`/resident/search?q=${encodeURIComponent(inputValue)}`);
+        if (inputValue.trim().length >= 2 || categoryId) {
+            router.push(`/resident/search?q=${encodeURIComponent(inputValue)}${categoryId ? `&category=${categoryId}` : ''}`);
         }
     };
 
@@ -83,16 +84,30 @@ function SearchPageContent() {
                             placeholder={t('common.search_placeholder')}
                             autoFocus
                         />
+                        {categoryId && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-1 bg-brand-50 border border-brand-100 rounded-lg animate-fade-in">
+                                <span className="text-[10px] font-black text-brand-700 uppercase tracking-tighter">Category Selected</span>
+                                <button 
+                                    type="button"
+                                    onClick={() => router.push(`/resident/search?q=${encodeURIComponent(query)}`)}
+                                    className="p-1 hover:bg-brand-200 rounded-full transition-colors"
+                                >
+                                    <span className="text-brand-700 font-bold">×</span>
+                                </button>
+                            </div>
+                        )}
                     </form>
                 </div>
             </header>
 
             {/* Results Body */}
             <main className="p-6 animate-fade-up">
-                {query.length < 2 ? (
+                {(query.length < 2 && !categoryId) ? (
                     <div className="flex flex-col items-center justify-center py-20 text-text-muted text-center">
                         <Search size={48} className="mb-4 opacity-20" />
-                        <p className="font-medium">{t('search.min_chars') || 'Type 2 or more characters to search.'}</p>
+                        <p className="font-medium">
+                            {categoryId ? 'Loading category items...' : (t('search.min_chars') || 'Type 2 or more characters to search.')}
+                        </p>
                     </div>
                 ) : isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-brand-600">
@@ -107,7 +122,11 @@ function SearchPageContent() {
                 ) : results.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <Frown size={48} className="mb-4 text-neutral-300" />
-                        <p className="font-bold text-text-primary mb-1">{t('search.no_results').replace('{query}', query)}</p>
+                        <p className="font-bold text-text-primary mb-1">
+                            {categoryId 
+                                ? 'No items found in this category.' 
+                                : t('search.no_results').replace('{query}', query)}
+                        </p>
                     </div>
                 ) : (
                     <div className="space-y-4">

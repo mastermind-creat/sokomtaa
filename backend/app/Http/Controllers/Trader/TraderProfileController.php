@@ -236,8 +236,38 @@ class TraderProfileController extends Controller
             $user->update(['avatar_url' => $validated['avatar_url']]);
         }
 
+        // Handle Stall/Market changes
+        if (isset($validated['stall_number']) || isset($validated['market_id'])) {
+            $newMarketId = $validated['market_id'] ?? $trader->market_id;
+            $newStallNumber = $validated['stall_number'] ?? $trader->stall?->stall_number;
+
+            if ($newMarketId != $trader->market_id || $newStallNumber != $trader->stall?->stall_number) {
+                $newStall = Stall::where('stall_number', $newStallNumber)
+                    ->where('market_id', $newMarketId)
+                    ->first();
+
+                if ($newStall) {
+                    if ($newStall->status === 'occupied' && $newStall->id !== $trader->stall_id) {
+                        return $this->error('The newly selected stall is already occupied.', 'STALL_OCCUPIED', 422);
+                    }
+                    
+                    // Release old stall
+                    if ($trader->stall) {
+                        $trader->stall->update(['status' => 'available']);
+                    }
+
+                    $payload['stall_id'] = $newStall->id;
+                    $payload['market_id'] = $newMarketId;
+                    $newStall->update(['status' => 'occupied']);
+                } else {
+                    return $this->error("The stall number '{$newStallNumber}' does not exist in the selected market.", 'STALL_NOT_FOUND', 422);
+                }
+            }
+            unset($payload['stall_number']);
+        }
+
         // Remove null / empty strings so we don't accidentally blank out fields
-        $payload = array_filter($validated, fn($v) => !is_null($v) && $v !== '');
+        $payload = array_filter($payload, fn($v) => !is_null($v) && $v !== '');
 
         Log::info('Trader Profile Update:', ['trader_id' => $trader->id, 'fields' => array_keys($payload)]);
 

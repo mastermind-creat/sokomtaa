@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Loader2, Phone, Lock, ArrowRight, ShieldCheck, KeyRound, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '@/components/shared/Logo';
+import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
 
 interface ForgotPasswordForm {
     phone: string;
@@ -77,41 +78,11 @@ export default function ForgotPasswordPage() {
 
     return (
         <div className="bg-white min-h-screen w-full flex">
-            {/* Left Panel — Branding (desktop only) */}
-            <div className="hidden lg:flex flex-col justify-between w-[45%] bg-gradient-to-br from-green-900 via-brand-700 to-green-800 p-14 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10">
-                    <div className="absolute top-[-20%] right-[-20%] w-[600px] h-[600px] rounded-full bg-white" />
-                    <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-amber-400" />
-                </div>
-
-                <div className="relative z-10">
-                    <motion.div
-                        className="mb-16 cursor-pointer inline-block"
-                        onClick={() => router.push('/')}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <Logo variant="green" width={180} />
-                    </motion.div>
-
-                    <motion.h2
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="text-4xl font-black text-white leading-tight mb-4"
-                    >
-                        Account Recovery
-                    </motion.h2>
-                    <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.1 }}
-                        className="text-green-200 text-lg leading-relaxed"
-                    >
-                        Regain access to your Soko Mtaa account securely and quickly.
-                    </motion.p>
-                </div>
-            </div>
+            {/* Left Panel — Cinematic Branding */}
+            <AuthCinematicSide 
+                title={<>Account<br />Recovery</>}
+                subtitle="Regain access to your Soko Mtaa account securely and quickly."
+            />
 
             {/* Right Panel — Form */}
             <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 lg:px-16 bg-white">

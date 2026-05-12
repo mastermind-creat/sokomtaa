@@ -23,16 +23,21 @@ class SearchController extends Controller
     public function index(Request $request)
     {
         $query = $request->input('q');
+        $categoryId = $request->input('category');
 
-        if (!$query || strlen($query) < 2) {
+        if ((!$query || strlen($query) < 2) && !$categoryId) {
             return $this->success([
                 'results' => [],
                 'total' => 0,
-                'breakdown' => []
+                'breakdown' => [
+                    'products' => 0,
+                    'traders' => 0,
+                    'markets' => 0
+                ]
             ], 'Search query too short.');
         }
 
-        $results = $this->searchService->globalSearch($query);
+        $results = $this->searchService->globalSearch($query, $categoryId);
 
         return $this->success($results, 'Search completed successfully.');
     }

@@ -6,9 +6,10 @@ import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, Phone, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Loader2, Phone, Lock, ArrowRight, ShieldCheck, Store, TrendingUp, Users, ShoppingBag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ApiResponse, AuthResponse } from '@/types';
+import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
 
 interface LoginFormData {
     phone: string;
@@ -62,63 +63,11 @@ export default function LoginPage() {
     return (
         <div className="bg-white">
             <div className="min-h-screen w-full flex">
-            {/* Left Panel — Branding (desktop only) */}
-            <div className="hidden lg:flex flex-col justify-between w-[45%] bg-gradient-to-br from-green-900 via-brand-700 to-green-800 p-14 relative overflow-hidden">
-                {/* Background decoration */}
-                <div className="absolute inset-0 opacity-10">
-                    <div className="absolute top-[-20%] right-[-20%] w-[600px] h-[600px] rounded-full bg-white" />
-                    <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-amber-400" />
-                </div>
-
-                <div className="relative z-10">
-                    <motion.div 
-                        className="mb-16 cursor-pointer inline-block" 
-                        onClick={() => router.push('/')}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <Logo variant="green" width={180} />
-                    </motion.div>
-
-                    <motion.h2 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="text-4xl font-black text-white leading-tight mb-4"
-                    >
-                        Kenya&apos;s Neighbourhood<br />Digital Marketplace
-                    </motion.h2>
-                    <motion.p 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.1 }}
-                        className="text-green-200 text-lg leading-relaxed"
-                    >
-                        Connecting local traders and residents across Kenyan markets — digitally, seamlessly, locally.
-                    </motion.p>
-                </div>
-
-                <div className="relative z-10 grid grid-cols-2 gap-4">
-                    {[
-                        { label: 'Active Markets', value: '12+' },
-                        { label: 'Registered Traders', value: '500+' },
-                        { label: 'Daily Transactions', value: '1,200+' },
-                        { label: 'Counties Covered', value: '4' },
-                    ].map((stat, idx) => (
-                        <motion.div 
-                            key={stat.label}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4, delay: 0.2 + (idx * 0.1) }}
-                            whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.15)" }}
-                            className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10 cursor-pointer transition-colors"
-                        >
-                            <p className="text-2xl font-black text-white">{stat.value}</p>
-                            <p className="text-xs text-green-200 font-medium mt-0.5">{stat.label}</p>
-                        </motion.div>
-                    ))}
-                </div>
-            </div>
+            {/* Left Panel — Cinematic Branding */}
+            <AuthCinematicSide 
+                title={<>Kenya&apos;s Neighbourhood<br />Digital Marketplace</>}
+                subtitle="Connecting local traders and residents across Kenyan markets — digitally, seamlessly, locally."
+            />
 
             {/* Right Panel — Form */}
             <motion.div

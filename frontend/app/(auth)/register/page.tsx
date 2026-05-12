@@ -8,6 +8,7 @@ import { Loader2, Phone, User as UserIcon, Lock, ArrowRight, Store, Home, CheckC
 import { useAuthStore } from '@/store/authStore';
 import { motion } from 'framer-motion';
 import { ApiResponse, AuthResponse } from '@/types';
+import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
 
 interface RegisterFormData {
     name: string;
@@ -53,61 +54,11 @@ export default function RegisterPage() {
     return (
         <div className="bg-white">
             <div className="min-h-screen w-full flex">
-            {/* Left Panel — Branding (desktop only) */}
-            <div className="hidden lg:flex flex-col justify-between w-[42%] bg-gradient-to-br from-green-900 via-brand-700 to-green-800 p-14 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10">
-                    <div className="absolute top-[-20%] right-[-20%] w-[600px] h-[600px] rounded-full bg-white" />
-                    <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-amber-400" />
-                </div>
-
-                <div className="relative z-10">
-                    <motion.div 
-                        className="mb-16 cursor-pointer inline-block" 
-                        onClick={() => router.push('/')}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <Logo variant="green" width={180} />
-                    </motion.div>
-                    <motion.h2 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="text-4xl font-black text-white leading-tight mb-4"
-                    >
-                        Join the Neighbourhood<br />Marketplace
-                    </motion.h2>
-                    <motion.p 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.1 }}
-                        className="text-green-200 text-lg leading-relaxed"
-                    >
-                        Create your free account and start buying, selling or managing your local market — all in one place.
-                    </motion.p>
-                </div>
-
-                <div className="relative z-10 space-y-3">
-                    {[
-                        'Discover local traders near you',
-                        'Reserve products via M-Pesa',
-                        'Track your stall & revenue',
-                        'Get county market updates',
-                    ].map((item, idx) => (
-                        <motion.div 
-                            key={item} 
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.2 + (idx * 0.1) }}
-                            whileHover={{ x: 10, backgroundColor: "rgba(255,255,255,0.1)" }}
-                            className="flex items-center gap-3 p-2 rounded-xl transition-all cursor-pointer"
-                        >
-                            <CheckCircle2 size={16} className="text-amber-400 shrink-0" />
-                            <span className="text-green-100 text-sm font-medium">{item}</span>
-                        </motion.div>
-                    ))}
-                </div>
-            </div>
+            {/* Left Panel — Cinematic Branding */}
+            <AuthCinematicSide 
+                title={<>Join the<br />Neighbourhood Marketplace</>}
+                subtitle="Create your free account and start buying, selling or managing your local market — all in one place."
+            />
 
             {/* Right Panel — Form */}
             <motion.div

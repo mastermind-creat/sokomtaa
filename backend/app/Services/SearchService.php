@@ -12,13 +12,23 @@ class SearchService
     /**
      * Conduct a global weighted search across the marketplace.
      */
-    public function globalSearch(string $query): array
+    public function globalSearch(?string $query = null, ?int $categoryId = null): array
     {
-        $products = Product::with(['trader', 'category'])
-            ->where('name', 'LIKE', "%{$query}%")
-            ->orWhere('name_sw', 'LIKE', "%{$query}%")
-            ->orWhere('description', 'LIKE', "%{$query}%")
-            ->where('is_active', true)
+        $productsQuery = Product::with(['trader', 'category']);
+
+        if ($query) {
+            $productsQuery->where(function($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%")
+                  ->orWhere('name_sw', 'LIKE', "%{$query}%")
+                  ->orWhere('description', 'LIKE', "%{$query}%");
+            });
+        }
+
+        if ($categoryId) {
+            $productsQuery->where('category_id', $categoryId);
+        }
+
+        $products = $productsQuery->where('is_active', true)
             ->get()
             ->map(function ($product) {
                 $ratingWeight = $product->trader?->average_rating ?? 0;
@@ -43,11 +53,15 @@ class SearchService
                 return $product;
             });
 
-        $traders = Trader::with(['market', 'stall'])
-            ->where('business_name', 'LIKE', "%{$query}%")
-            ->orWhere('description', 'LIKE', "%{$query}%")
-            ->get()
-            ->map(function ($trader) {
+        $traders = collect();
+        if ($query) {
+            $traders = Trader::with(['market', 'stall'])
+                ->where('business_name', 'LIKE', "%{$query}%")
+                ->orWhere('description', 'LIKE', "%{$query}%")
+                ->get();
+        }
+        
+        $traders = $traders->map(function ($trader) {
                 $popularityWeight = min($trader->profile_views / 100, 5);
                 $score = ($trader->average_rating * 0.8) + ($popularityWeight * 0.2);
                 
@@ -61,11 +75,15 @@ class SearchService
                 return $trader;
             });
 
-        $markets = Market::where('name', 'LIKE', "%{$query}%")
-            ->orWhere('location', 'LIKE', "%{$query}%")
-            ->where('is_active', true)
-            ->get()
-            ->map(function ($market) {
+        $markets = collect();
+        if ($query) {
+            $markets = Market::where('name', 'LIKE', "%{$query}%")
+                ->orWhere('location', 'LIKE', "%{$query}%")
+                ->where('is_active', true)
+                ->get();
+        }
+
+        $markets = $markets->map(function ($market) {
                 $market->reliability_score = 10; // Markets always rank high contextually
                 $market->search_type = 'market';
                 return $market;
