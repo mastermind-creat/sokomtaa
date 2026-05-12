@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Public\GlobalStatsController;
 
 Route::get('/stats', [GlobalStatsController::class, 'index']);
+Route::get('/traders/featured', [GlobalStatsController::class, 'featuredTraders']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);

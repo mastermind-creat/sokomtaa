@@ -30,7 +30,17 @@ export const AuthCinematicSide: React.FC<AuthCinematicSideProps> = ({
             const response = await api.get('/stats');
             return response.data;
         },
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 1000 * 60 * 5,
+    });
+
+    // Fetch real traders for social proof avatars
+    const { data: featuredTraders } = useQuery<Array<{ id: number; business_name: string; avatar_url: string | null }>>({ 
+        queryKey: ['featured-traders'],
+        queryFn: async () => {
+            const response = await api.get<never, { data: Array<{ id: number; business_name: string; avatar_url: string | null }> }>('/traders/featured');
+            return response.data;
+        },
+        staleTime: 1000 * 60 * 10,
     });
 
     // Map dynamic stats to the component's format
@@ -84,7 +94,7 @@ export const AuthCinematicSide: React.FC<AuthCinematicSideProps> = ({
     }, [mouseX, mouseY]);
 
     return (
-        <div className="hidden lg:flex flex-col justify-between w-[45%] bg-[#0A2E1A] p-14 relative overflow-hidden">
+        <div className="hidden lg:flex flex-col justify-between w-1/2 bg-[#0A2E1A] p-14 relative overflow-hidden">
             {/* Cinematic Background Layers */}
             <motion.div 
                 style={{ x: bgX, y: bgY }}
@@ -202,16 +212,25 @@ export const AuthCinematicSide: React.FC<AuthCinematicSideProps> = ({
                 )}
             </motion.div>
 
-            {/* Bottom Footer Decor */}
+            {/* Bottom Footer Decor — Real Trader Avatars */}
             <div className="relative z-20 pt-8 flex items-center justify-between border-t border-white/5">
                 <div className="flex -space-x-3">
-                    {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="w-8 h-8 rounded-full border-2 border-[#0A2E1A] bg-gray-300 overflow-hidden shadow-xl">
-                            <img src={`https://i.pravatar.cc/100?u=${i}`} alt="User" className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all" />
+                    {(featuredTraders && featuredTraders.length > 0 ? featuredTraders.slice(0, 5) : []).map((trader, i) => (
+                        <div key={trader.id} className="w-9 h-9 rounded-full border-2 border-[#0A2E1A] overflow-hidden shadow-xl" title={trader.business_name}>
+                            {trader.avatar_url ? (
+                                <img src={trader.avatar_url} alt={trader.business_name} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-brand-700 flex items-center justify-center text-[10px] font-black text-white">
+                                    {trader.business_name.charAt(0).toUpperCase()}
+                                </div>
+                            )}
                         </div>
                     ))}
-                    <div className="w-8 h-8 rounded-full border-2 border-[#0A2E1A] bg-brand-600 flex items-center justify-center text-[10px] font-black text-white shadow-xl">
-                        +2k
+                    {(!featuredTraders || featuredTraders.length === 0) && [1,2,3,4].map(i => (
+                        <div key={i} className="w-9 h-9 rounded-full border-2 border-[#0A2E1A] bg-brand-800 animate-pulse" />
+                    ))}
+                    <div className="w-9 h-9 rounded-full border-2 border-[#0A2E1A] bg-brand-600 flex items-center justify-center text-[10px] font-black text-white shadow-xl">
+                        {dynamicStats ? `+${Math.max(0, dynamicStats.total_traders - 5)}` : '+2k'}
                     </div>
                 </div>
                 <p className="text-[10px] font-black text-green-200/40 uppercase tracking-[0.2em]">
