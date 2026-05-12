@@ -24,8 +24,10 @@ import {
 import { ApiResponse, Trader, Product, Review } from '@/types';
 import Image from 'next/image';
 import ReservationFlow from '@/components/resident/ReservationFlow';
+import CartFlow from '@/components/resident/CartFlow';
 import ReviewCard from '@/components/shared/ReviewCard';
 import { useAuthStore } from '@/store/authStore';
+import { useCartStore } from '@/store/cartStore';
 import { useTranslation } from '@/hooks/useTranslation';
 
 type Tab = 'products' | 'about' | 'reviews';
@@ -37,6 +39,8 @@ export default function TraderStorefrontPage() {
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const { user } = useAuthStore();
     const { t } = useTranslation();
+    const { addItem, items, getTotalItems, getTotalAmount } = useCartStore();
+    const [showCart, setShowCart] = useState(false);
 
     // 1. Fetch Trader Details & Products
     const { data: storefrontData, isLoading: isTraderLoading } = useQuery<ApiResponse<{
@@ -239,8 +243,14 @@ export default function TraderStorefrontPage() {
                                             </div>
                                         </div>
                                         <div className="mt-auto">
-                                            <button className="w-full h-10 bg-brand-50 text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-600 hover:text-white transition-all active:scale-95 border border-brand-100">
-                                                <Plus size={14} /> {t('common.reserve')}
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    addItem(product, trader.id, trader.business_name);
+                                                }}
+                                                className="w-full h-10 bg-brand-50 text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-600 hover:text-white transition-all active:scale-95 border border-brand-100"
+                                            >
+                                                <Plus size={14} /> {t('common.add_to_cart') || 'Add to Cart'}
                                             </button>
                                         </div>
                                     </div>
@@ -374,12 +384,29 @@ export default function TraderStorefrontPage() {
                     >
                         <Phone size={24} />
                     </a>
-                    <button 
-                        onClick={() => products.length > 0 && setSelectedProduct(products[0])}
-                        className="flex-1 h-16 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-brand-200 active:scale-95 transition-all flex items-center justify-center gap-2"
-                    >
-                        {t('storefront.reserve_item')} <ChevronRight size={18} />
-                    </button>
+                    
+                    {items.length > 0 ? (
+                        <button 
+                            onClick={() => setShowCart(true)}
+                            className="flex-1 h-16 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-brand-200 active:scale-95 transition-all flex items-center justify-between px-8"
+                        >
+                            <div className="flex flex-col items-start leading-none">
+                                <span className="text-[10px] opacity-60 mb-1">{getTotalItems()} {t('common.items')}</span>
+                                <span>{t('storefront.view_cart') || 'View Cart'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm">KES {getTotalAmount()}</span>
+                                <ChevronRight size={18} />
+                            </div>
+                        </button>
+                    ) : (
+                        <button 
+                            disabled
+                            className="flex-1 h-16 bg-neutral-100 text-neutral-400 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-not-allowed"
+                        >
+                            {t('storefront.cart_empty') || 'Cart is Empty'}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -390,6 +417,13 @@ export default function TraderStorefrontPage() {
                         product={selectedProduct} 
                         traderId={trader.id}
                         onClose={() => setSelectedProduct(null)} 
+                    />
+                )}
+                
+                {showCart && (
+                    <CartFlow 
+                        traderId={trader.id}
+                        onClose={() => setShowCart(false)} 
                     />
                 )}
             </AnimatePresence>

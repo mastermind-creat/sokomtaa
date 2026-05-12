@@ -82,7 +82,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                 trader_id: traderId
             });
             
-            const reservation = response.data;
+            const reservation = response.data.data;
             setReservationId(reservation.id);
             setReservationCode(reservation.reservation_code);
             
