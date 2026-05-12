@@ -20,7 +20,7 @@ export const TopTradersPreview = () => {
 
   const { data: response, isLoading } = useQuery<ApiResponse<{ top_traders: Trader[] }>>({
     queryKey: ['recommendations-traders'],
-    queryFn: () => api.get('/recommendations').then(res => res.data),
+    queryFn: () => api.get('/recommendations'),
   });
 
   const traders = response?.data?.top_traders || [];
