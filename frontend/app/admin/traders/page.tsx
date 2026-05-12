@@ -226,7 +226,7 @@ export default function AdminTradersPage() {
                                         <div className="min-w-0">
                                             <h3 className="text-base font-black text-green-950 uppercase tracking-tight leading-none mb-1.5 truncate">{trader.business_name}</h3>
                                             <p className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-1.5 truncate">
-                                                <User size={10} className="text-brand-500" /> {trader.user.name}
+                                                <User size={10} className="text-brand-500" /> {trader.user?.name || 'Unknown User'}
                                             </p>
                                         </div>
                                     </div>
@@ -370,7 +370,7 @@ export default function AdminTradersPage() {
                                             <p className="text-[9px] font-black text-text-muted uppercase tracking-widest text-center">National ID Front</p>
                                             <div className="aspect-[1.6/1] bg-gray-100 rounded-2xl overflow-hidden border border-gray-200 group relative">
                                                 {reviewTrader.id_front_url ? (
-                                                    <img src={reviewTrader.id_front_url} alt="ID Front" className="w-full h-full object-cover transition-transform group-hover:scale-110 cursor-zoom-in" onClick={() => window.open(reviewTrader.id_front_url, '_blank')} />
+                                                    <img src={reviewTrader.id_front_url} alt="ID Front" className="w-full h-full object-cover transition-transform group-hover:scale-110 cursor-zoom-in" onClick={() => window.open(reviewTrader.id_front_url || undefined, '_blank')} />
                                                 ) : (
                                                     <div className="flex items-center justify-center h-full text-text-muted text-[10px] font-black uppercase">Not Uploaded</div>
                                                 )}
@@ -380,7 +380,7 @@ export default function AdminTradersPage() {
                                             <p className="text-[9px] font-black text-text-muted uppercase tracking-widest text-center">National ID Back</p>
                                             <div className="aspect-[1.6/1] bg-gray-100 rounded-2xl overflow-hidden border border-gray-200 group relative">
                                                 {reviewTrader.id_back_url ? (
-                                                    <img src={reviewTrader.id_back_url} alt="ID Back" className="w-full h-full object-cover transition-transform group-hover:scale-110 cursor-zoom-in" onClick={() => window.open(reviewTrader.id_back_url, '_blank')} />
+                                                    <img src={reviewTrader.id_back_url} alt="ID Back" className="w-full h-full object-cover transition-transform group-hover:scale-110 cursor-zoom-in" onClick={() => window.open(reviewTrader.id_back_url || undefined, '_blank')} />
                                                 ) : (
                                                     <div className="flex items-center justify-center h-full text-text-muted text-[10px] font-black uppercase">Not Uploaded</div>
                                                 )}
