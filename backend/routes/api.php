@@ -47,8 +47,7 @@ Route::prefix('markets')->group(function () {
 });
 
 // Location Discovery (Public)
-Route::get('/regions', [\App\Http\Controllers\Admin\RegionController::class, 'index']);
-Route::get('/centers', [\App\Http\Controllers\Admin\CenterController::class, 'index']);
+// These routes are handled by apiResource above
 
 // Global Search & Recommendations (Public)
 Route::get('/search', [\App\Http\Controllers\SearchController::class, 'index']);
@@ -268,8 +267,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/allocations', [\App\Http\Controllers\Admin\StallAllocationController::class, 'store']);
 
         // Locations (Regions & Centers)
-        Route::apiResource('regions', [\App\Http\Controllers\Admin\RegionController::class]);
-        Route::apiResource('centers', [\App\Http\Controllers\Admin\CenterController::class]);
+        Route::apiResource('regions', \App\Http\Controllers\Admin\RegionController::class);
+        Route::apiResource('centers', \App\Http\Controllers\Admin\CenterController::class);
 
         // Stall Application Review
         Route::get('/applications', [\App\Http\Controllers\Admin\ApplicationReviewController::class, 'index']);

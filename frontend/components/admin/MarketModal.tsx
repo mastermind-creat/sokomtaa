@@ -29,12 +29,15 @@ const marketSchema = z.object({
     estate: z.string().min(2, 'Estate/Street is required'),
     latitude: z.string().nullable().optional(),
     longitude: z.string().nullable().optional(),
-    is_active: z.boolean(),
+    is_active: z.boolean().default(true),
     banner_image: z.any().optional(),
     icon_image: z.any().optional(),
     default_monthly_fee: z.coerce.number().default(0),
     region_id: z.string().or(z.number()).optional(),
-    center_id: z.string().or(z.number()),
+    center_id: z.union([
+        z.string().min(1, 'Please select a center'),
+        z.number().min(1, 'Please select a center')
+    ]),
 });
 
 type MarketFormValues = z.infer<typeof marketSchema>;
