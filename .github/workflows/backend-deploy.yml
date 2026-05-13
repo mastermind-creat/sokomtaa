@@ -24,6 +24,8 @@ jobs:
         local-dir: backend/
         server-dir: domains/api.sokomtaa.co.ke/public_html/laravel_app/
         state-name: .ftp-deploy-sync-state.json
+        port: 21
+        timeout: 90000 # 90 seconds
         # Exclude files you don't want to overwrite in production
         exclude: |
           **/.git*
