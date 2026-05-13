@@ -54,13 +54,14 @@ export default function CartFlow({ traderId, onClose }: CartFlowProps) {
         }
     }, [user]);
 
-    // Fetch Settings for Fee Logic
+    // Fetch Settings for Fee Logic (public endpoint — no auth needed)
     const { data: settings } = useQuery<Record<string, SystemSetting[]>>({
         queryKey: ['system-settings-public'],
         queryFn: async () => {
-            const res = await api.get('/admin/settings');
-            return res.data.data;
-        }
+            const res = await api.get('/settings/public');
+            return res.data.data ?? {};
+        },
+        staleTime: 5 * 60 * 1000, // cache 5 min
     });
 
     const feeAmount = parseFloat(settings?.fees?.find(s => s.key === 'resident_service_fee')?.value || '10');
@@ -99,7 +100,11 @@ export default function CartFlow({ traderId, onClose }: CartFlowProps) {
                 trader_id: traderId
             });
             
-            const createdReservations = response.data.data;
+            // The axios interceptor returns response.data, so response IS {success, data, message}
+            const createdReservations = (response as any).data as Reservation[];
+            if (!Array.isArray(createdReservations) || createdReservations.length === 0) {
+                throw new Error('No reservations were created. Please try again.');
+            }
             setReservations(createdReservations);
             
             // 2. Initiate STK for the total amount

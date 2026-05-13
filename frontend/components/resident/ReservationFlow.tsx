@@ -54,13 +54,14 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
         }
     }, [user]);
 
-    // Fetch Settings for Fee Logic
+    // Fetch Settings for Fee Logic (public endpoint — no auth needed)
     const { data: settings } = useQuery<Record<string, SystemSetting[]>>({
         queryKey: ['system-settings-public'],
         queryFn: async () => {
-            const res = await api.get('/admin/settings'); // Note: In a real app, this might be a public endpoint or cached
-            return res.data.data;
-        }
+            const res = await api.get('/settings/public');
+            return res.data.data ?? {};
+        },
+        staleTime: 5 * 60 * 1000, // cache 5 min
     });
 
     const feeAmount = parseFloat(settings?.fees?.find(s => s.key === 'resident_service_fee')?.value || '10');
@@ -100,7 +101,11 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                 trader_id: traderId
             });
             
-            const reservation = response.data.data;
+            // The axios interceptor returns response.data, so response IS {success, data, message}
+            const reservation = (response as any).data as Reservation;
+            if (!reservation?.id) {
+                throw new Error('Reservation could not be created. Please try again.');
+            }
             setReservationId(reservation.id);
             setReservationCode(reservation.reservation_code);
             

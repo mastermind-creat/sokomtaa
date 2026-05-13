@@ -71,8 +71,8 @@ export default function TraderWalletPage() {
     const handleWithdraw = () => {
         setWithdrawError('');
         const amount = parseFloat(withdrawAmount);
-        if (isNaN(amount) || amount < 10) {
-            setWithdrawError('Minimum withdrawal is KES 10.');
+        if (isNaN(amount) || amount < 100) {
+            setWithdrawError('Minimum withdrawal is KES 100.');
             return;
         }
         if (amount > (wallet?.balance ?? 0)) {
@@ -85,7 +85,7 @@ export default function TraderWalletPage() {
         }
 
         requestWithdrawal.mutate(
-            { amount, mpesa_phone: withdrawPhone },
+            { amount, mpesa_number: withdrawPhone },
             {
                 onSuccess: () => {
                     setWithdrawSuccess(true);
@@ -161,7 +161,7 @@ export default function TraderWalletPage() {
                             </button>
                             <button
                                 onClick={() => setIsWithdrawOpen(true)}
-                                disabled={!wallet?.is_active || (wallet?.balance ?? 0) < 10}
+                                disabled={!wallet?.is_active || (wallet?.balance ?? 0) < 100}
                                 className="flex-1 flex items-center justify-center gap-2 bg-white/10 border border-white/20 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest backdrop-blur-sm active:scale-95 transition-all hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 <Banknote size={16} strokeWidth={2.5} />
@@ -389,8 +389,8 @@ export default function TraderWalletPage() {
                                         <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto">
                                             <CheckCircle2 size={32} className="text-green-600" />
                                         </div>
-                                        <p className="font-black text-green-950">Withdrawal Requested!</p>
-                                        <p className="text-sm text-gray-400">Funds will be sent to your M-Pesa within 24 hours.</p>
+                                        <p className="font-black text-green-950">Withdrawal Initiated! 🎉</p>
+                                        <p className="text-sm text-gray-400">Your M-Pesa will receive the funds within minutes.</p>
                                     </div>
                                 ) : (
                                     <>
@@ -455,10 +455,10 @@ export default function TraderWalletPage() {
                                         )}
 
                                         {/* Notice */}
-                                        <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-2xl border border-amber-100">
-                                            <Clock size={14} className="text-amber-600 shrink-0 mt-0.5" />
-                                            <p className="text-[11px] text-amber-900/80 font-medium leading-relaxed">
-                                                Withdrawals are processed manually within 24 hours. The amount is deducted from your wallet immediately.
+                                        <div className="flex items-start gap-2 p-3 bg-green-50 rounded-2xl border border-green-100">
+                                            <CheckCircle2 size={14} className="text-green-600 shrink-0 mt-0.5" />
+                                            <p className="text-[11px] text-green-900/80 font-medium leading-relaxed">
+                                                Withdrawals are instant via M-Pesa B2C. A KES 5 processing fee applies. Funds arrive within minutes.
                                             </p>
                                         </div>
 

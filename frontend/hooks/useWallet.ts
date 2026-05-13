@@ -53,7 +53,7 @@ export function useWallet() {
     });
 
     const requestWithdrawal = useMutation({
-        mutationFn: (data: { amount: number; mpesa_phone: string }) =>
+        mutationFn: (data: { amount: number; mpesa_number: string }) =>
             api.post('/trader/wallet/withdraw', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['wallet'] });

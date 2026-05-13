@@ -10,11 +10,24 @@ use Illuminate\Http\JsonResponse;
 class AdminSettingController extends Controller
 {
     /**
-     * Get all system settings.
+     * Get all system settings (admin only).
      */
     public function index(): JsonResponse
     {
         $settings = SystemSetting::all()->groupBy('group');
+        return response()->json([
+            'status' => 'success',
+            'data' => $settings
+        ]);
+    }
+
+    /**
+     * Get publicly accessible settings (fee thresholds for checkout UI).
+     * No authentication required.
+     */
+    public function publicIndex(): JsonResponse
+    {
+        $settings = SystemSetting::where('group', 'fees')->get()->groupBy('group');
         return response()->json([
             'status' => 'success',
             'data' => $settings

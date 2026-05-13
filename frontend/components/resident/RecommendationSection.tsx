@@ -39,16 +39,24 @@ interface RecommendationsData {
     top_traders: Trader[];
 }
 
+import { useLocationStore } from '@/store/locationStore';
+
 export default function RecommendationSection() {
+    const { coords } = useLocationStore();
+
     const { data: recommendationsData, isLoading } = useQuery<ApiResponse<RecommendationsData>>({
-        queryKey: ['recommendations'],
-        queryFn: () => api.get('/recommendations'),
+        queryKey: ['recommendations', coords?.lat, coords?.lng],
+        queryFn: () => {
+            const params = coords ? `?lat=${coords.lat}&lng=${coords.lng}` : '';
+            return api.get(`/recommendations${params}`);
+        },
     });
 
-    // Handle both wrapped and unwrapped data formats
-    const boosted = (recommendationsData as any)?.boosted_products || recommendationsData?.data?.boosted_products || [];
-    const products = (recommendationsData as any)?.popular_products || recommendationsData?.data?.popular_products || [];
-    const traders = (recommendationsData as any)?.top_traders || recommendationsData?.data?.top_traders || [];
+    // Handle both wrapped and unwrapped data formats with proper typing
+    const data = recommendationsData?.data || (recommendationsData as unknown as RecommendationsData);
+    const boosted = data?.boosted_products || [];
+    const products = data?.popular_products || [];
+    const traders = data?.top_traders || [];
 
     if (isLoading) {
         return (
@@ -56,7 +64,7 @@ export default function RecommendationSection() {
                 <div>
                     <div className="h-6 w-48 bg-neutral-200 rounded-md mb-4"></div>
                     <div className="flex gap-4 overflow-x-hidden">
-                        {[1, 2].map(n => (
+                        {[1, 2].map((n: number) => (
                             <div key={n} className="min-w-[240px] h-[300px] bg-neutral-200 rounded-3xl"></div>
                         ))}
                     </div>
@@ -125,7 +133,7 @@ export default function RecommendationSection() {
                 <div className="px-6">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl font-black text-green-950">Recommended</h2>
-                        <Link href="/search" className="text-xs font-black uppercase tracking-widest text-brand-600">View All</Link>
+                        <Link href="/resident/search" className="text-xs font-black uppercase tracking-widest text-brand-600">View All</Link>
                     </div>
                     <div className="flex gap-3 md:gap-6 overflow-x-auto pb-4 no-scrollbar -mx-6 px-6 snap-x snap-mandatory">
                         {products.map(product => (

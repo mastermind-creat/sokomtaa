@@ -36,6 +36,12 @@ class TraderReservationController extends Controller
 
         $reservations = $query->paginate(20);
 
+        // Append trader_amount: what the trader earns (excludes resident service fee)
+        $reservations->getCollection()->transform(function ($r) {
+            $r->trader_amount = (float) $r->unit_price * $r->quantity;
+            return $r;
+        });
+
         return $this->success($reservations);
     }
 
@@ -58,7 +64,11 @@ class TraderReservationController extends Controller
             ->with(['resident:id,name,phone', 'product:id,name,unit,image_url'])
             ->latest()
             ->limit(5)
-            ->get();
+            ->get()
+            ->map(function ($r) {
+                $r->trader_amount = (float) $r->unit_price * $r->quantity;
+                return $r;
+            });
 
         return $this->success($recent);
     }

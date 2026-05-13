@@ -20,6 +20,8 @@ interface ReservationDetail {
     quantity: number;
     unit_price: string;
     total_amount: string;
+    service_fee: string;
+    trader_amount?: number; // unit_price × quantity — excludes resident service fee
     notes: string | null;
     pickup_deadline: string | null;
     picked_up_at: string | null;
@@ -148,8 +150,13 @@ export default function OrderDetailPage() {
                     <DetailRow icon={<MessageSquare className="w-4 h-4" />} label="Notes" value={order.notes || 'No notes provided'} />
                     
                     <div className="pt-4 mt-4 border-t border-gray-50 flex items-center justify-between">
-                        <p className="text-sm font-bold text-text-secondary">Summary</p>
-                        <p className="text-2xl font-black text-green-950">KES {parseFloat(order.total_amount).toLocaleString()}</p>
+                        <div>
+                            <p className="text-sm font-bold text-text-secondary">Amount Received</p>
+                            <p className="text-[10px] text-text-muted font-medium">{order.quantity} × KES {parseFloat(order.unit_price).toFixed(2)}</p>
+                        </div>
+                        <p className="text-2xl font-black text-green-950">
+                            KES {(order.trader_amount ?? parseFloat(order.unit_price) * order.quantity).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
                     </div>
                 </div>
             </div>

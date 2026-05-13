@@ -9,6 +9,7 @@ import { ChevronLeft, Search, Frown, Loader2, Store, MapPin, Package } from 'luc
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useLocationStore } from '@/store/locationStore';
 
 interface SearchResult {
     id: number;
@@ -24,6 +25,7 @@ interface SearchResult {
     trader?: { id: number; market_id: number; business_name?: string; business_name_sw?: string; avatar_url?: string };
     market?: { id: number; name: string; location?: string };
     location?: string;
+    distance_km?: number;
 }
 
 interface SearchResponse {
@@ -43,11 +45,19 @@ function SearchPageContent() {
     const query = searchParams.get('q') || '';
     const categoryId = searchParams.get('category') || '';
     
+    const { coords } = useLocationStore();
+    
     const [inputValue, setInputValue] = useState(query);
 
     const { data: searchData, isLoading, isError } = useQuery<ApiResponse<SearchResponse>>({
-        queryKey: ['search', query, categoryId],
-        queryFn: () => api.get(`/search?q=${encodeURIComponent(query)}&category=${categoryId}`),
+        queryKey: ['search', query, categoryId, coords?.lat, coords?.lng],
+        queryFn: () => {
+            let url = `/search?q=${encodeURIComponent(query)}&category=${categoryId}`;
+            if (coords) {
+                url += `&lat=${coords.lat}&lng=${coords.lng}`;
+            }
+            return api.get(url);
+        },
         enabled: query.length >= 2 || categoryId.length > 0,
     });
 
@@ -159,7 +169,7 @@ function SearchPageContent() {
                                             <MapPin size={32} className="opacity-20" />
                                         )}
                                         
-                                        <div className="absolute top-3 left-3">
+                                        <div className="absolute top-3 left-3 flex flex-col gap-1 items-start">
                                             <span className={`text-[8px] uppercase font-black tracking-widest px-2 py-1 rounded-lg backdrop-blur-md border ${
                                                 result.search_type === 'product' ? 'bg-green-500/10 text-green-700 border-green-200' :
                                                 result.search_type === 'trader' ? 'bg-blue-500/10 text-blue-700 border-blue-200' :
@@ -167,6 +177,11 @@ function SearchPageContent() {
                                             }`}>
                                                 {t(`common.${result.search_type}`)}
                                             </span>
+                                            {result.distance_km !== undefined && (
+                                                <span className="text-[7px] uppercase font-black tracking-widest px-2 py-0.5 rounded-md bg-white/90 border border-border-default shadow-sm">
+                                                    {result.distance_km} km
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     

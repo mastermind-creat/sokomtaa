@@ -37,14 +37,18 @@ class TraderController extends Controller
 
     /**
      * Search for traders / discovery.
+     * Supports distance-based biasing if lat/lng are provided.
      */
     public function search(Request $request): JsonResponse
     {
-        $query = $request->input('q');
+        $query      = $request->input('q');
         $categoryId = $request->input('category_id');
-        $marketId = $request->input('market_id');
+        $marketId   = $request->input('market_id');
+        $lat        = $request->filled('lat')    ? (float) $request->lat    : null;
+        $lng        = $request->filled('lng')    ? (float) $request->lng    : null;
+        $radius     = $request->filled('radius') ? (float) $request->radius : 5.0;
 
-        $traders = Trader::query()
+        $tradersQuery = Trader::query()
             ->when($query, function ($q) use ($query) {
                 $q->where('business_name', 'like', "%{$query}%")
                   ->orWhere('business_name_sw', 'like', "%{$query}%");
@@ -56,8 +60,20 @@ class TraderController extends Controller
                 $q->whereHas('products', function ($p) use ($categoryId) {
                     $p->where('category_id', $categoryId);
                 });
-            })
-            ->with(['market', 'stall'])
+            });
+
+        // Distance filtering logic
+        if ($lat !== null && $lng !== null) {
+            $tradersQuery->selectRaw(
+                "*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( COALESCE(traders.latitude, markets.latitude) ) ) * cos( radians( COALESCE(traders.longitude, markets.longitude) ) - radians(?) ) + sin( radians(?) ) * sin( radians( COALESCE(traders.latitude, markets.latitude) ) ) ) ), 2) AS distance_km",
+                [$lat, $lng, $lat]
+            )
+            ->join('markets', 'traders.market_id', '=', 'markets.id')
+            ->having('distance_km', '<=', $radius)
+            ->orderBy('distance_km');
+        }
+
+        $traders = $tradersQuery->with(['market', 'stall'])
             ->paginate(15);
 
         return $this->success($traders);
@@ -76,19 +92,19 @@ class TraderController extends Controller
 
         $lat = $request->lat;
         $lng = $request->lng;
-        $radius = $request->radius ?? 10; // Default 10km
+        $radius = $request->radius ?? 5.0; // Default 5km
 
         // Haversine formula to find independent traders within radius
-        // Only show verified independent traders OR managed ones that have lat/lng
+        // Uses Trader lat/lng first, falls back to Market lat/lng
         $traders = Trader::where('verification_status', 'verified')
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->selectRaw("*, ( 6371 * acos( cos( radians(?) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitude ) ) ) ) AS distance", [$lat, $lng, $lat])
-            ->having('distance', '<=', $radius)
-            ->orderBy('distance')
+            ->selectRaw("traders.*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( COALESCE(traders.latitude, markets.latitude) ) ) * cos( radians( COALESCE(traders.longitude, markets.longitude) ) - radians(?) ) + sin( radians(?) ) * sin( radians( COALESCE(traders.latitude, markets.latitude) ) ) ) ), 2) AS distance_km", [$lat, $lng, $lat])
+            ->join('markets', 'traders.market_id', '=', 'markets.id')
+            ->having('distance_km', '<=', $radius)
+            ->orderBy('distance_km')
             ->with(['market', 'stall'])
             ->get();
 
         return $this->success($traders);
     }
+
 }

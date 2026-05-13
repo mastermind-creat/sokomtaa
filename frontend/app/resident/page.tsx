@@ -35,7 +35,12 @@ interface Market {
     location: string;
     traders_count: number;
     image_url?: string;
+    distance_km?: number;
 }
+
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { useLocationStore } from '@/store/locationStore';
+import LocationPermissionBanner from '@/components/shared/LocationPermissionBanner';
 
 export default function HomePage() {
     const { user } = useAuthStore();
@@ -44,17 +49,25 @@ export default function HomePage() {
     const language = user?.preferred_language || locale;
     const [showNearbyMap, setShowNearbyMap] = React.useState(false);
 
+    // Initialize geolocation tracking
+    useGeolocation();
+    const { coords } = useLocationStore();
+
     // Fetch Markets
     const { data: marketData, isLoading: marketsLoading } = useQuery<ApiResponse<Market[]> | any>({
-        queryKey: ['markets'],
-        queryFn: () => api.get('/markets'),
+        queryKey: ['markets', coords?.lat, coords?.lng],
+        queryFn: () => {
+            const params = coords ? `?lat=${coords.lat}&lng=${coords.lng}` : '';
+            return api.get(`/markets${params}`);
+        },
     });
 
-    // Handle both wrapped and unwrapped data formats
-    const markets = Array.isArray(marketData) ? marketData : (marketData?.data || []);
+    // Handle both wrapped and unwrapped data formats with explicit typing
+    const markets: Market[] = Array.isArray(marketData) ? marketData : (marketData?.data || []);
 
     return (
         <>
+            <LocationPermissionBanner />
             <div className="space-y-10 lg:space-y-16 pb-20">
                 
                 {/* 1. TOP: Dynamic Contextual Alert */}
@@ -123,7 +136,7 @@ export default function HomePage() {
                             </span>
                         </h1>
 
-                        <div className="relative max-w-2xl group" onClick={() => router.push('/search')}>
+                        <div className="relative max-w-2xl group" onClick={() => router.push('/resident/search')}>
                             <div className="absolute -inset-1 bg-gradient-to-r from-brand-400 to-amber-400 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
                             <div className="relative h-20 bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-2 flex items-center gap-2 cursor-pointer transition-all hover:border-brand-300">
                                 <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center text-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-all">
@@ -152,8 +165,8 @@ export default function HomePage() {
                     <CategoryFilter 
                         selectedCategoryId={null} 
                         onSelectCategory={(id) => {
-                            if(id) router.push(`/search?category=${encodeURIComponent(id)}`);
-                            else router.push('/search');
+                            if(id) router.push(`/resident/search?category=${encodeURIComponent(id)}`);
+                            else router.push('/resident/search');
                         }} 
                     />
                 </section>
@@ -216,7 +229,7 @@ export default function HomePage() {
                             <div key={i} className="h-40 md:h-48 bg-gray-50 animate-pulse rounded-2xl md:rounded-[3rem]" />
                         ))}
                         
-                        {markets.map((market, index) => (
+                        {markets.map((market: Market, index: number) => (
                             <motion.div 
                                 key={market.id} 
                                 initial={{ opacity: 0, scale: 0.9 }}
@@ -231,10 +244,15 @@ export default function HomePage() {
                                     <div className="w-10 h-10 md:w-16 md:h-16 bg-brand-50 text-brand-600 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-all shadow-inner">
                                         <MapPin size={20} />
                                     </div>
-                                    <div className="text-right">
+                                    <div className="text-right flex flex-col items-end gap-1">
                                         <p className="text-[8px] md:text-[10px] font-black text-brand-600 bg-brand-50 px-2 md:px-3 py-1 rounded-lg md:rounded-xl uppercase border border-brand-100">
                                             {market.traders_count} Traders
                                         </p>
+                                        {market.distance_km !== undefined && (
+                                            <p className="text-[8px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100 uppercase">
+                                                {market.distance_km} km mbali
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="relative z-10">

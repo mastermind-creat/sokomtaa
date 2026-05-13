@@ -82,7 +82,8 @@ export const useMpesa = () => {
 
             const response = await api.post<ApiResponse<{ checkout_request_id: string }>>('/payments/mpesa/stkpush', payload);
             
-            const checkoutId = response.data.data.checkout_request_id;
+            // The axios interceptor returns response.data, so response IS the Laravel body {success, data, message}
+            const checkoutId = (response as any).data.checkout_request_id;
             pollStatus(checkoutId);
             return checkoutId;
         } catch (err: unknown) {

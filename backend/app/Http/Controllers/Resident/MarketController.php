@@ -14,10 +14,15 @@ class MarketController extends Controller
     use ApiResponse;
 
     /**
-     * List all active markets.
+     * List active markets, optionally sorted/filtered by distance.
+     * Accepts: lat, lng, radius (km, default 5)
      */
     public function index(Request $request): JsonResponse
     {
+        $lat    = $request->filled('lat')    ? (float) $request->lat    : null;
+        $lng    = $request->filled('lng')    ? (float) $request->lng    : null;
+        $radius = $request->filled('radius') ? (float) $request->radius : 5.0;
+
         $query = Market::where('is_active', true)
             ->withCount('traders')
             ->with(['center.region']);
@@ -32,10 +37,20 @@ class MarketController extends Controller
             $query->where('center_id', $request->center_id);
         }
 
+        // If coordinates supplied, add distance column + filter by radius
+        if ($lat !== null && $lng !== null) {
+            $query->selectRaw(
+                "*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitude ) ) ) ), 2) AS distance_km",
+                [$lat, $lng, $lat]
+            )->having('distance_km', '<=', $radius)
+             ->orderBy('distance_km');
+        }
+
         $markets = $query->get();
 
         return $this->success($markets);
     }
+
 
     /**
      * Find markets near a specific location.

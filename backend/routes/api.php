@@ -62,8 +62,12 @@ Route::prefix('traders')->group(function () {
     Route::get('/{trader}/reviews', [\App\Http\Controllers\Resident\TraderController::class, 'reviews']);
 });
 
-// M-Pesa Public Callback
-Route::post('/payments/mpesa/callback', [\App\Http\Controllers\Payment\MpesaController::class, 'callback']);
+// M-Pesa Public Callbacks
+Route::post('/payments/mpesa/callback',        [\App\Http\Controllers\Payment\MpesaController::class, 'callback']);
+Route::post('/payments/mpesa/b2c-callback',    [\App\Http\Controllers\Trader\WithdrawalController::class, 'b2cCallback']);
+
+// Public Settings (fee thresholds for checkout UI — no auth required)
+Route::get('/settings/public', [\App\Http\Controllers\Admin\AdminSettingController::class, 'publicIndex']);
 
 // ── AUTHENTICATED ROUTES ──────────────────────────────────────────────────────
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -147,14 +151,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ── Market Fees & Wallet (Traders Only) ──────────────────────────────────
     Route::middleware(['role:trader'])->group(function () {
         Route::prefix('trader/wallet')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Trader\WalletController::class, 'index']);
-            Route::get('/transactions', [\App\Http\Controllers\Trader\WalletController::class, 'transactions']);
-            Route::post('/frequency', [\App\Http\Controllers\Trader\WalletController::class, 'updateFrequency']);
-            Route::post('/withdraw', [\App\Http\Controllers\Trader\WalletController::class, 'requestWithdrawal']);
+            Route::get('/',              [\App\Http\Controllers\Trader\WalletController::class,    'index']);
+            Route::get('/transactions',  [\App\Http\Controllers\Trader\WalletController::class,    'transactions']);
+            Route::post('/frequency',    [\App\Http\Controllers\Trader\WalletController::class,    'updateFrequency']);
+            Route::get('/withdrawals',   [\App\Http\Controllers\Trader\WithdrawalController::class, 'history']);
+            Route::post('/withdraw',     [\App\Http\Controllers\Trader\WithdrawalController::class, 'requestWithdrawal']);
         });
 
         Route::prefix('fees')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Payment\FeeController::class, 'index']);
+            Route::get('/',        [\App\Http\Controllers\Payment\FeeController::class, 'index']);
             Route::get('/summary', [\App\Http\Controllers\Payment\FeeController::class, 'summary']);
         });
     });

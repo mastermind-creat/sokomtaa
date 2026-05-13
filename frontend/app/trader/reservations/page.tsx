@@ -24,6 +24,8 @@ interface ReservationItem {
     quantity: number;
     unit_price: string;
     total_amount: string;
+    service_fee: string;
+    trader_amount: number; // unit_price × quantity — excludes resident service fee
     pickup_deadline: string | null;
     notes: string | null;
     created_at: string;
@@ -129,7 +131,7 @@ function OrderCard({ order, onMarkReady, onMarkComplete, isUpdating }: {
                             {order.quantity} {order.product.unit} × KES {parseFloat(order.unit_price).toFixed(0)}
                         </p>
                     </div>
-                    <p className="font-black text-primary text-lg">KES {parseFloat(order.total_amount).toFixed(0)}</p>
+                    <p className="font-black text-primary text-lg">KES {(order.trader_amount ?? parseFloat(order.unit_price) * order.quantity).toFixed(0)}</p>
                 </div>
 
                 {/* Deadline */}

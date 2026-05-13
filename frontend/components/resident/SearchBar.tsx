@@ -3,16 +3,23 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useLocationStore } from '@/store/locationStore';
 
 export default function SearchBar() {
     const [query, setQuery] = useState('');
     const router = useRouter();
 
+    const { coords } = useLocationStore();
+
     // Debounce the search submission
     useEffect(() => {
         const handler = setTimeout(() => {
             if (query.trim().length > 1) {
-                router.push(`/search?q=${encodeURIComponent(query)}`);
+                let url = `/resident/search?q=${encodeURIComponent(query)}`;
+                if (coords) {
+                    url += `&lat=${coords.lat}&lng=${coords.lng}`;
+                }
+                router.push(url);
             } else if (query.length === 0) {
                 // If cleared on the search page, might want to route back or clear results.
                 // For now, we leave it.
