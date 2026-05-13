@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 
 class TraderProfileController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, \App\Traits\PhoneNormalization;
 
     /**
      * Initial setup for a trader profile.
@@ -87,7 +87,7 @@ class TraderProfileController extends Controller
                 'business_name'       => $request->business_name,
                 'business_name_sw'    => $request->business_name_sw,
                 'description'         => $request->description,
-                'mpesa_number'        => $request->mpesa_number ?? $user->phone,
+                'mpesa_number'        => $this->normalizePhone($request->mpesa_number ?? $user->phone),
                 'permit_number'       => $request->permit_number,
                 'verification_status' => 'unverified',
                 'is_open'             => false,
@@ -208,6 +208,11 @@ class TraderProfileController extends Controller
         }
         if (isset($validated['closing_time'])) {
             $validated['closing_time'] = $this->normalizeTime($validated['closing_time']);
+        }
+
+        // Normalize mpesa_number if provided
+        if (isset($validated['mpesa_number'])) {
+            $validated['mpesa_number'] = $this->normalizePhone($validated['mpesa_number']);
         }
 
         // Handle server-side file uploads if present (multipart form)
