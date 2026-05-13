@@ -10,6 +10,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useLocationStore } from '@/store/locationStore';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 interface SearchResult {
     id: number;
@@ -70,6 +72,60 @@ function SearchPageContent() {
 
     const results = searchData?.data?.results || [];
 
+    // State for comparison view
+    const [selectedGroup, setSelectedGroup] = useState<any>(null);
+
+    // Group products by name for price comparison
+    const processedResults = React.useMemo(() => {
+        const productGroups: Record<string, any[]> = {};
+        const nonProducts: any[] = [];
+
+        results.forEach((res: any) => {
+            if (res.search_type === 'product') {
+                const key = (res.name || res.name_sw || '').toLowerCase().trim();
+                if (!productGroups[key]) productGroups[key] = [];
+                productGroups[key].push(res);
+            } else {
+                nonProducts.push(res);
+            }
+        });
+
+        const final: any[] = [];
+        
+        // Process product groups
+        Object.entries(productGroups).forEach(([name, group]) => {
+            if (group.length > 1) {
+                // Find min and max price
+                const prices = group.map(p => Number(p.price));
+                const minPrice = Math.min(...prices);
+                const maxPrice = Math.max(...prices);
+                
+                // Sort group by price
+                const sortedGroup = [...group].sort((a, b) => Number(a.price) - Number(b.price));
+                
+                // The "Main" card for this group
+                const bestDeal = sortedGroup[0];
+                final.push({
+                    ...bestDeal,
+                    is_grouped: true,
+                    min_price: minPrice,
+                    max_price: maxPrice,
+                    sellers_count: group.length,
+                    all_sellers: sortedGroup
+                });
+            } else {
+                final.push(group[0]);
+            }
+        });
+
+        // Add non-products and sort everything by distance or score
+        return [...final, ...nonProducts].sort((a, b) => {
+            if (a.is_boosted && !b.is_boosted) return -1;
+            if (!a.is_boosted && b.is_boosted) return 1;
+            return 0;
+        });
+    }, [results]);
+
     return (
         <div className="flex flex-col min-h-screen bg-surface-base pb-32">
             {/* Search Header */}
@@ -129,7 +185,7 @@ function SearchPageContent() {
                         <Frown size={48} className="mb-4 opacity-50" />
                         <p className="font-bold mb-1">{t('common.error')}</p>
                     </div>
-                ) : results.length === 0 ? (
+                ) : processedResults.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <Frown size={48} className="mb-4 text-neutral-300" />
                         <p className="font-bold text-text-primary mb-1">
@@ -140,20 +196,26 @@ function SearchPageContent() {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <h2 className="text-sm font-bold text-text-secondary mb-2 uppercase tracking-wider">
-                            {t('search.results_count').replace('{total}', searchData?.data.total.toString() || '0')}
-                        </h2>
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-sm font-bold text-text-secondary uppercase tracking-wider">
+                                {t('search.results_count').replace('{total}', searchData?.data.total.toString() || '0')}
+                            </h2>
+                            {results.some((r: any) => r.search_type === 'product') && (
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-lg border border-amber-200">
+                                    <TrendingUp size={12} />
+                                    <span className="text-[9px] font-black uppercase tracking-widest">Price Comparison Active</span>
+                                </div>
+                            )}
+                        </div>
                         
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {results.map((result) => (
-                                <Link 
+                            {processedResults.map((result: any) => (
+                                <div 
                                     key={`${result.search_type}-${result.id}`} 
-                                    href={
-                                        result.search_type === 'product' ? `/trader/${result.trader?.id}` :
-                                        result.search_type === 'trader' ? `/trader/${result.id}` :
-                                        `/market/${result.id}`
-                                    }
-                                    className="flex flex-col bg-white rounded-3xl border border-border-default shadow-sm active:scale-[0.98] transition-all group overflow-hidden"
+                                    className={cn(
+                                        "flex flex-col bg-white rounded-3xl border shadow-sm transition-all group overflow-hidden relative",
+                                        result.is_grouped ? "border-brand-200 ring-2 ring-brand-50" : "border-border-default"
+                                    )}
                                 >
                                     <div className={`aspect-square w-full flex items-center justify-center shrink-0 overflow-hidden relative ${result.search_type === 'market' ? 'bg-amber-50 text-amber-600' : 'bg-brand-50 text-brand-500'}`}>
                                         {(result.image_url || result.avatar_url) ? (
@@ -170,19 +232,31 @@ function SearchPageContent() {
                                         )}
                                         
                                         <div className="absolute top-3 left-3 flex flex-col gap-1 items-start">
-                                            <span className={`text-[8px] uppercase font-black tracking-widest px-2 py-1 rounded-lg backdrop-blur-md border ${
-                                                result.search_type === 'product' ? 'bg-green-500/10 text-green-700 border-green-200' :
-                                                result.search_type === 'trader' ? 'bg-blue-500/10 text-blue-700 border-blue-200' :
-                                                'bg-amber-500/10 text-amber-700 border-amber-200'
-                                            }`}>
-                                                {t(`common.${result.search_type}`)}
+                                            <span className={cn(
+                                                "text-[8px] uppercase font-black tracking-widest px-2 py-1 rounded-lg backdrop-blur-md border",
+                                                result.is_grouped ? "bg-brand-600 text-white border-brand-500 shadow-lg" : (
+                                                    result.search_type === 'product' ? 'bg-green-500/10 text-green-700 border-green-200' :
+                                                    result.search_type === 'trader' ? 'bg-blue-500/10 text-blue-700 border-blue-200' :
+                                                    'bg-amber-500/10 text-amber-700 border-amber-200'
+                                                )
+                                            )}>
+                                                {result.is_grouped ? 'Best Price' : t(`common.${result.search_type}`)}
                                             </span>
-                                            {result.distance_km !== undefined && (
-                                                <span className="text-[7px] uppercase font-black tracking-widest px-2 py-0.5 rounded-md bg-white/90 border border-border-default shadow-sm">
-                                                    {result.distance_km} km
+                                            {result.is_grouped && (
+                                                <span className="text-[7px] uppercase font-black tracking-widest px-2 py-1 rounded-lg bg-white/90 border border-brand-200 text-brand-600 shadow-sm">
+                                                    {result.sellers_count} Sellers
                                                 </span>
                                             )}
                                         </div>
+
+                                        {/* Closed Status Overlay */}
+                                        {!result.is_grouped && (
+                                            <div className="absolute top-3 right-3">
+                                                {((result.search_type === 'product' && !result.trader?.is_open) || (result.search_type === 'trader' && !result.is_open)) && (
+                                                    <span className="text-[7px] font-black bg-neutral-800/80 backdrop-blur-sm text-white px-2 py-1 rounded-lg uppercase tracking-tighter shadow-sm">Closed</span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     
                                     <div className="p-4 flex-1 flex flex-col">
@@ -192,33 +266,166 @@ function SearchPageContent() {
                                              result.name}
                                         </h3>
                                         
-                                        <div className="mt-auto pt-2">
+                                        <div className="mt-auto pt-2 space-y-3">
                                             {result.search_type === 'product' && (
-                                                <div className="flex items-baseline gap-1">
-                                                    <span className="text-xs font-black text-brand-600 font-mono">KES {result.price}</span>
-                                                    <span className="text-[10px] text-text-muted lowercase font-bold">/{result.unit}</span>
+                                                <div className="flex flex-col gap-0.5">
+                                                    <div className="flex items-baseline gap-1">
+                                                        <span className="text-xs font-black text-brand-600 font-mono">KES {result.price}</span>
+                                                        <span className="text-[10px] text-text-muted lowercase font-bold">/{result.unit}</span>
+                                                    </div>
+                                                    {result.is_grouped && (
+                                                        <p className="text-[8px] font-bold text-text-muted uppercase tracking-widest">
+                                                            Range: KES {result.min_price} - {result.max_price}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             )}
-                                            {result.search_type === 'trader' && (
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-text-secondary">
-                                                    <MapPin size={10} className="text-amber-500" />
-                                                    <span className="truncate">{result.market?.name}</span>
-                                                </div>
-                                            )}
-                                            {result.search_type === 'market' && (
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-text-secondary">
-                                                    <MapPin size={10} className="text-amber-500" />
-                                                    <span className="truncate">{result.location}</span>
-                                                </div>
+                                            
+                                            {result.is_grouped ? (
+                                                <button 
+                                                    onClick={() => setSelectedGroup(result)}
+                                                    className="w-full h-10 bg-brand-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-200 active:scale-95 transition-all"
+                                                >
+                                                    Compare Sellers
+                                                </button>
+                                            ) : (
+                                                <Link 
+                                                    href={
+                                                        result.search_type === 'product' ? `/trader/${result.trader?.id}` :
+                                                        result.search_type === 'trader' ? `/trader/${result.id}` :
+                                                        `/market/${result.id}`
+                                                    }
+                                                    className="w-full h-10 bg-brand-50 text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all"
+                                                >
+                                                    View Details
+                                                </Link>
                                             )}
                                         </div>
                                     </div>
-                                </Link>
+                                </div>
                             ))}
                         </div>
                     </div>
                 )}
             </main>
+
+            {/* Comparison Bottom Sheet */}
+            <AnimatePresence>
+                {selectedGroup && (
+                    <>
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedGroup(null)}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
+                        />
+                        <motion.div 
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[3rem] z-[101] max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
+                        >
+                            <div className="p-6 pb-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="px-2 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase rounded shadow-sm">Live</div>
+                                        <p className="text-[10px] font-black text-brand-600 uppercase tracking-[0.2em]">Market Price Leaderboard</p>
+                                    </div>
+                                    <h2 className="text-xl font-black text-green-950 uppercase leading-tight">{selectedGroup.name}</h2>
+                                </div>
+                                <button 
+                                    onClick={() => setSelectedGroup(null)}
+                                    className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-green-950 font-bold hover:bg-gray-100 transition-colors"
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            <div className="bg-brand-50/50 p-6 flex items-center justify-between border-b border-brand-100">
+                                <div>
+                                    <p className="text-[9px] font-black text-brand-700 uppercase tracking-widest mb-1">Market Leader</p>
+                                    <p className="text-sm font-black text-green-950">
+                                        Save up to <span className="text-brand-600 font-mono">KES {selectedGroup.max_price - selectedGroup.min_price}</span> today
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[9px] font-black text-text-muted uppercase tracking-widest mb-1">Price Range</p>
+                                    <p className="text-sm font-black text-green-950 font-mono">
+                                        {selectedGroup.min_price} - {selectedGroup.max_price}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
+                                {selectedGroup.all_sellers.map((seller: any, idx: number) => (
+                                    <Link 
+                                        key={seller.id} 
+                                        href={`/trader/${seller.trader.id}`}
+                                        className={cn(
+                                            "flex items-center gap-4 p-4 rounded-2xl border transition-all active:scale-[0.98] relative overflow-hidden",
+                                            idx === 0 
+                                                ? "bg-white border-brand-500 ring-2 ring-brand-50 shadow-brand-sm" 
+                                                : "bg-white border-gray-100 hover:border-brand-200"
+                                        )}
+                                    >
+                                        {idx === 0 && (
+                                            <div className="absolute top-0 right-0">
+                                                <div className="bg-brand-600 text-white text-[7px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-tighter shadow-sm">
+                                                    Best Deal
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        <div className="w-14 h-14 rounded-xl bg-gray-50 relative overflow-hidden shrink-0 border border-gray-100">
+                                            {seller.trader.avatar_url ? (
+                                                <Image src={seller.trader.avatar_url} alt="" fill className="object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                    <Store size={24} />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-black text-green-950 text-sm truncate uppercase mb-1">{seller.trader.business_name}</h4>
+                                            <div className="flex items-center gap-2 text-[10px] font-bold text-text-muted">
+                                                <span className="flex items-center gap-1">
+                                                    <MapPin size={10} className="text-amber-500" />
+                                                    {seller.market?.name || 'Local Market'}
+                                                </span>
+                                                {seller.distance_km !== undefined && (
+                                                    <span className="w-1 h-1 rounded-full bg-gray-200" />
+                                                )}
+                                                {seller.distance_km !== undefined && (
+                                                    <span className="text-brand-600">{seller.distance_km} km</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="flex flex-col items-end">
+                                                <p className={cn(
+                                                    "text-lg font-black font-mono leading-none mb-0.5",
+                                                    idx === 0 ? "text-brand-600" : "text-green-950"
+                                                )}>
+                                                    KES {seller.price}
+                                                </p>
+                                                <p className="text-[9px] font-black text-text-muted uppercase tracking-widest leading-none">per {seller.unit}</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+
+                            <div className="p-6 bg-gray-50 border-t border-gray-100">
+                                <p className="text-[10px] text-center font-bold text-text-muted uppercase tracking-widest">
+                                    Prices verified by Soko Mtaa traders.
+                                </p>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

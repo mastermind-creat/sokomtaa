@@ -62,6 +62,16 @@ export default function HomePage() {
         },
     });
 
+    // Fetch Active Ready Reservation for Banner
+    const { data: readyReservationsData } = useQuery<ApiResponse<any>>({
+        queryKey: ['reservations', 'ready-banner'],
+        queryFn: () => api.get('/reservations?status=ready'),
+        enabled: !!user
+    });
+    
+    const readyReservations = readyReservationsData?.data?.data || readyReservationsData?.data || [];
+    const latestReadyReservation = readyReservations?.[0];
+
     // Handle both wrapped and unwrapped data formats with explicit typing
     const markets: Market[] = Array.isArray(marketData) ? marketData : (marketData?.data || []);
 
@@ -72,12 +82,12 @@ export default function HomePage() {
                 
                 {/* 1. TOP: Dynamic Contextual Alert */}
                 <AnimatePresence mode="wait">
-                    {user && (
+                    {user && latestReadyReservation && (
                         <motion.div 
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             whileHover={{ scale: 1.02 }}
-                            className="relative overflow-hidden group"
+                            className="relative overflow-hidden group cursor-pointer"
                             onClick={() => router.push('/reservations')}
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-500 rounded-[2.5rem] opacity-20 group-hover:opacity-30 transition-opacity" />
@@ -91,13 +101,22 @@ export default function HomePage() {
                                             <span className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />
                                             Active Reservation
                                         </p>
-                                        <h4 className="text-green-950 font-black text-base lg:text-lg tracking-tight">Order is ready for Pickup!</h4>
+                                        <h4 className="text-green-950 font-black text-base lg:text-lg tracking-tight">
+                                            {latestReadyReservation.product?.name} is ready for Pickup!
+                                        </h4>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <div className="text-right hidden sm:block">
                                         <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Expires in</p>
-                                        <p className="text-sm font-black text-green-950">1h 45m</p>
+                                        <p className="text-sm font-black text-green-950">
+                                            {latestReadyReservation.pickup_deadline ? (
+                                                new Date(latestReadyReservation.pickup_deadline) > new Date() 
+                                                ? Math.floor((new Date(latestReadyReservation.pickup_deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60)) + "h " + 
+                                                  Math.floor(((new Date(latestReadyReservation.pickup_deadline).getTime() - new Date().getTime()) % (1000 * 60 * 60)) / (1000 * 60)) + "m"
+                                                : "Expired"
+                                            ) : "24h"}
+                                        </p>
                                     </div>
                                     <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md border border-amber-400">
                                         <ArrowRight size={24} />
@@ -151,6 +170,34 @@ export default function HomePage() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Feature Spotlight: Price Comparison */}
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.5 }}
+                            className="mt-6 flex flex-wrap gap-3"
+                        >
+                            <div className="bg-white/50 backdrop-blur-sm border border-brand-100 rounded-2xl px-4 py-2 flex items-center gap-3 shadow-sm hover:bg-brand-50 transition-colors cursor-pointer" onClick={() => router.push('/resident/search')}>
+                                <div className="w-8 h-8 bg-brand-600 text-white rounded-lg flex items-center justify-center shadow-md">
+                                    <TrendingUp size={16} />
+                                </div>
+                                <div>
+                                    <p className="text-[9px] font-black text-brand-700 uppercase tracking-widest leading-none">Smart Comparison</p>
+                                    <p className="text-xs font-bold text-green-950">Find the lowest prices across traders</p>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white/50 backdrop-blur-sm border border-amber-100 rounded-2xl px-4 py-2 flex items-center gap-3 shadow-sm hover:bg-amber-50 transition-colors cursor-pointer" onClick={() => router.push('/map')}>
+                                <div className="w-8 h-8 bg-amber-500 text-white rounded-lg flex items-center justify-center shadow-md">
+                                    <MapPin size={16} />
+                                </div>
+                                <div>
+                                    <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest leading-none">Live Market Map</p>
+                                    <p className="text-xs font-bold text-green-950">Locate stalls in real-time</p>
+                                </div>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 </section>
 
@@ -197,6 +244,12 @@ export default function HomePage() {
                             <p className="text-text-secondary text-sm lg:text-lg font-medium mt-1">Discover markets near you.</p>
                         </div>
                         <div className="flex items-center gap-3">
+                            <button 
+                                onClick={() => router.push('/resident/markets')}
+                                className="flex h-14 px-8 bg-brand-50 text-brand-700 border border-brand-100 rounded-2xl items-center justify-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-100 transition-all shadow-sm"
+                            >
+                                <ArrowRight size={18} /> EXPLORE ALL
+                            </button>
                             <button 
                                 onClick={() => setShowNearbyMap(!showNearbyMap)}
                                 className={cn(

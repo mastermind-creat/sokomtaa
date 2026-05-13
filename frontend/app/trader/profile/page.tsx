@@ -590,8 +590,16 @@ export default function TraderProfilePage() {
                                 </div>
                                 <div className="mt-8 p-6 bg-gray-50 rounded-3xl flex items-center justify-between">
                                     <div>
-                                        <h4 className="text-sm font-black text-green-900 uppercase tracking-wider">Operational Status</h4>
-                                        <p className="text-xs font-bold text-gray-500 mt-0.5">Manually set if you are currently open for orders.</p>
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="text-sm font-black text-green-900 uppercase tracking-wider">Operational Status</h4>
+                                            <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${current.is_open ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                                                {current.is_open ? 'Live' : 'Closed'}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs font-bold text-gray-500 mt-1 leading-relaxed">
+                                            This is a manual override. <br/>
+                                            <span className="text-brand-600">Note:</span> Your stall automatically closes outside business hours.
+                                        </p>
                                     </div>
                                     <button
                                         onClick={() => set('is_open', !current.is_open)}

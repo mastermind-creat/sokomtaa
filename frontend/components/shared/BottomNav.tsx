@@ -24,7 +24,7 @@ export default function BottomNav() {
             path: user?.role === 'resident' ? '/resident' : '/', 
             roles: ['resident', 'trader', 'admin'] 
         },
-        { icon: MapPin, label: t('common.markets'), path: '/market/map', roles: ['resident', 'trader', 'admin'] },
+        { icon: MapPin, label: t('common.markets'), path: '/resident/markets', roles: ['resident', 'trader', 'admin'] },
         { 
             icon: LayoutDashboard, 
             label: t('nav.dawati'), 

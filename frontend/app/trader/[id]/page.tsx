@@ -145,9 +145,17 @@ export default function TraderStorefrontPage() {
                             {trader.market?.name} • Row {trader.stall?.stall_number}
                         </p>
                     </div>
-                    <div className={`px-4 py-2 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-sm flex items-center gap-2 border ${trader.is_open ? 'bg-green-50 text-green-700 border-green-100' : 'bg-neutral-50 text-neutral-500 border-neutral-100'}`}>
-                        <div className={`w-2 h-2 rounded-full ${trader.is_open ? 'bg-green-500 animate-pulse' : 'bg-neutral-400'}`} />
-                        {trader.is_open ? 'Open Now' : 'Closed'}
+                    <div className="flex flex-col items-end gap-2">
+                        <div className={`px-4 py-2 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-sm flex items-center gap-2 border ${trader.is_open ? 'bg-green-50 text-green-700 border-green-100' : 'bg-neutral-50 text-neutral-500 border-neutral-100'}`}>
+                            <div className={`w-2 h-2 rounded-full ${trader.is_open ? 'bg-green-500 animate-pulse' : 'bg-neutral-400'}`} />
+                            {trader.is_open ? 'Open Now' : 'Closed'}
+                        </div>
+                        {trader.opening_time && trader.closing_time && (
+                            <p className="text-[9px] font-black text-text-muted uppercase tracking-widest flex items-center gap-1">
+                                <Calendar size={10} className="text-brand-400" />
+                                {trader.opening_time} - {trader.closing_time}
+                            </p>
+                        )}
                     </div>
                 </div>
 

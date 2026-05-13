@@ -74,6 +74,9 @@ export default function AdminMarketsPage() {
         mutationFn: (id: number) => api.delete(`/admin/markets/${id}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+        },
+        onError: (err: any) => {
+            alert(err.message || 'Failed to delete market. Check if it has active traders.');
         }
     });
 
@@ -81,7 +84,8 @@ export default function AdminMarketsPage() {
         mutationFn: (id: number) => api.patch(`/admin/markets/${id}/toggle`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
-        }
+        },
+        onError: () => alert('Failed to update market status.')
     });
 
     const resetInfrastructureMutation = useMutation({
@@ -89,14 +93,16 @@ export default function AdminMarketsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
             alert('Market infrastructure has been reset to standard template.');
-        }
+        },
+        onError: () => alert('Failed to reset infrastructure.')
     });
 
     const syncFeesMutation = useMutation({
         mutationFn: (marketId: number) => api.post<ApiResponse<any>>('/admin/stalls/bulk-update-fees', { market_id: marketId }),
         onSuccess: (res) => {
             alert(res.data.message || 'Stall fees updated successfully.');
-        }
+        },
+        onError: () => alert('Failed to sync fees.')
     });
 
     const handleSyncFees = (id: number) => {

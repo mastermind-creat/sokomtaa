@@ -27,6 +27,10 @@ class MarketController extends Controller
             ->withCount('traders')
             ->with(['center.region']);
 
+        if ($request->filled('q')) {
+            $query->where('name', 'LIKE', "%{$request->q}%");
+        }
+
         if ($request->has('region_id')) {
             $query->whereHas('center', function($q) use ($request) {
                 $q->where('region_id', $request->region_id);

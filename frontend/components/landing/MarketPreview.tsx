@@ -26,7 +26,7 @@ export const MarketPreview = () => {
     visible: { x: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
   };
 
-  if (!isLoading && markets.length === 0) return null;
+  // Don't return null early, so the section header and "Explore All Markets" button are always visible
 
   return (
     <section id="markets" className="py-24 px-6 bg-surface-base relative overflow-hidden">
@@ -45,7 +45,7 @@ export const MarketPreview = () => {
               We&apos;re starting with the heart of our neighborhoods. Find your local market and support traders you know.
             </p>
             <Link
-              href="/resident/search"
+              href="/resident/markets"
               className="inline-flex items-center gap-3 px-8 py-4 bg-green-950 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-600 transition-all shadow-xl shadow-green-950/20"
             >
               Explore All Markets <ArrowRight size={16} />
@@ -67,7 +67,13 @@ export const MarketPreview = () => {
                 viewport={{ once: true }}
                 className="space-y-4"
               >
-                {markets.map((market) => (
+                {markets.length === 0 ? (
+                  <div className="py-12 px-8 bg-white border border-dashed border-gray-200 rounded-[32px] text-center">
+                    <MapPin size={32} className="mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-400 font-bold text-sm uppercase tracking-widest">No preview markets available</p>
+                    <p className="text-gray-300 text-xs mt-1">Check back soon for new community hubs</p>
+                  </div>
+                ) : markets.map((market) => (
                   <motion.div
                     key={market.id}
                     variants={itemVariants}

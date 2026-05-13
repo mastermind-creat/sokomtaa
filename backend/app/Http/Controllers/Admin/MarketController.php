@@ -142,14 +142,19 @@ class MarketController extends Controller
      */
     public function destroy(Market $market): JsonResponse
     {
-        // Check if market has traders or stalls before deleting
-        if ($market->traders()->count() > 0 || $market->stalls()->count() > 0) {
-            return $this->error('Cannot delete market with active traders or stalls. Deactivate it instead.', 422);
+        // Block if market has traders
+        if ($market->traders()->count() > 0) {
+            return $this->error('Cannot delete market with active traders. Please deactivate it or migrate traders first.', 'TRADERS_EXIST', 422);
         }
+
+        // Delete stalls and allocations first
+        $stallIds = $market->stalls()->pluck('id');
+        \App\Models\Allocation::whereIn('stall_id', $stallIds)->delete();
+        $market->stalls()->delete();
 
         $market->delete();
 
-        return $this->success(null, 'Market deleted successfully');
+        return $this->success(null, 'Market and its infrastructure deleted successfully');
     }
 
     /**

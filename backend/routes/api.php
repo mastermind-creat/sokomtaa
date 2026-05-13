@@ -47,7 +47,8 @@ Route::prefix('markets')->group(function () {
 });
 
 // Location Discovery (Public)
-// These routes are handled by apiResource above
+Route::get('/regions', [\App\Http\Controllers\Public\LocationController::class, 'regions']);
+Route::get('/centers', [\App\Http\Controllers\Public\LocationController::class, 'centers']);
 
 // Global Search & Recommendations (Public)
 Route::get('/search', [\App\Http\Controllers\SearchController::class, 'index']);

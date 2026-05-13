@@ -64,7 +64,7 @@ export default function ResidentSidebar() {
         { icon: Search, label: t('nav.discover'), path: '/resident', badge: null },
         { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: counts?.active_reservations || null },
         { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: counts?.watchlist || null },
-        { icon: MapPin, label: t('common.markets'), path: '/market/map', badge: null },
+        { icon: MapPin, label: t('common.markets'), path: '/resident/markets', badge: null },
     ];
 
     // Helper to check if a path is active, but only after mounting to avoid hydration mismatch

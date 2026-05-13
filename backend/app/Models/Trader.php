@@ -50,6 +50,35 @@ class Trader extends Model
         'last_fee_deduction_at' => 'datetime',
     ];
 
+    /**
+     * Get the effective open status of the trader.
+     * Respects both the manual toggle and the business hours.
+     */
+    public function getIsOpenAttribute($value): bool
+    {
+        // If manually closed or unset, it's definitely closed
+        if (!$value) {
+            return false;
+        }
+
+        // If no business hours are set, respect the manual toggle
+        if (!$this->opening_time || !$this->closing_time) {
+            return true;
+        }
+
+        // Check against current time in Kenya (Africa/Nairobi)
+        $now = now()->setTimezone('Africa/Nairobi');
+        $currentTime = $now->format('H:i');
+
+        // Handle normal day shifts (e.g., 08:00 to 18:00)
+        if ($this->opening_time < $this->closing_time) {
+            return $currentTime >= $this->opening_time && $currentTime <= $this->closing_time;
+        } 
+        
+        // Handle overnight shifts if any (e.g., 20:00 to 05:00)
+        return $currentTime >= $this->opening_time || $currentTime <= $this->closing_time;
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

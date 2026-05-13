@@ -4,7 +4,18 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
-import { Loader2, Phone, User as UserIcon, Lock, ArrowRight, Store, Home, CheckCircle2 } from 'lucide-react';
+import { 
+    Loader2, 
+    Phone, 
+    User as UserIcon, 
+    Lock, 
+    ArrowRight, 
+    Store, 
+    Home, 
+    CheckCircle2,
+    Eye,
+    EyeOff
+} from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { motion } from 'framer-motion';
 import { ApiResponse, AuthResponse } from '@/types';
@@ -36,6 +47,16 @@ export default function RegisterPage() {
 
     const selectedRole = watch('role');
     const password = watch('password');
+
+    const isPasswordStrong = (() => {
+        if (!password) return false;
+        let s = 0;
+        if (password.length >= 8) s++;
+        if (/[a-z]/.test(password) && /[A-Z]/.test(password)) s++;
+        if (/\d/.test(password)) s++;
+        if (/[@$!%*?&]/.test(password)) s++;
+        return s === 4;
+    })();
 
     const onSubmit = async (data: RegisterFormData) => {
         try {
@@ -174,7 +195,11 @@ export default function RegisterPage() {
                                 <input
                                     {...register('password', {
                                         required: 'Password is required',
-                                        minLength: { value: 8, message: 'Password must be at least 8 characters' }
+                                        minLength: { value: 8, message: 'Password must be at least 8 characters' },
+                                        pattern: {
+                                            value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+                                            message: 'Password must include uppercase, lowercase, number and special character'
+                                        }
                                     })}
                                     className="w-full h-[54px] pl-12 pr-12 rounded-xl border border-gray-200 bg-gray-50 text-green-950 placeholder:text-gray-400 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white transition-all"
                                     placeholder="••••••••"
@@ -184,11 +209,47 @@ export default function RegisterPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-600 transition-colors"
                                 >
-                                    {showPassword ? 'HIDE' : 'SHOW'}
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
+                            
+                            {/* Strength Indicator */}
+                            {password && (
+                                <div className="mt-3 space-y-2">
+                                    <div className="flex gap-1 h-1">
+                                        {[1, 2, 3, 4].map((level) => {
+                                            const strength = (() => {
+                                                let s = 0;
+                                                if (password.length >= 8) s++;
+                                                if (/[a-z]/.test(password) && /[A-Z]/.test(password)) s++;
+                                                if (/\d/.test(password)) s++;
+                                                if (/[@$!%*?&]/.test(password)) s++;
+                                                return s;
+                                            })();
+                                            
+                                            const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
+                                            return (
+                                                <div 
+                                                    key={level}
+                                                    className={`flex-1 rounded-full transition-all duration-500 ${
+                                                        level <= strength ? colors[strength-1] : 'bg-gray-100'
+                                                    }`}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                        <Requirement item="8+ characters" met={password.length >= 8} />
+                                        <Requirement item="Upper & Lowercase" met={/[a-z]/.test(password) && /[A-Z]/.test(password)} />
+                                        <Requirement item="At least one number" met={/\d/.test(password)} />
+                                        <Requirement item="Special character" met={/[@$!%*?&]/.test(password)} />
+                                    </div>
+                                </div>
+                            )}
+                            
                             {errors.password && <p className="text-red-500 text-xs font-medium mt-1.5">{errors.password.message}</p>}
                         </div>
 
@@ -227,7 +288,7 @@ export default function RegisterPage() {
 
                         {/* Submit Button */}
                         <button
-                            disabled={isSubmitting || isRedirecting}
+                            disabled={isSubmitting || isRedirecting || !isPasswordStrong}
                             className="w-full h-[54px] bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-black text-base rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
                             type="submit"
                         >
@@ -258,3 +319,14 @@ export default function RegisterPage() {
         </div>
     );
 }
+
+const Requirement = ({ item, met }: { item: string; met: boolean }) => (
+    <div className="flex items-center gap-2">
+        <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-colors ${met ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+            {met ? <CheckCircle2 size={10} /> : <div className="w-1 h-1 rounded-full bg-current" />}
+        </div>
+        <span className={`text-[10px] font-bold tracking-tight transition-colors ${met ? 'text-green-700' : 'text-gray-400'}`}>
+            {item}
+        </span>
+    </div>
+);

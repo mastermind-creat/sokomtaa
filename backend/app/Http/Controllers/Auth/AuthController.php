@@ -185,7 +185,16 @@ class AuthController extends Controller
         $request->validate([
             'phone' => 'required|string|exists:users,phone',
             'otp' => 'required|string|size:6',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => [
+                'required', 
+                'string', 
+                'confirmed', 
+                \Illuminate\Validation\Rules\Password::min(8)
+                    ->letters()
+                    ->numbers()
+                    ->symbols()
+                    ->mixedCase()
+            ],
         ]);
 
         $cachedOtp = Cache::get("pwd_reset_otp_{$request->phone}");

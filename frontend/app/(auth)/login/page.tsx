@@ -6,7 +6,19 @@ import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, Phone, Lock, ArrowRight, ShieldCheck, Store, TrendingUp, Users, ShoppingBag } from 'lucide-react';
+import { 
+    Loader2, 
+    Phone, 
+    Lock, 
+    ArrowRight, 
+    ShieldCheck, 
+    Store, 
+    TrendingUp, 
+    Users, 
+    ShoppingBag,
+    Eye,
+    EyeOff
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ApiResponse, AuthResponse } from '@/types';
 import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
@@ -146,9 +158,9 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-600 transition-colors"
                                 >
-                                    {showPassword ? 'HIDE' : 'SHOW'}
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
                             {errors.password && <p className="text-red-500 text-xs font-medium mt-1.5">{errors.password.message}</p>}

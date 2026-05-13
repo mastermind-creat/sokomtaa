@@ -29,7 +29,15 @@ class RegisterRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:20', 'unique:users'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'confirmed', Password::defaults()],
+            'password' => [
+                'required', 
+                'confirmed', 
+                Password::min(8)
+                    ->letters()
+                    ->numbers()
+                    ->symbols()
+                    ->mixedCase()
+            ],
             'role' => ['required', 'string', 'in:trader,resident'],
             'national_id' => ['nullable', 'string', 'max:50'],
             'preferred_language' => ['nullable', 'string', 'in:en,sw'],
