@@ -100,9 +100,15 @@ export default function LoginPage() {
                                     <Phone size={18} />
                                 </div>
                                 <input
-                                    {...register('phone', { required: 'Phone number is required' })}
+                                    {...register('phone', { 
+                                        required: 'Phone number is required',
+                                        pattern: {
+                                            value: /^(?:\+254|254|0)?([17]\d{8})$/,
+                                            message: 'Invalid Kenyan phone number format'
+                                        }
+                                    })}
                                     className="w-full h-[54px] pl-12 pr-4 rounded-xl border border-gray-200 bg-gray-50 text-green-950 placeholder:text-gray-400 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white transition-all"
-                                    placeholder="07XXXXXXXX"
+                                    placeholder="07XXXXXXXX or +254..."
                                     type="tel"
                                     autoComplete="tel"
                                 />

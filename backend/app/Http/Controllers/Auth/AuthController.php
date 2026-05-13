@@ -18,12 +18,42 @@ use Illuminate\Support\Facades\Cache;
 class AuthController extends Controller
 {
     use ApiResponse;
+    
+    private function normalizePhone(string $phone): string
+    {
+        // Remove all non-numeric characters except +
+        $phone = preg_replace('/[^0-9+]/', '', $phone);
+        
+        // Handle +254...
+        if (str_starts_with($phone, '+254')) {
+            return substr($phone, 1);
+        }
+        
+        // Handle 07... or 01...
+        if (str_starts_with($phone, '0')) {
+            return '254' . substr($phone, 1);
+        }
+        
+        // Handle 7... or 1...
+        if (strlen($phone) === 9 && (str_starts_with($phone, '7') || str_starts_with($phone, '1'))) {
+            return '254' . $phone;
+        }
+        
+        return $phone;
+    }
 
     public function register(RegisterRequest $request): JsonResponse
     {
+        $phone = $this->normalizePhone($request->phone);
+        
+        // Check if normalized phone already exists (redundant if FormRequest handles it, but safe)
+        if (User::where('phone', $phone)->exists()) {
+            return $this->error('The phone number has already been taken.', 'VALIDATION_FAILED', 422);
+        }
+
         $user = User::create([
             'name' => $request->name,
-            'phone' => $request->phone,
+            'phone' => $phone,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
@@ -60,12 +90,15 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::where('phone', $request->phone)->first();
+        $phone = $this->normalizePhone($request->phone);
+        $user = User::where('phone', $phone)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'phone' => ['Invalid credentials.'],
-            ]);
+        if (! $user) {
+            return $this->error('The phone number is not registered.', 'AUTH_FAILED', 422);
+        }
+
+        if (! Hash::check($request->password, $user->password)) {
+            return $this->error('Incorrect password. Please try again.', 'AUTH_FAILED', 422);
         }
 
         return $this->success([
@@ -139,20 +172,8 @@ class AuthController extends Controller
 
     public function forgotPassword(Request $request): JsonResponse
     {
-        $phone = $request->phone;
-        
-        // Normalize: if starts with 07..., try both 07... and 2547...
-        $searchPhones = [$phone];
-        if (str_starts_with($phone, '0')) {
-            $searchPhones[] = '254' . substr($phone, 1);
-        } elseif (str_starts_with($phone, '7')) {
-             $searchPhones[] = '254' . $phone;
-             $searchPhones[] = '0' . $phone;
-        } elseif (str_starts_with($phone, '254')) {
-            $searchPhones[] = '0' . substr($phone, 3);
-        }
-
-        $user = User::whereIn('phone', $searchPhones)->first();
+        $phone = $this->normalizePhone($request->phone);
+        $user = User::where('phone', $phone)->first();
 
         if (!$user) {
             return $this->error('The selected phone number is not registered.', 'VALIDATION_FAILED', 422);
