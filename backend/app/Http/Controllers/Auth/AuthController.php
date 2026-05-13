@@ -179,6 +179,9 @@ class AuthController extends Controller
 
     public function resetPassword(Request $request): JsonResponse
     {
+        $phone = $this->normalizePhone($request->phone);
+        $request->merge(['phone' => $phone]);
+
         $request->validate([
             'phone' => 'required|string|exists:users,phone',
             'otp' => 'required|string|size:6',

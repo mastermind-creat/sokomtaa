@@ -22,10 +22,11 @@ class TraderController extends Controller
 
         $trader->load(['stall', 'market']);
 
-        // Get trader's active products
+        // Get trader's active products, prioritized by active boost
         $products = Product::where('trader_id', $trader->id)
             ->where('is_active', true)
             ->with('category')
+            ->orderByRaw('CASE WHEN is_boosted = 1 AND boosted_until >= ? THEN 0 ELSE 1 END', [now()])
             ->latest()
             ->paginate(12);
 
@@ -33,6 +34,35 @@ class TraderController extends Controller
             'trader' => $trader,
             'products' => $products
         ]);
+    }
+
+    /**
+     * Get a trader's products (paginated).
+     */
+    public function products(Trader $trader): JsonResponse
+    {
+        $products = Product::where('trader_id', $trader->id)
+            ->where('is_active', true)
+            ->with('category')
+            ->orderByRaw('CASE WHEN is_boosted = 1 AND boosted_until >= ? THEN 0 ELSE 1 END', [now()])
+            ->latest()
+            ->paginate(15);
+
+        return $this->success($products);
+    }
+
+    /**
+     * Get a trader's reviews.
+     */
+    public function reviews(Trader $trader): JsonResponse
+    {
+        $reviews = \App\Models\Review::where('trader_id', $trader->id)
+            ->where('is_visible', true)
+            ->with('resident:id,name,avatar_url')
+            ->latest()
+            ->paginate(10);
+
+        return $this->success($reviews);
     }
 
     /**

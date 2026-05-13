@@ -7,9 +7,20 @@ use Illuminate\Validation\Rules\Password;
 
 class RegisterRequest extends FormRequest
 {
+    use \App\Traits\PhoneNormalization;
+
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('phone')) {
+            $this->merge([
+                'phone' => $this->normalizePhone($this->phone),
+            ]);
+        }
     }
 
     public function rules(): array

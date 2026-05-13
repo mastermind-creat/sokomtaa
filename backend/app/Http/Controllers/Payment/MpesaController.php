@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Auth;
 
 class MpesaController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, \App\Traits\PhoneNormalization;
 
     protected $mpesaService;
     protected $notificationService;
@@ -43,14 +43,7 @@ class MpesaController extends Controller
         ]);
 
         // Normalize Phone Number to 254XXXXXXXXX
-        $phone = $request->phone_number;
-        $phone = str_replace('+', '', $phone);
-        if (str_starts_with($phone, '0')) {
-            $phone = '254' . substr($phone, 1);
-        }
-        if (strlen($phone) === 9 && (str_starts_with($phone, '7') || str_starts_with($phone, '1'))) {
-            $phone = '254' . $phone;
-        }
+        $phone = $this->normalizePhone($request->phone_number);
 
         $user = Auth::user();
         $amount = 0;
