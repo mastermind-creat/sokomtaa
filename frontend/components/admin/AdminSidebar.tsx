@@ -133,6 +133,7 @@ export default function AdminSidebar() {
             title: 'Infrastructure',
             icon: Building2,
             items: [
+                { icon: MapPin, label: 'Regions & Centers', path: '/admin/locations' },
                 { icon: MapPin, label: t('Markets'), path: '/admin/markets' },
                 { icon: Store, label: t('Stalls'), path: '/admin/stalls' },
                 { icon: GanttChartSquare, label: 'Allocations', path: '/admin/allocations' },
