@@ -26,6 +26,8 @@ import { ApiResponse, Reservation } from '@/types';
 import api from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { SystemSetting } from '@/types';
+import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
+
 
 interface CartFlowProps {
     traderId: number;
@@ -91,6 +93,11 @@ export default function CartFlow({ traderId, onClose }: CartFlowProps) {
     const handleConfirmPayment = async () => {
         setLocalError(null);
         try {
+            const normalizedPhone = normalizePhoneNumber(phoneNumber);
+            if (!normalizedPhone) {
+                throw new Error('Please enter a valid phone number');
+            }
+
             // 1. Create bulk reservations
             const response = await api.post<ApiResponse<Reservation[]>>('/reservations/bulk', {
                 items: items.map(item => ({
@@ -108,14 +115,15 @@ export default function CartFlow({ traderId, onClose }: CartFlowProps) {
             setReservations(createdReservations);
             
             // 2. Initiate STK for the total amount
-            const id = await initiateStk(phoneNumber, 'reservation', createdReservations.map(r => r.id));
+            const id = await initiateStk(normalizedPhone, 'reservation', createdReservations.map(r => r.id));
             setCheckoutId(id);
             setStep('processing');
             setSecondsLeft(60);
         } catch (err: any) {
             console.error('Bulk reservation failed', err);
-            setLocalError(err.response?.data?.message || err.message || 'Failed to complete reservation. Please try again.');
+            setLocalError(handleApiError(err));
         }
+
     };
 
     const serviceFee = 10.00;

@@ -10,6 +10,7 @@ import { Loader2, Phone, Lock, ArrowRight, ShieldCheck, Store, TrendingUp, Users
 import { motion } from 'framer-motion';
 import { ApiResponse, AuthResponse } from '@/types';
 import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
+import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
 
 interface LoginFormData {
     phone: string;
@@ -37,7 +38,13 @@ export default function LoginPage() {
     const onSubmit = async (data: LoginFormData) => {
         try {
             setError(null);
-            const response = await api.post('/auth/login', data) as unknown as ApiResponse<AuthResponse>;
+            // Normalize phone before sending to API
+            const normalizedData = {
+                ...data,
+                phone: normalizePhoneNumber(data.phone)
+            };
+            
+            const response = await api.post('/auth/login', normalizedData) as unknown as ApiResponse<AuthResponse>;
             const { user, token } = response.data;
 
             setAuth(user, token);
@@ -53,12 +60,11 @@ export default function LoginPage() {
                 router.push('/');
             }
         } catch (err: unknown) {
-            const errObj = err as { message?: string } | string;
-            const msg = typeof errObj === 'string' ? errObj : errObj?.message ?? 'Login failed. Please check your credentials.';
-            setError(msg);
+            setError(handleApiError(err));
             setIsRedirecting(false);
         }
     };
+
 
     return (
         <div className="bg-white">

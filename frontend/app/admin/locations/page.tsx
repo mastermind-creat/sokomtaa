@@ -24,6 +24,8 @@ import { ApiResponse, Region, Center } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useUIStore } from '@/store/uiStore';
+import { toast } from 'sonner';
+import { handleApiError } from '@/lib/utils';
 
 export default function LocationsPage() {
     const { t } = useTranslation();
@@ -32,29 +34,30 @@ export default function LocationsPage() {
     const [activeTab, setActiveTab] = useState<'regions' | 'centers'>('regions');
     const [searchQuery, setSearchQuery] = useState('');
     const [showForm, setShowForm] = useState(false);
-    const [editingItem, setEditingItem] = useState<any>(null);
+    const [editingItem, setEditingItem] = useState<Region | Center | null>(null);
 
     React.useEffect(() => {
         setPageTitle('Location Management');
     }, [setPageTitle]);
 
     // Fetch Regions
-    const { data: regions, isLoading: regionsLoading } = useQuery({
+    const { data: regions, isLoading: regionsLoading } = useQuery<Region[]>({
         queryKey: ['admin-regions'],
         queryFn: async () => {
             const res = await api.get<ApiResponse<Region[]>>('/admin/regions');
-            return res.data.data;
+            return res.data;
         }
     });
 
     // Fetch Centers
-    const { data: centers, isLoading: centersLoading } = useQuery({
+    const { data: centers, isLoading: centersLoading } = useQuery<Center[]>({
         queryKey: ['admin-centers'],
         queryFn: async () => {
             const res = await api.get<ApiResponse<Center[]>>('/admin/centers');
-            return res.data.data;
+            return res.data;
         }
     });
+
 
     // Mutations
     const regionMutation = useMutation({
@@ -64,10 +67,14 @@ export default function LocationsPage() {
             }
             return api.post('/admin/regions', data);
         },
-        onSuccess: () => {
+        onSuccess: (res: any) => {
             queryClient.invalidateQueries({ queryKey: ['admin-regions'] });
+            toast.success(res.message || `Region ${editingItem ? 'updated' : 'created'} successfully`);
             setShowForm(false);
             setEditingItem(null);
+        },
+        onError: (err: any) => {
+            toast.error(handleApiError(err));
         }
     });
 
@@ -78,10 +85,14 @@ export default function LocationsPage() {
             }
             return api.post('/admin/centers', data);
         },
-        onSuccess: () => {
+        onSuccess: (res: any) => {
             queryClient.invalidateQueries({ queryKey: ['admin-centers'] });
+            toast.success(res.message || `Center ${editingItem ? 'updated' : 'created'} successfully`);
             setShowForm(false);
             setEditingItem(null);
+        },
+        onError: (err: any) => {
+            toast.error(handleApiError(err));
         }
     });
 
@@ -89,16 +100,21 @@ export default function LocationsPage() {
         mutationFn: async ({ type, id }: { type: 'regions' | 'centers', id: number }) => {
             return api.delete(`/admin/${type}/${id}`);
         },
-        onSuccess: (_, variables) => {
+        onSuccess: (res: any, variables) => {
             queryClient.invalidateQueries({ queryKey: [`admin-${variables.type}`] });
+            toast.success(res.message || 'Deleted successfully');
+        },
+        onError: (err: any) => {
+            toast.error(handleApiError(err));
         }
     });
 
-    const filteredRegions = regions?.filter(r => 
+
+    const filteredRegions = regions?.filter((r: Region) => 
         r.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const filteredCenters = centers?.filter(c => 
+    const filteredCenters = centers?.filter((c: Center) => 
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.region?.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -207,7 +223,7 @@ export default function LocationsPage() {
                         item={editingItem}
                         regions={regions || []}
                         onClose={() => setShowForm(false)}
-                        onSubmit={(data: any) => {
+                        onSubmit={(data) => {
                             if (activeTab === 'regions') regionMutation.mutate(data);
                             else centerMutation.mutate(data);
                         }}
@@ -222,7 +238,7 @@ export default function LocationsPage() {
 interface LocationCardProps {
     title: string;
     subtitle: string;
-    icon: any;
+    icon: React.ElementType;
     onEdit: () => void;
     onDelete: () => void;
     description?: string | null;
@@ -283,7 +299,7 @@ function LocationCard({ title, subtitle, icon: Icon, onEdit, onDelete, descripti
 
 interface LocationModalProps {
     type: 'regions' | 'centers';
-    item?: any;
+    item?: Region | Center | null;
     regions: Region[];
     onClose: () => void;
     onSubmit: (data: any) => void;
@@ -331,8 +347,14 @@ function LocationModal({ type, item, regions, onClose, onSubmit, isLoading }: Lo
 
                     <form className="space-y-6" onSubmit={(e) => {
                         e.preventDefault();
-                        onSubmit(formData);
+                        const submitData = { ...formData };
+                        // Remove region_id if we are creating a region
+                        if (type === 'regions') {
+                            delete (submitData as any).region_id;
+                        }
+                        onSubmit(submitData);
                     }}>
+
                         {type === 'centers' && (
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-4">Select Region</label>
@@ -341,7 +363,7 @@ function LocationModal({ type, item, regions, onClose, onSubmit, isLoading }: Lo
                                     onChange={(e) => setFormData({...formData, region_id: e.target.value})}
                                     className="w-full h-16 px-6 bg-neutral-50 rounded-2xl border-2 border-transparent focus:border-brand-500 focus:bg-white transition-all outline-none text-sm font-bold"
                                 >
-                                    {regions.map((r: any) => (
+                                    {regions.map((r: Region) => (
                                         <option key={r.id} value={r.id}>{r.name}</option>
                                     ))}
                                 </select>

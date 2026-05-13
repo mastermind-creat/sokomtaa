@@ -6,6 +6,8 @@ import { Phone, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 
+import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
+
 interface MpesaPaymentSheetProps {
     isOpen: boolean;
     onClose: () => void;
@@ -29,7 +31,9 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
     }
 
     const handlePayment = async () => {
-        if (!phone.match(/^(?:254|\+254|0)?(7|1)[0-9]{8}$/)) {
+        const normalizedPhone = normalizePhoneNumber(phone);
+        
+        if (!normalizedPhone || normalizedPhone.length < 10) {
             setMessage('Invalid phone number. Use 07XXXXXXXX, 254... or +254...');
             setStatus('error');
             return;
@@ -41,7 +45,7 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
 
         try {
             await api.post<ApiResponse<MpesaStkResponse>>('/payments/mpesa/stkpush', {
-                phone_number: phone,
+                phone_number: normalizedPhone,
                 type,
                 target_id: targetId || 0,
                 amount: type === 'wallet_topup' ? parseFloat(inputAmount) : amount
@@ -56,18 +60,12 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
             }, 3000);
         } catch (err: unknown) {
             setStatus('error');
-            let errorMsg = 'An error occurred during payment.';
-            
-            if (err && typeof err === 'object') {
-                const axiosError = err as { response?: { data?: { message?: string } }; message?: string };
-                errorMsg = axiosError.response?.data?.message || axiosError.message || errorMsg;
-            }
-            
-            setMessage(errorMsg);
+            setMessage(handleApiError(err));
         } finally {
             setIsProcessing(false);
         }
     };
+
 
     return (
         <AnimatePresence>

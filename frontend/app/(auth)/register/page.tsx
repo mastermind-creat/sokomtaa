@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { motion } from 'framer-motion';
 import { ApiResponse, AuthResponse } from '@/types';
 import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
+import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
 
 interface RegisterFormData {
     name: string;
@@ -39,17 +40,22 @@ export default function RegisterPage() {
     const onSubmit = async (data: RegisterFormData) => {
         try {
             setError(null);
-            const response = await api.post('/auth/register', data) as unknown as ApiResponse<AuthResponse>;
+            // Normalize phone before sending to API
+            const normalizedData = {
+                ...data,
+                phone: normalizePhoneNumber(data.phone)
+            };
+            
+            const response = await api.post('/auth/register', normalizedData) as unknown as ApiResponse<AuthResponse>;
             setAuth(response.data.user, response.data.token);
             setIsRedirecting(true); // Keep loading state active during Next.js router transition
             router.push('/verify');
         } catch (err: unknown) {
-            const errObj = err as { message?: string } | string;
-            const msg = typeof errObj === 'string' ? errObj : errObj?.message ?? 'Registration failed. Please check your details.';
-            setError(msg);
+            setError(handleApiError(err));
             setIsRedirecting(false);
         }
     };
+
 
     return (
         <div className="bg-white">
