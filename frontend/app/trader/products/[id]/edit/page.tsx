@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { 
-    ChevronLeft, 
-    Camera, 
-    Loader2, 
-    Package, 
-    Tag, 
+import {
+    ChevronLeft,
+    Camera,
+    Loader2,
+    Package,
+    Tag,
     Coins,
     Layers,
     Save,
@@ -26,6 +26,7 @@ import { useUIStore } from '@/store/uiStore';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import AiSuggestionButton from '@/components/shared/AiSuggestionButton';
 
 interface EditProductForm {
     name: string;
@@ -39,7 +40,7 @@ interface EditProductForm {
 }
 
 const DEFAULT_UNITS = [
-    'kg', 'g', 'piece', 'bunch', 'litre', 'ml', 'tray', 'crate', 'box', 'bag', 
+    'kg', 'g', 'piece', 'bunch', 'litre', 'ml', 'tray', 'crate', 'box', 'bag',
     'packet', 'bundle', 'net', 'bucket', 'dozen', 'cup', 'tin'
 ];
 
@@ -98,12 +99,12 @@ export default function EditProductPage() {
         const savedUnits = localStorage.getItem('trader_custom_units');
         const custom = savedUnits ? JSON.parse(savedUnits) : [];
         const baseUnits = [...new Set([...DEFAULT_UNITS, ...custom])];
-        
+
         // If product has a unit not in the list, add it
         if (product?.unit && !baseUnits.includes(product.unit.toLowerCase())) {
             baseUnits.push(product.unit.toLowerCase());
         }
-        
+
         setUnits(baseUnits);
     }, [product]);
 
@@ -159,11 +160,11 @@ export default function EditProductPage() {
         formData.append('stock_quantity', String(data.stock_quantity || 0));
         formData.append('description', data.description || '');
         formData.append('is_active', data.is_active ? '1' : '0');
-        
+
         if (data.image && data.image[0]) {
             formData.append('image', data.image[0]);
         }
-        
+
         saveMutation.mutate(formData);
     };
 
@@ -179,14 +180,14 @@ export default function EditProductPage() {
     return (
         <div className="flex flex-col min-h-screen bg-[#FAFAF8] pb-32 max-w-4xl mx-auto w-full pt-6">
             <div className="p-6 flex items-center justify-between">
-                <button 
-                    onClick={() => router.back()} 
+                <button
+                    onClick={() => router.back()}
                     className="p-3 bg-white border border-gray-100 rounded-2xl text-text-secondary hover:text-green-950 transition-all active:scale-95 shadow-sm"
                 >
                     <ChevronLeft size={24} />
                 </button>
 
-                <button 
+                <button
                     onClick={() => setShowDeleteConfirm(true)}
                     className="p-3 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-100 transition-all active:scale-95 border border-rose-100"
                 >
@@ -205,7 +206,7 @@ export default function EditProductPage() {
                             </div>
                             <label className="text-sm font-black text-green-950 uppercase tracking-wider">Product Photo</label>
                         </div>
-                        
+
                         <div className="relative aspect-square w-full max-w-[320px] mx-auto md:mx-0 rounded-[40px] border-2 border-dashed border-neutral-200 bg-white flex flex-col items-center justify-center overflow-hidden group hover:border-brand-500 transition-all shadow-sm">
                             {imagePreview ? (
                                 <>
@@ -235,7 +236,7 @@ export default function EditProductPage() {
                                 </div>
                                 <label className="text-sm font-black text-green-950 uppercase tracking-wider">Product Name</label>
                             </div>
-                            <input 
+                            <input
                                 {...register('name', { required: 'Name is required' })}
                                 className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl text-lg font-bold text-green-950 focus:ring-2 ring-brand-500 outline-none transition-all shadow-sm"
                                 placeholder="e.g. Fresh Tomatoes"
@@ -253,7 +254,7 @@ export default function EditProductPage() {
                                     <label className="text-sm font-black text-green-950 uppercase tracking-wider">Price</label>
                                 </div>
                                 <div className="relative">
-                                    <input 
+                                    <input
                                         type="number"
                                         {...register('price', { required: 'Price is required' })}
                                         className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl font-black text-xl text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
@@ -272,7 +273,7 @@ export default function EditProductPage() {
                                     <label className="text-sm font-black text-green-950 uppercase tracking-wider">Stock Level</label>
                                 </div>
                                 <div className="relative">
-                                    <input 
+                                    <input
                                         type="number"
                                         {...register('stock_quantity', { required: 'Quantity is required', min: 0 })}
                                         className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl font-black text-xl text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
@@ -324,7 +325,7 @@ export default function EditProductPage() {
                                 </div>
                                 <label className="text-sm font-black text-green-950 uppercase tracking-wider">Unit</label>
                             </div>
-                            <button 
+                            <button
                                 type="button"
                                 onClick={() => setIsAddingUnit(!isAddingUnit)}
                                 className="text-[10px] font-black uppercase tracking-widest text-brand-600 hover:text-brand-700 transition-colors"
@@ -335,21 +336,21 @@ export default function EditProductPage() {
 
                         <AnimatePresence mode="wait">
                             {isAddingUnit ? (
-                                <motion.div 
+                                <motion.div
                                     key="new-unit"
                                     initial={{ opacity: 0, x: 10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -10 }}
                                     className="flex gap-2"
                                 >
-                                    <input 
+                                    <input
                                         value={newUnit}
                                         onChange={(e) => setNewUnit(e.target.value)}
                                         className="flex-1 h-16 px-6 bg-white border-2 border-brand-200 rounded-2xl font-bold text-green-950 outline-none shadow-sm"
                                         placeholder="Enter unit name..."
                                         autoFocus
                                     />
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={handleAddUnit}
                                         className="w-16 h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-200 active:scale-95 transition-all"
@@ -364,7 +365,7 @@ export default function EditProductPage() {
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: 10 }}
                                 >
-                                    <select 
+                                    <select
                                         {...register('unit', { required: 'Unit is required' })}
                                         className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl font-bold text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm appearance-none cursor-pointer"
                                     >
@@ -380,13 +381,20 @@ export default function EditProductPage() {
                     </div>
 
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
-                                <FileText size={18} />
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
+                                    <FileText size={18} />
+                                </div>
+                                <label className="text-sm font-black text-green-950 uppercase tracking-wider">Description</label>
                             </div>
-                            <label className="text-sm font-black text-green-950 uppercase tracking-wider">Description</label>
+                            <AiSuggestionButton
+                                productName={watch('name')}
+                                category={categories.find((c: any) => String(c.id) === watch('category_id'))?.name}
+                                onSuggestion={(s) => setValue('description', s)}
+                            />
                         </div>
-                        <textarea 
+                        <textarea
                             {...register('description')}
                             rows={2}
                             className="w-full p-6 bg-white border border-gray-100 rounded-2xl text-base font-medium text-green-950 focus:ring-2 ring-brand-500 outline-none transition-all shadow-sm resize-none"
@@ -417,7 +425,7 @@ export default function EditProductPage() {
                             watch('is_active') ? "bg-brand-600" : "bg-neutral-200"
                         )}
                     >
-                        <motion.div 
+                        <motion.div
                             animate={{ x: watch('is_active') ? 24 : 4 }}
                             className="absolute top-1 w-6 h-6 bg-white rounded-full shadow-sm"
                         />
@@ -449,12 +457,12 @@ export default function EditProductPage() {
             <AnimatePresence>
                 {showDeleteConfirm && (
                     <>
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={() => setShowDeleteConfirm(false)}
                             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
                         />
-                        <motion.div 
+                        <motion.div
                             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                             className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[3rem] p-8 z-50 shadow-2xl border-t border-gray-100"
                         >
@@ -465,18 +473,18 @@ export default function EditProductPage() {
                                 </div>
                                 <h3 className="text-2xl font-black text-green-950 tracking-tight">Delete Product?</h3>
                                 <p className="text-text-secondary font-medium mt-2 max-w-xs">
-                                    Are you sure you want to remove <span className="font-bold text-green-950">"{product?.name}"</span>? This action cannot be undone.
+                                    Are you sure you want to remove <span className="font-bold text-green-950">&quot;{product?.name}&quot;</span>? This action cannot be undone.
                                 </p>
                             </div>
                             <div className="flex flex-col gap-3">
-                                <button 
+                                <button
                                     onClick={() => deleteMutation.mutate()}
                                     disabled={deleteMutation.isPending}
                                     className="w-full h-16 bg-rose-600 text-white rounded-2xl font-black uppercase text-sm tracking-widest shadow-lg shadow-rose-900/20 active:scale-95 transition-all flex items-center justify-center gap-3"
                                 >
                                     {deleteMutation.isPending ? <Loader2 className="animate-spin" /> : <><Trash2 size={20} /> Delete Product</>}
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => setShowDeleteConfirm(false)}
                                     className="w-full h-14 bg-neutral-50 text-text-secondary rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-neutral-100 transition-all"
                                 >

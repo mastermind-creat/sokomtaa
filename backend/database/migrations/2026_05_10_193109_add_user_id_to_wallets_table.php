@@ -20,7 +20,9 @@ return new class extends Migration
         });
 
         // Sync user_id from trader_id
-        DB::statement("UPDATE wallets w JOIN traders t ON w.trader_id = t.id SET w.user_id = t.user_id WHERE w.user_id IS NULL");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("UPDATE wallets w JOIN traders t ON w.trader_id = t.id SET w.user_id = t.user_id WHERE w.user_id IS NULL");
+        }
     }
 
     /**

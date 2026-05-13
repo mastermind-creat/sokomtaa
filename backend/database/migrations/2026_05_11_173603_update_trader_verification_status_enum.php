@@ -14,7 +14,9 @@ return new class extends Migration
     {
         // Using raw SQL because Laravel's change() doesn't handle enums well without DBAL, 
         // and even then it can be problematic with existing data.
-        DB::statement("ALTER TABLE traders MODIFY COLUMN verification_status ENUM('unverified', 'pending', 'verified', 'rejected') DEFAULT 'unverified'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE traders MODIFY COLUMN verification_status ENUM('unverified', 'pending', 'verified', 'rejected') DEFAULT 'unverified'");
+        }
 
         // Fix legacy data: Move 'pending' traders without documents back to 'unverified'
         DB::table('traders')

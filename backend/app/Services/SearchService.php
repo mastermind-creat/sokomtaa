@@ -18,10 +18,16 @@ class SearchService
         $productsQuery = Product::with(['trader.market', 'category']);
 
         if ($query) {
-            $productsQuery->where(function($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%")
-                  ->orWhere('name_sw', 'LIKE', "%{$query}%")
-                  ->orWhere('description', 'LIKE', "%{$query}%");
+            // AI Query Expansion
+            $aiService = app(\App\Services\AiService::class);
+            $expandedQueries = $aiService->expandQuery($query);
+            
+            $productsQuery->where(function($q) use ($expandedQueries) {
+                foreach ($expandedQueries as $qTerm) {
+                    $q->orWhere('name', 'LIKE', "%{$qTerm}%")
+                      ->orWhere('name_sw', 'LIKE', "%{$qTerm}%")
+                      ->orWhere('description', 'LIKE', "%{$qTerm}%");
+                }
             });
         }
 
@@ -71,9 +77,14 @@ class SearchService
         // 2. TRADERS
         $tradersQuery = Trader::with(['market', 'stall']);
         if ($query) {
-            $tradersQuery->where(function($q) use ($query) {
-                $q->where('business_name', 'LIKE', "%{$query}%")
-                  ->orWhere('description', 'LIKE', "%{$query}%");
+            $aiService = app(\App\Services\AiService::class);
+            $expandedQueries = $aiService->expandQuery($query);
+
+            $tradersQuery->where(function($q) use ($expandedQueries) {
+                foreach ($expandedQueries as $qTerm) {
+                    $q->orWhere('business_name', 'LIKE', "%{$qTerm}%")
+                      ->orWhere('description', 'LIKE', "%{$qTerm}%");
+                }
             });
         }
 
@@ -107,9 +118,14 @@ class SearchService
         // 3. MARKETS
         $marketsQuery = Market::where('is_active', true);
         if ($query) {
-            $marketsQuery->where(function($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%")
-                  ->orWhere('location', 'LIKE', "%{$query}%");
+            $aiService = app(\App\Services\AiService::class);
+            $expandedQueries = $aiService->expandQuery($query);
+
+            $marketsQuery->where(function($q) use ($expandedQueries) {
+                foreach ($expandedQueries as $qTerm) {
+                    $q->orWhere('name', 'LIKE', "%{$qTerm}%")
+                      ->orWhere('location', 'LIKE', "%{$qTerm}%");
+                }
             });
         }
 
@@ -213,4 +229,4 @@ class SearchService
     }
 }
 
-}
+

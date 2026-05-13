@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import OfflineBanner from "@/components/shared/OfflineBanner";
 import GlobalLoader from "@/components/shared/GlobalLoader";
+import AiAssistantFab from "@/components/shared/AiAssistantFab";
 import NextTopLoader from 'nextjs-toploader';
 import { Toaster } from 'sonner';
 
@@ -70,6 +71,7 @@ export default function RootLayout({
           <div className="w-full min-h-screen bg-white relative">
             <OfflineBanner />
             {children}
+            <AiAssistantFab />
           </div>
         </Providers>
       </body>

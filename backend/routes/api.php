@@ -340,3 +340,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
 Route::get('/health', function () {
     return response()->json(['status' => 'ok', 'timestamp' => now()]);
 });
+
+// AI Routes
+Route::group(['prefix' => 'ai'], function () {
+    Route::get('trends', [\App\Http\Controllers\AiController::class, 'trends']);
+    Route::get('suggest-description', [\App\Http\Controllers\AiController::class, 'suggestDescription']);
+    
+    Route::group(['middleware' => 'auth:sanctum'], function () {
+        Route::post('chat', [\App\Http\Controllers\AiController::class, 'chat']);
+    });
+});

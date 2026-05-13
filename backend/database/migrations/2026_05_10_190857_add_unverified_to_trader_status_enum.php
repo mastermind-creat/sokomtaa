@@ -10,7 +10,9 @@ return new class extends Migration
     public function up(): void
     {
         // Add 'unverified' to the enum and make it the default
-        DB::statement("ALTER TABLE traders MODIFY COLUMN verification_status ENUM('unverified', 'pending', 'verified', 'rejected') DEFAULT 'unverified'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE traders MODIFY COLUMN verification_status ENUM('unverified', 'pending', 'verified', 'rejected') DEFAULT 'unverified'");
+        }
         
         // Update any existing 'pending' traders who haven't uploaded IDs yet
         DB::table('traders')

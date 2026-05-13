@@ -29,6 +29,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
+import AiSuggestionButton from '@/components/shared/AiSuggestionButton';
 
 interface AddProductForm {
     name: string;
@@ -477,11 +478,18 @@ export default function AddProductPage() {
                     </div>
 
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
-                                <FileText size={18} />
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
+                                    <FileText size={18} />
+                                </div>
+                                <label className="text-sm font-black text-green-950 uppercase tracking-wider">Description</label>
                             </div>
-                            <label className="text-sm font-black text-green-950 uppercase tracking-wider">Description</label>
+                            <AiSuggestionButton 
+                                productName={watch('name')} 
+                                category={categories.find((c: any) => String(c.id) === watch('category_id'))?.name}
+                                onSuggestion={(s) => setValue('description', s)}
+                            />
                         </div>
                         <textarea 
                             {...register('description')}
