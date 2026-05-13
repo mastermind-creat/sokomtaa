@@ -49,7 +49,7 @@ export const ProductPreview = () => {
               Fresh & Trending
             </p>
             <h2 className="font-display text-3xl md:text-5xl font-[1000] text-green-950 tracking-tighter">
-              Featured Produce
+              Featured Products
             </h2>
           </div>
           <Link
@@ -75,7 +75,7 @@ export const ProductPreview = () => {
           </div>
         ) : (
           <div className="space-y-12">
-            
+
             {/* Boosted Products - Featured Horizontal Layout */}
             {boostedProducts.length > 0 && (
               <div className="bg-amber-50/50 p-6 md:p-8 rounded-[40px] border border-amber-100">
@@ -85,7 +85,7 @@ export const ProductPreview = () => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {boostedProducts.slice(0, 3).map((product) => (
-                    <motion.div 
+                    <motion.div
                       key={`boosted-${product.id}`}
                       initial={{ opacity: 0, scale: 0.95 }}
                       whileInView={{ opacity: 1, scale: 1 }}
@@ -110,7 +110,7 @@ export const ProductPreview = () => {
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="flex-1 min-w-0 pr-2">
                           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 rounded-md text-[9px] font-black uppercase tracking-widest text-amber-600 mb-1">
                             Promoted
@@ -132,7 +132,7 @@ export const ProductPreview = () => {
 
             {/* Popular Products - Grid */}
             {popularProducts.length > 0 && (
-              <motion.div 
+              <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 whileInView="visible"
@@ -158,7 +158,7 @@ export const ProductPreview = () => {
                             <ShoppingBag size={32} />
                           </div>
                         )}
-                        
+
                         {/* Price Badge */}
                         <div className="absolute top-3 right-3">
                           <div className="px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-lg text-[10px] font-black uppercase tracking-widest text-green-950 shadow-sm border border-white/20">
@@ -200,7 +200,7 @@ export const ProductPreview = () => {
                 ))}
               </motion.div>
             )}
-            
+
           </div>
         )}
       </div>

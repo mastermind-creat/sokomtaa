@@ -55,15 +55,21 @@ class ReservationController extends Controller
     }
 
     /**
-     * List all reservations for the authenticated resident.
+     * List reservations for the authenticated resident, with optional status filter.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
-        $reservations = Reservation::where('resident_id', $user->id)
+
+        $query = Reservation::where('resident_id', $user->id)
             ->with(['trader', 'product'])
-            ->latest()
-            ->paginate(15);
+            ->latest();
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        $reservations = $query->paginate(15);
 
         return $this->success($reservations);
     }

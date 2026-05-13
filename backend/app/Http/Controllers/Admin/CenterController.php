@@ -34,6 +34,10 @@ class CenterController extends Controller
             'is_active' => 'boolean'
         ]);
 
+        // Automatically derive region_id from county to satisfy database constraints
+        $county = \App\Models\County::find($validated['county_id']);
+        $validated['region_id'] = $county->region_id;
+
         $center = Center::create($validated);
 
         return response()->json([
@@ -51,6 +55,10 @@ class CenterController extends Controller
             'description' => 'nullable|string',
             'is_active' => 'boolean'
         ]);
+
+        // Update region_id if county_id changed
+        $county = \App\Models\County::find($validated['county_id']);
+        $validated['region_id'] = $county->region_id;
 
         $center->update($validated);
 

@@ -94,26 +94,14 @@ export const Hero = () => {
             </motion.p>
 
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center gap-4 pt-4">
-              {hasHydrated && isAuthenticated ? (
-                <a 
-                  href="#product-preview" 
-                  onClick={(e) => handleScrollTo(e, '#product-preview')}
-                  className="w-full sm:w-auto px-8 py-4 bg-brand-500 text-white font-display font-black text-lg rounded-2xl shadow-[0_0_40px_rgba(45,150,83,0.4)] hover:bg-brand-400 hover:scale-105 transition-all duration-300 group flex items-center justify-center gap-3"
-                >
-                  <ShoppingBag size={20} />
-                  Start Shopping
-                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                </a>
-              ) : (
-                <Link 
-                  href="/register" 
-                  className="w-full sm:w-auto px-8 py-4 bg-brand-500 text-white font-display font-black text-lg rounded-2xl shadow-[0_0_40px_rgba(45,150,83,0.4)] hover:bg-brand-400 hover:scale-105 transition-all duration-300 group flex items-center justify-center gap-3"
-                >
-                  <ShoppingBag size={20} />
-                  Start Shopping
-                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                </Link>
-              )}
+              <Link 
+                href={hasHydrated && isAuthenticated ? "/resident" : "/login"} 
+                className="w-full sm:w-auto px-8 py-4 bg-brand-500 text-white font-display font-black text-lg rounded-2xl shadow-[0_0_40px_rgba(45,150,83,0.4)] hover:bg-brand-400 hover:scale-105 transition-all duration-300 group flex items-center justify-center gap-3"
+              >
+                <ShoppingBag size={20} />
+                Start Shopping
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
               
               <a 
                 href="#trader-preview" 
