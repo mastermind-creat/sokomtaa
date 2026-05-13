@@ -32,7 +32,7 @@ class RegionController extends Controller
             'success' => true,
             'message' => 'Region created successfully',
             'data' => $region
-        ], 21);
+        ], 201);
     }
 
     public function update(Request $request, Region $region): JsonResponse
@@ -59,7 +59,7 @@ class RegionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot delete region with existing centers.'
-            ], 40);
+            ], 400);
         }
 
         $region->delete();

@@ -40,7 +40,7 @@ class CenterController extends Controller
             'success' => true,
             'message' => 'Center created successfully',
             'data' => $center->load('region')
-        ], 21);
+        ], 201);
     }
 
     public function update(Request $request, Center $center): JsonResponse
@@ -68,7 +68,7 @@ class CenterController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot delete center with existing markets.'
-            ], 40);
+            ], 400);
         }
 
         $center->delete();
