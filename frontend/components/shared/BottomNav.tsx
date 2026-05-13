@@ -18,7 +18,12 @@ export default function BottomNav() {
     }, []);
 
     const tabs = [
-        { icon: Search, label: t('nav.discover'), path: '/', roles: ['resident', 'trader', 'admin'] },
+        { 
+            icon: Search, 
+            label: t('nav.discover'), 
+            path: user?.role === 'resident' ? '/resident' : '/', 
+            roles: ['resident', 'trader', 'admin'] 
+        },
         { icon: MapPin, label: t('common.markets'), path: '/market/map', roles: ['resident', 'trader', 'admin'] },
         { 
             icon: LayoutDashboard, 

@@ -175,7 +175,7 @@ export default function WatchlistPage() {
                                 </p>
                             </div>
                             <button 
-                                onClick={() => router.push('/')}
+                                onClick={() => router.push('/resident')}
                                 className="px-10 py-5 bg-brand-600 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-brand-100 flex items-center gap-3 mx-auto"
                             >
                                 <ShoppingBag size={18} /> Gudua Bidhaa (Discover)

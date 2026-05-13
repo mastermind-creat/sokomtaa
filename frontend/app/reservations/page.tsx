@@ -221,10 +221,10 @@ export default function ResidentReservationsPage() {
                                 <p className="text-sm text-text-secondary font-medium px-10 max-w-md mx-auto">Try adjusting your filters or start exploring the market for fresh deals.</p>
                             </div>
                             <button 
-                                onClick={() => router.push('/')}
-                                className="h-16 px-12 bg-brand-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-[0.25em] shadow-2xl shadow-brand-200 hover:bg-brand-700 active:scale-95 transition-all"
+                                onClick={() => router.push('/resident')}
+                                className="px-10 py-5 bg-brand-600 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-brand-100 flex items-center gap-3 mx-auto"
                             >
-                                Start Shopping
+                                <ShoppingBag size={18} /> Gudua Bidhaa (Discover)
                             </button>
                         </div>
                     )}

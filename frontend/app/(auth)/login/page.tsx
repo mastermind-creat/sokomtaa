@@ -56,6 +56,8 @@ export default function LoginPage() {
                 router.push('/admin/dashboard');
             } else if (user.role === 'trader') {
                 router.push('/trader/dashboard');
+            } else if (user.role === 'resident') {
+                router.push('/resident');
             } else {
                 router.push('/');
             }
