@@ -17,7 +17,7 @@ interface MpesaPaymentSheetProps {
     description?: string;
 }
 export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amount, onSuccess, title, description }: MpesaPaymentSheetProps) {
-    const [phone, setPhone] = React.useState('2547');
+    const [phone, setPhone] = React.useState('07');
     const [inputAmount, setInputAmount] = React.useState(amount?.toString() || '');
     const [status, setStatus] = React.useState<'idle' | 'pending' | 'success' | 'error'>('idle');
     const [message, setMessage] = React.useState('');
@@ -29,8 +29,8 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
     }
 
     const handlePayment = async () => {
-        if (!phone.match(/^2547[0-9]{8}$/)) {
-            setMessage('Invalid phone number. Use 2547XXXXXXXX');
+        if (!phone.match(/^(?:254|\+254|0)?(7|1)[0-9]{8}$/)) {
+            setMessage('Invalid phone number. Use 07XXXXXXXX, 254... or +254...');
             setStatus('error');
             return;
         }
@@ -146,7 +146,7 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
                                         value={phone}
                                         onChange={(e) => setPhone(e.target.value)}
                                         disabled={isProcessing}
-                                        placeholder="2547XXXXXXXX"
+                                        placeholder="07XXXXXXXX or +254..."
                                         className="input flex-1 h-14"
                                         type="tel"
                                     />

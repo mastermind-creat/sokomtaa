@@ -441,7 +441,7 @@ export default function TraderWalletPage() {
                                                     value={withdrawPhone}
                                                     onChange={e => { setWithdrawPhone(e.target.value); setWithdrawError(''); }}
                                                     className="w-full h-12 pl-10 pr-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-green-950 focus:outline-none focus:border-brand-600 focus:bg-white transition-all"
-                                                    placeholder="e.g. 0712 345 678"
+                                                    placeholder="07XXXXXXXX or +254..."
                                                 />
                                             </div>
                                         </div>

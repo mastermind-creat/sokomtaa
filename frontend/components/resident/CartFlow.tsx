@@ -255,7 +255,7 @@ export default function CartFlow({ traderId, onClose }: CartFlowProps) {
                                         value={phoneNumber}
                                         onChange={(e) => setPhoneNumber(e.target.value)}
                                         className="w-full h-16 pl-14 pr-4 bg-neutral-50 rounded-2xl border-2 border-transparent focus:border-brand-500 outline-none font-mono text-lg font-black"
-                                        placeholder="2547XXXXXXXX"
+                                        placeholder="07XXXXXXXX or +254..."
                                     />
                                 </div>
 
