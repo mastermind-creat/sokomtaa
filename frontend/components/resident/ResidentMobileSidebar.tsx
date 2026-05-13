@@ -10,7 +10,8 @@ import {
     MapPin,
     Heart,
     HelpCircle,
-    LogOut
+    LogOut,
+    FileText
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -66,6 +67,7 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
         { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: counts?.active_reservations || null },
         { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: counts?.watchlist || null },
         { icon: MapPin, label: t('common.markets'), path: '/market/map', badge: null },
+        { icon: FileText, label: 'Reports & Archive', path: '/resident/reports', badge: null },
     ];
 
     const handleNavigate = (path: string) => {

@@ -12,6 +12,7 @@ import {
     RefreshCw,
     MessageSquare,
     MapPin,
+    FileText,
     LucideIcon
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -182,6 +183,7 @@ export default function TraderSidebar() {
                         <SidebarLink href="/trader/wallet" icon={CreditCard} label={t('sidebar.my_wallet') || 'Wallet Yangu'} active={getActiveState('/trader/wallet')} />
                         <SidebarLink href="/trader/analytics" icon={BarChart3} label={t('sidebar.store_analytics')} active={getActiveState('/trader/analytics')} />
                         <SidebarLink href="/trader/reviews" icon={MessageSquare} label={t('sidebar.reviews')} active={getActiveState('/trader/reviews')} />
+                        <SidebarLink href="/trader/reports" icon={FileText} label="Business Reports" active={getActiveState('/trader/reports')} />
                         <SidebarLink href="/trader/apply-stall" icon={MapPin} label={t('sidebar.stall_application') || 'Stall Application'} active={getActiveState('/trader/apply-stall')} count={stallBadge} />
                     </div>
                 </div>

@@ -14,7 +14,8 @@ import {
     RefreshCw,
     MessageSquare,
     MapPin,
-    LogOut
+    LogOut,
+    FileText
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -74,6 +75,7 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
                 { icon: CreditCard, label: t('sidebar.my_wallet') || 'Wallet Yangu', path: '/trader/wallet' },
                 { icon: BarChart3, label: t('sidebar.store_analytics'), path: '/trader/analytics' },
                 { icon: MessageSquare, label: t('sidebar.reviews'), path: '/trader/reviews' },
+                { icon: FileText, label: 'Business Reports', path: '/trader/reports' },
                 { icon: MapPin, label: stallApp ? `${t('sidebar.stall_application') || 'Stall App'} (${stallBadge[stallApp.status] ?? ''})` : (t('sidebar.stall_application') || 'Stall Application'), path: '/trader/apply-stall' },
                 { icon: Settings, label: t('common.settings'), path: '/trader/profile' },
             ]

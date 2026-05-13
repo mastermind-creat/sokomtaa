@@ -156,6 +156,7 @@ export default function AdminSidebar() {
                 { icon: CreditCard, label: 'Payment History', path: '/admin/payments' },
                 { icon: ShoppingBag, label: 'Reservations', path: '/admin/reservations' },
                 { icon: Star, label: 'Reviews', path: '/admin/reviews' },
+                { icon: FileText, label: 'System Reports', path: '/admin/reports' },
             ]
         },
         {

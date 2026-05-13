@@ -10,7 +10,8 @@ import {
     ChevronRight,
     MapPin,
     Heart,
-    HelpCircle
+    HelpCircle,
+    FileText
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -65,6 +66,7 @@ export default function ResidentSidebar() {
         { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: counts?.active_reservations || null },
         { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: counts?.watchlist || null },
         { icon: MapPin, label: t('common.markets'), path: '/resident/markets', badge: null },
+        { icon: FileText, label: 'Reports & Archive', path: '/resident/reports', badge: null },
     ];
 
     // Helper to check if a path is active, but only after mounting to avoid hydration mismatch

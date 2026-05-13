@@ -13,7 +13,8 @@ import {
     Loader2,
     Layers,
     Edit3,
-    Trash2
+    Trash2,
+    X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ApiResponse, Stall, Market } from '@/types';

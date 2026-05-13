@@ -81,6 +81,49 @@ class AnalyticsController extends Controller
         $totalStalls = \App\Models\Stall::count();
         $occupiedStalls = \App\Models\Stall::where('status', 'occupied')->count();
         $occupancyRate = $totalStalls > 0 ? round(($occupiedStalls / $totalStalls) * 100) : 0;
+
+        // 6. Top Reserved Products (INTELLIGENCE)
+        $topProducts = \App\Models\Product::join('reservations', 'products.id', '=', 'reservations.product_id')
+            ->select('products.id', 'products.name', 'products.image_url', \Illuminate\Support\Facades\DB::raw("COUNT(reservations.id) as reservations_count"))
+            ->groupBy('products.id', 'products.name', 'products.image_url')
+            ->orderByDesc('reservations_count')
+            ->limit(5)
+            ->get();
+
+        // 7. Planning Insights (LOGIC-BASED)
+        $planningInsights = [];
+        
+        // Insight: Occupancy vs Demand
+        if ($occupancyRate > 85) {
+            $planningInsights[] = [
+                'type' => 'infrastructure',
+                'title' => 'Expansion Opportunity',
+                'description' => "Market occupancy is at {$occupancyRate}%. Consider developing additional stalls or secondary market centers to accommodate growing trader demand.",
+                'priority' => 'high'
+            ];
+        }
+
+        // Insight: Peak Hours Operational Planning
+        $topHour = $peakHours->sortByDesc('count')->first();
+        if ($topHour) {
+            $planningInsights[] = [
+                'type' => 'operations',
+                'title' => 'Peak Staffing Strategy',
+                'description' => "Activity peaks at {$topHour['hour']}. Ensure maximum security presence and waste management operations are scheduled during this window.",
+                'priority' => 'medium'
+            ];
+        }
+
+        // Insight: Top Category Growth
+        $topCategory = $categoryDemand->first();
+        if ($topCategory) {
+            $planningInsights[] = [
+                'type' => 'category',
+                'title' => 'Sector Specialization',
+                'description' => "The '{$topCategory->name}' category dominates trade volume. Evaluate physical zoning to provide specialized amenities (e.g., cold storage) for this sector.",
+                'priority' => 'medium'
+            ];
+        }
         
         return response()->json([
             'success' => true,
@@ -90,7 +133,9 @@ class AnalyticsController extends Controller
                 'reservation_volume' => $reservationVolume,
                 'category_demand' => $categoryDemand,
                 'peak_hours' => $peakHours,
-                'occupancy_rate' => $occupancyRate
+                'occupancy_rate' => $occupancyRate,
+                'top_products' => $topProducts,
+                'planning_insights' => $planningInsights
             ]
         ]);
     }
