@@ -93,8 +93,8 @@ export default function AdminMarketsPage() {
     });
 
     const syncFeesMutation = useMutation({
-        mutationFn: (marketId: number) => api.post('/admin/stalls/bulk-update-fees', { market_id: marketId }),
-        onSuccess: (res: any) => {
+        mutationFn: (marketId: number) => api.post<ApiResponse<any>>('/admin/stalls/bulk-update-fees', { market_id: marketId }),
+        onSuccess: (res) => {
             alert(res.data.message || 'Stall fees updated successfully.');
         }
     });
@@ -111,7 +111,7 @@ export default function AdminMarketsPage() {
         }
     };
 
-    const handleFormSubmit = (data: any) => {
+    const handleFormSubmit = (data: FormData) => {
         if (selectedMarket) {
             updateMutation.mutate({ id: selectedMarket.id, data });
         } else {

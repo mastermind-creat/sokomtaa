@@ -11,10 +11,10 @@ class CenterController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Center::with('region')->withCount('markets');
+        $query = Center::with(['county.region'])->withCount('markets');
 
-        if ($request->has('region_id')) {
-            $query->where('region_id', $request->region_id);
+        if ($request->has('county_id')) {
+            $query->where('county_id', $request->county_id);
         }
 
         $centers = $query->get();
@@ -28,7 +28,7 @@ class CenterController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'region_id' => 'required|exists:regions,id',
+            'county_id' => 'required|exists:counties,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'boolean'
@@ -39,14 +39,14 @@ class CenterController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Center created successfully',
-            'data' => $center->load('region')
+            'data' => $center->load('county.region')
         ], 201);
     }
 
     public function update(Request $request, Center $center): JsonResponse
     {
         $validated = $request->validate([
-            'region_id' => 'required|exists:regions,id',
+            'county_id' => 'required|exists:counties,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'boolean'
@@ -57,7 +57,7 @@ class CenterController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Center updated successfully',
-            'data' => $center->load('region')
+            'data' => $center->load('county.region')
         ]);
     }
 

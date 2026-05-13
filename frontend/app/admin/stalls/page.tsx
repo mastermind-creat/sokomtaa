@@ -79,7 +79,7 @@ export default function AdminStallsPage() {
 
     // Mutations
     const createMutation = useMutation({
-        mutationFn: (data: any) => api.post('/admin/stalls', { ...data, market_id: selectedMarketId }),
+        mutationFn: (data: Partial<Stall>) => api.post('/admin/stalls', { ...data, market_id: selectedMarketId }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-stalls'] });
             setIsModalOpen(false);
@@ -87,7 +87,7 @@ export default function AdminStallsPage() {
     });
 
     const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: number, data: any }) => api.patch(`/admin/stalls/${id}`, data),
+        mutationFn: ({ id, data }: { id: number, data: Partial<Stall> }) => api.patch(`/admin/stalls/${id}`, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-stalls'] });
             setIsModalOpen(false);
@@ -112,7 +112,7 @@ export default function AdminStallsPage() {
         }
     });
 
-    const handleFormSubmit = (data: any) => {
+    const handleFormSubmit = (data: Partial<Stall>) => {
         if (selectedStall) {
             updateMutation.mutate({ id: selectedStall.id, data });
         } else {
@@ -165,7 +165,7 @@ export default function AdminStallsPage() {
                         ].map((v) => (
                             <button 
                                 key={v.id}
-                                onClick={() => setView(v.id as any)}
+                                onClick={() => setView(v.id as 'list' | 'map' | 'bulk')}
                                 className={cn(
                                     "flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                                     view === v.id ? "bg-brand-600 text-white shadow-brand-sm" : "text-text-muted hover:bg-gray-50"

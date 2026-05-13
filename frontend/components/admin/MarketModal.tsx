@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { ApiResponse } from '@/types';
+import { ApiResponse, Region, County, Center } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
@@ -16,7 +16,9 @@ import {
     ShieldCheck, 
     Save, 
     Loader2,
-    CreditCard
+    CreditCard,
+    Map as MapIcon,
+    Navigation
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Market } from '@/types';
@@ -34,6 +36,7 @@ const marketSchema = z.object({
     icon_image: z.any().optional(),
     default_monthly_fee: z.coerce.number().default(0),
     region_id: z.string().or(z.number()).optional(),
+    county_id: z.string().or(z.number()).optional(),
     center_id: z.union([
         z.string().min(1, 'Please select a center'),
         z.number().min(1, 'Please select a center')
@@ -76,31 +79,44 @@ export const MarketModal: React.FC<MarketModalProps> = ({
             is_active: true,
             default_monthly_fee: 0,
             region_id: '',
+            county_id: '',
             center_id: '',
         }
     });
 
-    const selectedRegionId = watch('region_id' as any);
+    const selectedRegionId = watch('region_id');
+    const selectedCountyId = watch('county_id');
 
     // ── Queries ──
-    const { data: regions } = useQuery<ApiResponse<any[]>>({
+    const { data: regions } = useQuery<ApiResponse<Region[]>>({
         queryKey: ['admin-regions-simple'],
         queryFn: () => api.get('/admin/regions'),
         enabled: isOpen,
     });
 
-    const { data: centers } = useQuery<ApiResponse<any[]>>({
+    const { data: counties } = useQuery<ApiResponse<County[]>>({
+        queryKey: ['admin-counties-simple'],
+        queryFn: () => api.get('/admin/counties'),
+        enabled: isOpen,
+    });
+
+    const { data: centers } = useQuery<ApiResponse<Center[]>>({
         queryKey: ['admin-centers-simple'],
         queryFn: () => api.get('/admin/centers'),
         enabled: isOpen,
     });
 
-    const filteredCenters = React.useMemo(() => {
-        if (!centers?.data || !selectedRegionId) return [];
-        return centers.data.filter(c => c.region_id.toString() === selectedRegionId.toString());
-    }, [centers, selectedRegionId]);
+    const filteredCounties = React.useMemo(() => {
+        if (!counties?.data || !selectedRegionId) return [];
+        return counties.data.filter(c => c.region_id.toString() === selectedRegionId.toString());
+    }, [counties, selectedRegionId]);
 
-    const handleFormSubmit = (data: MarketFormValues) => {
+    const filteredCenters = React.useMemo(() => {
+        if (!centers?.data || !selectedCountyId) return [];
+        return centers.data.filter(c => c.county_id?.toString() === selectedCountyId.toString());
+    }, [centers, selectedCountyId]);
+
+    const handleFormSubmit: SubmitHandler<MarketFormValues> = (data) => {
         const formData = new FormData();
         Object.entries(data).forEach(([key, value]) => {
             if (key === 'banner_image' || key === 'icon_image') {
@@ -127,9 +143,18 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                 default_monthly_fee: initialData.default_monthly_fee || 0,
                 center_id: initialData.center_id || '',
             });
-            // Also need to set region_id for the selector
-            if (initialData.center?.region_id) {
-                setValue('region_id' as any, initialData.center.region_id);
+            
+            // Set hierarchical IDs
+            if (initialData.center) {
+                setValue('center_id', initialData.center.id);
+                if (initialData.center.county_id) {
+                    setValue('county_id', initialData.center.county_id);
+                }
+                if (initialData.center.region_id) {
+                    setValue('region_id', initialData.center.region_id);
+                } else if (initialData.center.county?.region_id) {
+                    setValue('region_id', initialData.center.county.region_id);
+                }
             }
         } else {
             reset({
@@ -141,10 +166,12 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                 longitude: '',
                 is_active: true,
                 default_monthly_fee: 0,
+                region_id: '',
+                county_id: '',
                 center_id: '',
             });
         }
-    }, [initialData, reset]);
+    }, [initialData, reset, setValue]);
 
     if (!isOpen) return null;
 
@@ -163,9 +190,9 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+                    className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh]"
                 >
-                    <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+                    <div className="p-8 border-b border-gray-100 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center">
                                 <MapPin size={24} />
@@ -187,219 +214,257 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                         </button>
                     </div>
 
-                    <form onSubmit={handleSubmit(handleFormSubmit)} className="p-8 space-y-6">
-                        <div className="space-y-4">
-                            {/* Market Name */}
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                    Market Site Name
-                                </label>
-                                <div className="relative">
-                                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                    <input 
-                                        {...register('name')}
-                                        placeholder="e.g. Gikomba Main Hub"
-                                        className={cn(
-                                            "w-full h-14 pl-12 pr-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
-                                            errors.name && "border-red-200 bg-red-50"
-                                        )}
-                                    />
-                                </div>
-                                {errors.name && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.name.message}</p>}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* Region Selection */}
+                    <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col flex-1 overflow-hidden">
+                        <div className="p-8 space-y-6 overflow-y-auto no-scrollbar flex-1">
+                            <div className="space-y-4">
+                                {/* Market Name */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        Select Region
+                                        Market Site Name
                                     </label>
-                                    <select 
-                                        {...register('region_id' as any)}
-                                        className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
-                                    >
-                                        <option value="">Choose Region...</option>
-                                        {regions?.data?.map(r => (
-                                            <option key={r.id} value={r.id}>{r.name}</option>
-                                        ))}
-                                    </select>
+                                    <div className="relative">
+                                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                        <input 
+                                            {...register('name')}
+                                            placeholder="e.g. Gikomba Main Hub"
+                                            className={cn(
+                                                "w-full h-14 pl-12 pr-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
+                                                errors.name && "border-red-200 bg-red-50"
+                                            )}
+                                        />
+                                    </div>
+                                    {errors.name && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.name.message}</p>}
                                 </div>
 
-                                {/* Center Selection */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        Select Center
-                                    </label>
-                                    <select 
-                                        {...register('center_id')}
-                                        disabled={!selectedRegionId}
-                                        className={cn(
-                                            "w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
-                                            errors.center_id && "border-red-200 bg-red-50"
-                                        )}
-                                    >
-                                        <option value="">Choose Center...</option>
-                                        {filteredCenters.map(c => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
-                                        ))}
-                                    </select>
+                                <div className="space-y-4 p-5 bg-neutral-50 rounded-3xl border border-gray-100">
+                                    <p className="text-[10px] font-black text-brand-600 uppercase tracking-[0.2em] mb-2">Location Hierarchy</p>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {/* Region Selection */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                                Region
+                                            </label>
+                                            <select 
+                                                {...register('region_id')}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setValue('region_id', val);
+                                                    setValue('county_id', '');
+                                                    setValue('center_id', '');
+                                                }}
+                                                className="w-full h-10 px-3 bg-white border border-gray-100 rounded-xl text-xs font-bold focus:border-brand-500 outline-none"
+                                            >
+                                                <option value="">Region...</option>
+                                                {regions?.data?.map(r => (
+                                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* County Selection */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                                County
+                                            </label>
+                                            <select 
+                                                {...register('county_id')}
+                                                disabled={!selectedRegionId}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setValue('county_id', val);
+                                                    setValue('center_id', '');
+                                                    
+                                                    // Auto-fill the text county field for compatibility
+                                                    const countyName = counties?.data?.find(c => c.id.toString() === val.toString())?.name;
+                                                    if (countyName) setValue('county', countyName);
+                                                }}
+                                                className="w-full h-10 px-3 bg-white border border-gray-100 rounded-xl text-xs font-bold focus:border-brand-500 outline-none disabled:opacity-50"
+                                            >
+                                                <option value="">County...</option>
+                                                {filteredCounties.map(c => (
+                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Center Selection */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                                Center
+                                            </label>
+                                            <select 
+                                                {...register('center_id')}
+                                                disabled={!selectedCountyId}
+                                                className={cn(
+                                                    "w-full h-10 px-3 bg-white border border-gray-100 rounded-xl text-xs font-bold focus:border-brand-500 outline-none disabled:opacity-50",
+                                                    errors.center_id && "border-red-200"
+                                                )}
+                                            >
+                                                <option value="">Center...</option>
+                                                {filteredCenters.map(c => (
+                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
                                     {errors.center_id && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.center_id.message as string}</p>}
                                 </div>
-                            </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* County */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* County (Legacy Text Field - auto-filled) */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                            County Name (Text)
+                                        </label>
+                                        <div className="relative">
+                                            <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                            <input 
+                                                {...register('county')}
+                                                placeholder="e.g. Nairobi"
+                                                className={cn(
+                                                    "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
+                                                    errors.county && "border-red-200 bg-red-50"
+                                                )}
+                                            />
+                                        </div>
+                                        {errors.county && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.county.message}</p>}
+                                    </div>
+
+                                    {/* Location */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                            Location / Area
+                                        </label>
+                                        <div className="relative">
+                                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                            <input 
+                                                {...register('location')}
+                                                placeholder="e.g. Central"
+                                                className={cn(
+                                                    "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
+                                                    errors.location && "border-red-200 bg-red-50"
+                                                )}
+                                            />
+                                        </div>
+                                        {errors.location && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.location.message}</p>}
+                                    </div>
+                                </div>
+
+                                {/* Estate */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        County
+                                        Estate / Specific Area
                                     </label>
                                     <div className="relative">
-                                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                        <Compass className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                                         <input 
-                                            {...register('county')}
-                                            placeholder="Nairobi"
+                                            {...register('estate')}
+                                            placeholder="e.g. Kamukunji Area"
                                             className={cn(
-                                                "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
-                                                errors.county && "border-red-200 bg-red-50"
+                                                "w-full h-12 pl-12 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
+                                                errors.estate && "border-red-200 bg-red-50"
                                             )}
                                         />
                                     </div>
-                                    {errors.county && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.county.message}</p>}
+                                    {errors.estate && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.estate.message}</p>}
                                 </div>
 
-                                {/* Location */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        Location / Area
+                                <div className="grid grid-cols-2 gap-4 pt-2">
+                                    {/* Latitude */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
+                                            Latitude (Optional)
+                                        </label>
+                                        <input 
+                                            {...register('latitude')}
+                                            placeholder="-1.286389"
+                                            className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
+                                        />
+                                    </div>
+
+                                    {/* Longitude */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
+                                            Longitude (Optional)
+                                        </label>
+                                        <input 
+                                            {...register('longitude')}
+                                            placeholder="36.817223"
+                                            className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Default Monthly Fee */}
+                                <div className="space-y-1.5 p-5 bg-amber-50 rounded-3xl border border-amber-100">
+                                    <label className="text-[10px] font-black text-amber-900 uppercase tracking-widest ml-1">
+                                        Global Market Fee (KES)
                                     </label>
                                     <div className="relative">
-                                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                        <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-600" size={18} />
                                         <input 
-                                            {...register('location')}
-                                            placeholder="Central"
+                                            type="number"
+                                            {...register('default_monthly_fee')}
+                                            placeholder="e.g. 1500"
                                             className={cn(
-                                                "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
-                                                errors.location && "border-red-200 bg-red-50"
+                                                "w-full h-14 pl-12 pr-4 bg-white border border-transparent rounded-2xl text-lg font-black text-amber-950 focus:border-amber-400 transition-all outline-none",
+                                                errors.default_monthly_fee && "border-red-200 bg-red-50"
                                             )}
                                         />
                                     </div>
-                                    {errors.location && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.location.message}</p>}
-                                </div>
-                            </div>
-
-                            {/* Estate */}
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                    Estate / Specific Area
-                                </label>
-                                <div className="relative">
-                                    <Compass className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                    <input 
-                                        {...register('estate')}
-                                        placeholder="e.g. Kamukunji Area"
-                                        className={cn(
-                                            "w-full h-12 pl-12 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
-                                            errors.estate && "border-red-200 bg-red-50"
-                                        )}
-                                    />
-                                </div>
-                                {errors.estate && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.estate.message}</p>}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4 pt-2">
-                                {/* Latitude */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
-                                        Latitude (Optional)
-                                    </label>
-                                    <input 
-                                        {...register('latitude')}
-                                        placeholder="-1.286389"
-                                        className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
-                                    />
+                                    <p className="text-[9px] font-bold text-amber-700/60 ml-1">Standard monthly fee applied to all stalls in this hub</p>
+                                    {errors.default_monthly_fee && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.default_monthly_fee.message as string}</p>}
                                 </div>
 
-                                {/* Longitude */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest ml-1">
-                                        Longitude (Optional)
-                                    </label>
-                                    <input 
-                                        {...register('longitude')}
-                                        placeholder="36.817223"
-                                        className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Default Monthly Fee */}
-                            <div className="space-y-1.5 p-5 bg-amber-50 rounded-3xl border border-amber-100">
-                                <label className="text-[10px] font-black text-amber-900 uppercase tracking-widest ml-1">
-                                    Global Market Fee (KES)
-                                </label>
-                                <div className="relative">
-                                    <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-600" size={18} />
-                                    <input 
-                                        type="number"
-                                        {...register('default_monthly_fee')}
-                                        placeholder="e.g. 1500"
-                                        className={cn(
-                                            "w-full h-14 pl-12 pr-4 bg-white border border-transparent rounded-2xl text-lg font-black text-amber-950 focus:border-amber-400 transition-all outline-none",
-                                            errors.default_monthly_fee && "border-red-200 bg-red-50"
-                                        )}
-                                    />
-                                </div>
-                                <p className="text-[9px] font-bold text-amber-700/60 ml-1">Standard monthly fee applied to all stalls in this hub</p>
-                                {errors.default_monthly_fee && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.default_monthly_fee.message as string}</p>}
-                            </div>
-
-                            {/* Images Section */}
-                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 mt-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        Banner Image
-                                    </label>
-                                    <input 
-                                        type="file"
-                                        accept="image/*"
-                                        {...register('banner_image')}
-                                        className="w-full text-[10px] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        Market Icon
-                                    </label>
-                                    <input 
-                                        type="file"
-                                        accept="image/*"
-                                        {...register('icon_image')}
-                                        className="w-full text-[10px] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Status Toggle */}
-                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 mt-4">
-                                <div className="flex items-center gap-3">
-                                    <ShieldCheck className="text-brand-600" size={20} />
-                                    <div>
-                                        <p className="text-xs font-black text-green-950 uppercase tracking-tight">Active Status</p>
-                                        <p className="text-[10px] font-bold text-text-muted">Allow visibility in directory</p>
+                                {/* Images Section */}
+                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 mt-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                            Banner Image
+                                        </label>
+                                        <input 
+                                            type="file"
+                                            accept="image/*"
+                                            {...register('banner_image')}
+                                            className="w-full text-[10px] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                            Market Icon
+                                        </label>
+                                        <input 
+                                            type="file"
+                                            accept="image/*"
+                                            {...register('icon_image')}
+                                            className="w-full text-[10px] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+                                        />
                                     </div>
                                 </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        {...register('is_active')}
-                                        className="sr-only peer" 
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
-                                </label>
+
+                                {/* Status Toggle */}
+                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 mt-4">
+                                    <div className="flex items-center gap-3">
+                                        <ShieldCheck className="text-brand-600" size={20} />
+                                        <div>
+                                            <p className="text-xs font-black text-green-950 uppercase tracking-tight">Active Status</p>
+                                            <p className="text-[10px] font-bold text-text-muted">Allow visibility in directory</p>
+                                        </div>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            {...register('is_active')}
+                                            className="sr-only peer" 
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="flex gap-3 pt-4">
+                        <div className="p-8 border-t border-gray-100 flex gap-3 shrink-0">
                             <button
                                 type="button"
                                 onClick={onClose}
@@ -422,6 +487,7 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                         </div>
                     </form>
                 </motion.div>
+
             </div>
         </AnimatePresence>
     );

@@ -92,9 +92,13 @@ export const AllocationModal: React.FC<AllocationModalProps> = ({
         enabled: isOpen,
     });
 
-    const markets = Array.isArray(marketsRes) ? marketsRes : marketsRes?.data || [];
-    const stalls = Array.isArray(stallsRes) ? stallsRes : stallsRes?.data || [];
-    const traders = Array.isArray(tradersRes) ? tradersRes : tradersRes?.data || [];
+    const markets = marketsRes?.data || [];
+    const stalls = stallsRes?.data || [];
+    const traders = tradersRes?.data || [];
+
+    const handleFormSubmit: SubmitHandler<AllocationFormValues> = (data) => {
+        onSubmit(data);
+    };
 
     if (!isOpen) return null;
 
@@ -113,9 +117,9 @@ export const AllocationModal: React.FC<AllocationModalProps> = ({
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+                    className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh]"
                 >
-                    <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+                    <div className="p-8 border-b border-gray-100 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center">
                                 <Building2 size={24} />
@@ -137,147 +141,148 @@ export const AllocationModal: React.FC<AllocationModalProps> = ({
                         </button>
                     </div>
 
-                    <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
-                        <div className="space-y-4">
-                            
-                            {/* Market Selection */}
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                    Filter by Market
-                                </label>
-                                <div className="relative">
-                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                    <select 
-                                        value={selectedMarketId}
-                                        onChange={(e) => {
-                                            const marketId = e.target.value;
-                                            setSelectedMarketId(marketId);
-                                            // @ts-ignore
-                                            setValue('stall_id', ''); 
-                                        }}
-                                        className="w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none appearance-none cursor-pointer"
-                                        disabled={marketsLoading}
-                                    >
-                                        <option value="">{marketsLoading ? 'Loading markets...' : 'All Markets'}</option>
-                                        {markets.map(m => (
-                                            <option key={m.id} value={m.id}>{m.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            {/* Stall Selection */}
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                    Select Available Stall
-                                </label>
-                                <div className="relative">
-                                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                    <select 
-                                        {...register('stall_id')}
-                                        className={cn(
-                                            "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none appearance-none cursor-pointer",
-                                            errors.stall_id && "border-red-200 bg-red-50"
-                                        )}
-                                        disabled={stallsLoading}
-                                    >
-                                        <option value="">{stallsLoading ? 'Loading stalls...' : 'Choose a stall...'}</option>
-                                        {stalls.map(s => (
-                                            <option key={s.id} value={s.id}>Stall {s.stall_number} (Block {s.block})</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                {errors.stall_id && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.stall_id.message}</p>}
-                                {!stallsLoading && stalls.length === 0 && (
-                                    <p className="text-[10px] font-bold text-orange-600 ml-1">No available stalls found.</p>
-                                )}
-                            </div>
-
-                            {/* Trader Selection */}
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                    Select Trader
-                                </label>
-                                <div className="relative">
-                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                    <select 
-                                        {...register('trader_id')}
-                                        className={cn(
-                                            "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none appearance-none cursor-pointer",
-                                            errors.trader_id && "border-red-200 bg-red-50"
-                                        )}
-                                        disabled={tradersLoading}
-                                    >
-                                        <option value="">{tradersLoading ? 'Loading traders...' : 'Choose an unallocated trader...'}</option>
-                                        {traders.map(t => (
-                                            <option key={t.id} value={t.id}>{t.business_name || t.user?.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                {errors.trader_id && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.trader_id.message}</p>}
-                                {!tradersLoading && traders.length === 0 && (
-                                    <p className="text-[10px] font-bold text-orange-600 ml-1">No unallocated traders found.</p>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* Start Date */}
+                    <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col flex-1 overflow-hidden">
+                        <div className="p-8 space-y-6 overflow-y-auto no-scrollbar flex-1">
+                            <div className="space-y-4">
+                                
+                                {/* Market Selection */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        Start Date
+                                        Filter by Market
                                     </label>
                                     <div className="relative">
-                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                        <input 
-                                            type="date"
-                                            {...register('start_date')}
-                                            className={cn(
-                                                "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
-                                                errors.start_date && "border-red-200 bg-red-50"
-                                            )}
-                                        />
+                                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                        <select 
+                                            value={selectedMarketId}
+                                            onChange={(e) => {
+                                                const marketId = e.target.value;
+                                                setSelectedMarketId(marketId);
+                                                setValue('stall_id', ''); 
+                                            }}
+                                            className="w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none appearance-none cursor-pointer"
+                                            disabled={marketsLoading}
+                                        >
+                                            <option value="">{marketsLoading ? 'Loading markets...' : 'All Markets'}</option>
+                                            {markets.map(m => (
+                                                <option key={m.id} value={m.id}>{m.name}</option>
+                                            ))}
+                                        </select>
                                     </div>
-                                    {errors.start_date && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.start_date.message}</p>}
                                 </div>
-
-                                {/* End Date */}
+                                
+                                {/* Stall Selection */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        End Date (Optional)
+                                        Select Available Stall
                                     </label>
                                     <div className="relative">
-                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                        <input 
-                                            type="date"
-                                            {...register('end_date')}
+                                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                        <select 
+                                            {...register('stall_id')}
                                             className={cn(
-                                                "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
-                                                errors.end_date && "border-red-200 bg-red-50"
+                                                "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none appearance-none cursor-pointer",
+                                                errors.stall_id && "border-red-200 bg-red-50"
                                             )}
+                                            disabled={stallsLoading}
+                                        >
+                                            <option value="">{stallsLoading ? 'Loading stalls...' : 'Choose a stall...'}</option>
+                                            {stalls.map(s => (
+                                                <option key={s.id} value={s.id}>Stall {s.stall_number} (Block {s.block})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {errors.stall_id && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.stall_id.message}</p>}
+                                    {!stallsLoading && stalls.length === 0 && (
+                                        <p className="text-[10px] font-bold text-orange-600 ml-1">No available stalls found.</p>
+                                    )}
+                                </div>
+
+                                {/* Trader Selection */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                        Select Trader
+                                    </label>
+                                    <div className="relative">
+                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                        <select 
+                                            {...register('trader_id')}
+                                            className={cn(
+                                                "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none appearance-none cursor-pointer",
+                                                errors.trader_id && "border-red-200 bg-red-50"
+                                            )}
+                                            disabled={tradersLoading}
+                                        >
+                                            <option value="">{tradersLoading ? 'Loading traders...' : 'Choose an unallocated trader...'}</option>
+                                            {traders.map(t => (
+                                                <option key={t.id} value={t.id}>{t.business_name || t.user?.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {errors.trader_id && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.trader_id.message}</p>}
+                                    {!tradersLoading && traders.length === 0 && (
+                                        <p className="text-[10px] font-bold text-orange-600 ml-1">No unallocated traders found.</p>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Start Date */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                            Start Date
+                                        </label>
+                                        <div className="relative">
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                            <input 
+                                                type="date"
+                                                {...register('start_date')}
+                                                className={cn(
+                                                    "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
+                                                    errors.start_date && "border-red-200 bg-red-50"
+                                                )}
+                                            />
+                                        </div>
+                                        {errors.start_date && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.start_date.message}</p>}
+                                    </div>
+
+                                    {/* End Date */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                            End Date (Optional)
+                                        </label>
+                                        <div className="relative">
+                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                            <input 
+                                                type="date"
+                                                {...register('end_date')}
+                                                className={cn(
+                                                    "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
+                                                    errors.end_date && "border-red-200 bg-red-50"
+                                                )}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Notes */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                        Notes (Optional)
+                                    </label>
+                                    <div className="relative">
+                                        <FileText className="absolute left-4 top-4 text-gray-400" size={16} />
+                                        <textarea 
+                                            {...register('notes')}
+                                            placeholder="Add any specific conditions..."
+                                            rows={3}
+                                            className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none resize-none"
                                         />
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Notes */}
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                    Notes (Optional)
-                                </label>
-                                <div className="relative">
-                                    <FileText className="absolute left-4 top-4 text-gray-400" size={16} />
-                                    <textarea 
-                                        {...register('notes')}
-                                        placeholder="Add any specific conditions..."
-                                        rows={3}
-                                        className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none resize-none"
-                                    />
-                                </div>
                             </div>
-
                         </div>
 
-                        <div className="flex gap-3 pt-4">
+                        <div className="p-8 border-t border-gray-100 flex gap-3 shrink-0">
                             <button
                                 type="button"
                                 onClick={onClose}

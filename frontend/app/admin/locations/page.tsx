@@ -16,11 +16,12 @@ import {
     Navigation,
     Building2,
     X,
-    MoreVertical
+    MoreVertical,
+    Map as MapIcon
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { ApiResponse, Region, Center } from '@/types';
+import { ApiResponse, Region, County, Center } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useUIStore } from '@/store/uiStore';
@@ -31,38 +32,41 @@ export default function LocationsPage() {
     const { t } = useTranslation();
     const { setPageTitle } = useUIStore();
     const queryClient = useQueryClient();
-    const [activeTab, setActiveTab] = useState<'regions' | 'centers'>('regions');
+    const [activeTab, setActiveTab] = useState<'regions' | 'counties' | 'centers'>('regions');
     const [searchQuery, setSearchQuery] = useState('');
     const [showForm, setShowForm] = useState(false);
-    const [editingItem, setEditingItem] = useState<Region | Center | null>(null);
+    const [editingItem, setEditingItem] = useState<Region | County | Center | null>(null);
 
     React.useEffect(() => {
         setPageTitle('Location Management');
     }, [setPageTitle]);
 
     // Fetch Regions
-    const { data: regions, isLoading: regionsLoading } = useQuery<Region[]>({
+    const { data: regionsData, isLoading: regionsLoading } = useQuery<ApiResponse<Region[]>>({
         queryKey: ['admin-regions'],
-        queryFn: async () => {
-            const res = await api.get<ApiResponse<Region[]>>('/admin/regions');
-            return res.data;
-        }
+        queryFn: () => api.get('/admin/regions')
     });
+    const regions = regionsData?.data;
+
+    // Fetch Counties
+    const { data: countiesData, isLoading: countiesLoading } = useQuery<ApiResponse<County[]>>({
+        queryKey: ['admin-counties'],
+        queryFn: () => api.get('/admin/counties')
+    });
+    const counties = countiesData?.data;
 
     // Fetch Centers
-    const { data: centers, isLoading: centersLoading } = useQuery<Center[]>({
+    const { data: centersData, isLoading: centersLoading } = useQuery<ApiResponse<Center[]>>({
         queryKey: ['admin-centers'],
-        queryFn: async () => {
-            const res = await api.get<ApiResponse<Center[]>>('/admin/centers');
-            return res.data;
-        }
+        queryFn: () => api.get('/admin/centers')
     });
+    const centers = centersData?.data;
 
 
     // Mutations
     const regionMutation = useMutation({
         mutationFn: async (data: any) => {
-            if (editingItem) {
+            if (editingItem && activeTab === 'regions') {
                 return api.put(`/admin/regions/${editingItem.id}`, data);
             }
             return api.post('/admin/regions', data);
@@ -78,9 +82,27 @@ export default function LocationsPage() {
         }
     });
 
+    const countyMutation = useMutation({
+        mutationFn: async (data: any) => {
+            if (editingItem && activeTab === 'counties') {
+                return api.put(`/admin/counties/${editingItem.id}`, data);
+            }
+            return api.post('/admin/counties', data);
+        },
+        onSuccess: (res: any) => {
+            queryClient.invalidateQueries({ queryKey: ['admin-counties'] });
+            toast.success(res.message || `County ${editingItem ? 'updated' : 'created'} successfully`);
+            setShowForm(false);
+            setEditingItem(null);
+        },
+        onError: (err: any) => {
+            toast.error(handleApiError(err));
+        }
+    });
+
     const centerMutation = useMutation({
         mutationFn: async (data: any) => {
-            if (editingItem) {
+            if (editingItem && activeTab === 'centers') {
                 return api.put(`/admin/centers/${editingItem.id}`, data);
             }
             return api.post('/admin/centers', data);
@@ -97,7 +119,7 @@ export default function LocationsPage() {
     });
 
     const deleteMutation = useMutation({
-        mutationFn: async ({ type, id }: { type: 'regions' | 'centers', id: number }) => {
+        mutationFn: async ({ type, id }: { type: 'regions' | 'counties' | 'centers', id: number }) => {
             return api.delete(`/admin/${type}/${id}`);
         },
         onSuccess: (res: any, variables) => {
@@ -114,10 +136,24 @@ export default function LocationsPage() {
         r.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const filteredCenters = centers?.filter((c: Center) => 
+    const filteredCounties = counties?.filter((c: County) => 
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.region?.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const filteredCenters = centers?.filter((c: Center) => 
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.county?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.region?.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const getTabName = () => {
+        switch(activeTab) {
+            case 'regions': return 'Region';
+            case 'counties': return 'County';
+            case 'centers': return 'Center';
+        }
+    };
 
     return (
         <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto pb-24">
@@ -125,7 +161,7 @@ export default function LocationsPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-1">
                     <h2 className="text-3xl font-black text-green-950 tracking-tight">Geographical Hub</h2>
-                    <p className="text-text-secondary text-sm font-medium">Manage regions, urban centers, and market clusters.</p>
+                    <p className="text-text-secondary text-sm font-medium">Manage regions, counties, urban centers, and market clusters.</p>
                 </div>
                 <button 
                     onClick={() => {
@@ -135,7 +171,7 @@ export default function LocationsPage() {
                     className="h-14 px-8 bg-brand-600 text-white rounded-[1.25rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-brand-900/10 active:scale-95 transition-all"
                 >
                     <Plus size={20} />
-                    Add New {activeTab === 'regions' ? 'Region' : 'Center'}
+                    Add New {getTabName()}
                 </button>
             </div>
 
@@ -144,16 +180,23 @@ export default function LocationsPage() {
                 <div className="flex bg-neutral-100/50 p-1.5 rounded-[1.5rem] w-full lg:w-fit">
                     <button 
                         onClick={() => setActiveTab('regions')}
-                        className={`flex-1 lg:flex-none h-12 px-8 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${activeTab === 'regions' ? 'bg-white text-brand-600 shadow-sm' : 'text-text-muted hover:text-green-950'}`}
+                        className={`flex-1 lg:flex-none h-12 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${activeTab === 'regions' ? 'bg-white text-brand-600 shadow-sm' : 'text-text-muted hover:text-green-950'}`}
                     >
-                        <Globe size={16} />
+                        <Globe size={14} />
                         Regions
                     </button>
                     <button 
-                        onClick={() => setActiveTab('centers')}
-                        className={`flex-1 lg:flex-none h-12 px-8 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${activeTab === 'centers' ? 'bg-white text-brand-600 shadow-sm' : 'text-text-muted hover:text-green-950'}`}
+                        onClick={() => setActiveTab('counties')}
+                        className={`flex-1 lg:flex-none h-12 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${activeTab === 'counties' ? 'bg-white text-brand-600 shadow-sm' : 'text-text-muted hover:text-green-950'}`}
                     >
-                        <Navigation size={16} />
+                        <MapIcon size={14} />
+                        Counties
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('centers')}
+                        className={`flex-1 lg:flex-none h-12 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${activeTab === 'centers' ? 'bg-white text-brand-600 shadow-sm' : 'text-text-muted hover:text-green-950'}`}
+                    >
+                        <Navigation size={14} />
                         Centers
                     </button>
                 </div>
@@ -171,19 +214,19 @@ export default function LocationsPage() {
             </div>
 
             {/* Data Grid */}
-            {(regionsLoading || centersLoading) ? (
+            {(regionsLoading || countiesLoading || centersLoading) ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4">
                     <Loader2 className="animate-spin text-brand-600" size={40} />
                     <p className="text-xs font-black text-text-muted uppercase tracking-widest">Loading Locations...</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {activeTab === 'regions' ? (
+                    {activeTab === 'regions' && (
                         filteredRegions?.map((region) => (
                             <LocationCard 
                                 key={region.id}
                                 title={region.name}
-                                subtitle={`${region.centers_count || 0} Centers`}
+                                subtitle={`${region.counties_count || 0} Counties`}
                                 icon={Globe}
                                 onEdit={() => {
                                     setEditingItem(region);
@@ -194,12 +237,33 @@ export default function LocationsPage() {
                                 isActive={region.is_active}
                             />
                         ))
-                    ) : (
+                    )}
+                    
+                    {activeTab === 'counties' && (
+                        filteredCounties?.map((county) => (
+                            <LocationCard 
+                                key={county.id}
+                                title={county.name}
+                                subtitle={county.region?.name || 'No Region'}
+                                icon={MapIcon}
+                                onEdit={() => {
+                                    setEditingItem(county);
+                                    setShowForm(true);
+                                }}
+                                onDelete={() => deleteMutation.mutate({ type: 'counties', id: county.id })}
+                                description={county.description}
+                                isActive={county.is_active}
+                                badge={`${county.centers_count || 0} Centers`}
+                            />
+                        ))
+                    )}
+
+                    {activeTab === 'centers' && (
                         filteredCenters?.map((center) => (
                             <LocationCard 
                                 key={center.id}
                                 title={center.name}
-                                subtitle={center.region?.name || 'No Region'}
+                                subtitle={`${center.county?.name || 'No County'} • ${center.region?.name || 'No Region'}`}
                                 icon={Navigation}
                                 onEdit={() => {
                                     setEditingItem(center);
@@ -222,12 +286,14 @@ export default function LocationsPage() {
                         type={activeTab}
                         item={editingItem}
                         regions={regions || []}
+                        counties={counties || []}
                         onClose={() => setShowForm(false)}
                         onSubmit={(data) => {
                             if (activeTab === 'regions') regionMutation.mutate(data);
+                            else if (activeTab === 'counties') countyMutation.mutate(data);
                             else centerMutation.mutate(data);
                         }}
-                        isLoading={regionMutation.isPending || centerMutation.isPending}
+                        isLoading={regionMutation.isPending || countyMutation.isPending || centerMutation.isPending}
                     />
                 )}
             </AnimatePresence>
@@ -298,21 +364,26 @@ function LocationCard({ title, subtitle, icon: Icon, onEdit, onDelete, descripti
 }
 
 interface LocationModalProps {
-    type: 'regions' | 'centers';
-    item?: Region | Center | null;
+    type: 'regions' | 'counties' | 'centers';
+    item?: Region | County | Center | any;
     regions: Region[];
+    counties: County[];
     onClose: () => void;
     onSubmit: (data: any) => void;
     isLoading: boolean;
 }
 
-function LocationModal({ type, item, regions, onClose, onSubmit, isLoading }: LocationModalProps) {
+function LocationModal({ type, item, regions, counties, onClose, onSubmit, isLoading }: LocationModalProps) {
     const [formData, setFormData] = useState({
         name: item?.name || '',
         description: item?.description || '',
         region_id: item?.region_id || regions[0]?.id || '',
+        county_id: item?.county_id || counties[0]?.id || '',
         is_active: item ? item.is_active : true
     });
+
+    // Cascading logic for Center creation
+    const filteredCounties = counties.filter(c => c.region_id.toString() === formData.region_id.toString());
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -328,34 +399,40 @@ function LocationModal({ type, item, regions, onClose, onSubmit, isLoading }: Lo
                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                className="bg-white rounded-[3rem] p-8 md:p-12 w-full max-w-[540px] relative shadow-2xl overflow-hidden"
+                className="bg-white rounded-[3rem] p-0 w-full max-w-[540px] relative shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
-                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-50 rounded-bl-[10rem] -mr-32 -mt-32 opacity-50" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-50 rounded-bl-[10rem] -mr-32 -mt-32 opacity-50 shrink-0" />
                 
-                <div className="relative z-10 space-y-8">
+                <div className="p-8 md:p-12 pb-6 relative z-10 shrink-0">
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <h3 className="text-2xl font-black text-green-950 tracking-tight">
-                                {item ? 'Edit' : 'Create'} {type === 'regions' ? 'Region' : 'Center'}
+                                {item ? 'Edit' : 'Create'} {type === 'regions' ? 'Region' : type === 'counties' ? 'County' : 'Center'}
                             </h3>
-                            <p className="text-sm text-text-secondary font-medium">Enter details for the new geographical entry.</p>
+                            <p className="text-sm text-text-secondary font-medium">Enter details for the geographical entry.</p>
                         </div>
                         <button onClick={onClose} className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center text-text-muted hover:text-green-950 transition-all">
                             <X size={24} />
                         </button>
                     </div>
+                </div>
 
-                    <form className="space-y-6" onSubmit={(e) => {
+                <div className="flex-1 overflow-y-auto p-8 md:p-12 pt-0 relative z-10 no-scrollbar">
+                    <form className="space-y-6" id="location-form" onSubmit={(e) => {
                         e.preventDefault();
                         const submitData = { ...formData };
-                        // Remove region_id if we are creating a region
+                        
                         if (type === 'regions') {
                             delete (submitData as any).region_id;
+                            delete (submitData as any).county_id;
+                        } else if (type === 'counties') {
+                            delete (submitData as any).county_id;
                         }
+                        
                         onSubmit(submitData);
                     }}>
 
-                        {type === 'centers' && (
+                        {type === 'counties' && (
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-4">Select Region</label>
                                 <select 
@@ -370,6 +447,49 @@ function LocationModal({ type, item, regions, onClose, onSubmit, isLoading }: Lo
                             </div>
                         )}
 
+                        {type === 'centers' && (
+                            <>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-4">Select Region</label>
+                                    <select 
+                                        value={formData.region_id}
+                                        onChange={(e) => {
+                                            const newRegionId = e.target.value;
+                                            const firstCounty = counties.find(c => c.region_id.toString() === newRegionId.toString());
+                                            setFormData({
+                                                ...formData, 
+                                                region_id: newRegionId,
+                                                county_id: firstCounty?.id.toString() || ''
+                                            });
+                                        }}
+                                        className="w-full h-16 px-6 bg-neutral-50 rounded-2xl border-2 border-transparent focus:border-brand-500 focus:bg-white transition-all outline-none text-sm font-bold"
+                                    >
+                                        {regions.map((r: Region) => (
+                                            <option key={r.id} value={r.id}>{r.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-4">Select County</label>
+                                    <select 
+                                        value={formData.county_id}
+                                        onChange={(e) => setFormData({...formData, county_id: e.target.value})}
+                                        className="w-full h-16 px-6 bg-neutral-50 rounded-2xl border-2 border-transparent focus:border-brand-500 focus:bg-white transition-all outline-none text-sm font-bold"
+                                        disabled={!formData.region_id}
+                                    >
+                                        <option value="">Select a county...</option>
+                                        {filteredCounties.map((c: County) => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                    {filteredCounties.length === 0 && formData.region_id && (
+                                        <p className="text-[10px] text-rose-500 font-bold ml-4">No counties found for this region. Create one first.</p>
+                                    )}
+                                </div>
+                            </>
+                        )}
+
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] ml-4">Name</label>
                             <input 
@@ -377,7 +497,7 @@ function LocationModal({ type, item, regions, onClose, onSubmit, isLoading }: Lo
                                 value={formData.name}
                                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                                 className="w-full h-16 px-6 bg-neutral-50 rounded-2xl border-2 border-transparent focus:border-brand-500 focus:bg-white transition-all outline-none text-sm font-bold"
-                                placeholder={`e.g. ${type === 'regions' ? 'Westlands Sub-County' : 'Kangemi Center'}`}
+                                placeholder={`e.g. ${type === 'regions' ? 'Coast Region' : type === 'counties' ? 'Mombasa County' : 'Likoni Center'}`}
                                 required
                             />
                         </div>
@@ -404,16 +524,19 @@ function LocationModal({ type, item, regions, onClose, onSubmit, isLoading }: Lo
                                 Mark as Operational / Active
                             </label>
                         </div>
-
-                        <button 
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full h-16 bg-brand-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-brand-900/10 active:scale-95 transition-all flex items-center justify-center gap-3"
-                        >
-                            {isLoading ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20} />}
-                            {item ? 'Update Entry' : 'Create Entry'}
-                        </button>
                     </form>
+                </div>
+
+                <div className="p-8 md:p-12 pt-4 shrink-0 relative z-10 border-t border-gray-50">
+                    <button 
+                        type="submit"
+                        form="location-form"
+                        disabled={isLoading || (type === 'centers' && !formData.county_id)}
+                        className="w-full h-16 bg-brand-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-brand-900/10 disabled:opacity-50 disabled:shadow-none active:scale-95 transition-all flex items-center justify-center gap-3"
+                    >
+                        {isLoading ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20} />}
+                        {item ? 'Update Entry' : 'Create Entry'}
+                    </button>
                 </div>
             </motion.div>
         </div>

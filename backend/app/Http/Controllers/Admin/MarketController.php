@@ -46,8 +46,9 @@ class MarketController extends Controller
             'estate' => 'required|string|max:255',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'is_active' => 'boolean',
+            'is_active' => 'nullable', // Handled below
             'default_monthly_fee' => 'nullable|numeric|min:0',
+            'center_id' => 'required|exists:centers,id',
             'banner_image' => 'nullable|image|max:5120',
             'icon_image' => 'nullable|image|max:2048'
         ]);
@@ -57,6 +58,9 @@ class MarketController extends Controller
         }
 
         $data = $request->except(['banner_image', 'icon_image']);
+        
+        // Handle boolean fields from FormData
+        $data['is_active'] = filter_var($request->input('is_active', true), FILTER_VALIDATE_BOOLEAN);
 
         if ($request->hasFile('banner_image')) {
             $data['banner_url'] = $this->cloudinaryService->uploadImage($request->file('banner_image'), 'markets/banners');
@@ -80,8 +84,6 @@ class MarketController extends Controller
     public function update(Request $request, Market $market): JsonResponse
     {
         Log::info('Market Update Request:', $request->all());
-        Log::info('Has banner_image: ' . ($request->hasFile('banner_image') ? 'Yes' : 'No'));
-        Log::info('Has icon_image: ' . ($request->hasFile('icon_image') ? 'Yes' : 'No'));
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
@@ -90,8 +92,9 @@ class MarketController extends Controller
             'estate' => 'sometimes|required|string|max:255',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'is_active' => 'boolean',
+            'is_active' => 'nullable',
             'default_monthly_fee' => 'nullable|numeric|min:0',
+            'center_id' => 'sometimes|required|exists:centers,id',
             'banner_image' => 'nullable|image|max:5120',
             'icon_image' => 'nullable|image|max:2048'
         ]);
@@ -101,6 +104,11 @@ class MarketController extends Controller
         }
 
         $data = $request->except(['banner_image', 'icon_image']);
+        
+        // Handle boolean fields from FormData
+        if ($request->has('is_active')) {
+            $data['is_active'] = filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN);
+        }
 
         if ($request->hasFile('banner_image')) {
             $url = $this->cloudinaryService->uploadImage($request->file('banner_image'), 'markets/banners');

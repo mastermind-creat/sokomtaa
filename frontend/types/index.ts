@@ -273,6 +273,19 @@ export interface Region {
     name: string;
     description?: string | null;
     is_active: boolean;
+    counties_count?: number;
+    centers_count?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface County {
+    id: number;
+    region_id: number;
+    name: string;
+    description?: string | null;
+    is_active: boolean;
+    region?: Region;
     centers_count?: number;
     created_at: string;
     updated_at: string;
@@ -280,10 +293,12 @@ export interface Region {
 
 export interface Center {
     id: number;
+    county_id: number;
     region_id: number;
     name: string;
     description?: string | null;
     is_active: boolean;
+    county?: County;
     region?: Region;
     markets_count?: number;
     created_at: string;

@@ -18,11 +18,19 @@ class Region extends Model
     ];
 
     /**
-     * Get the centers for the region.
+     * Get the counties for the region.
      */
-    public function centers(): HasMany
+    public function counties(): HasMany
     {
-        return $this->hasMany(Center::class);
+        return $this->hasMany(County::class);
+    }
+
+    /**
+     * Get the centers for the region through counties.
+     */
+    public function centers(): HasManyThrough
+    {
+        return $this->hasManyThrough(Center::class, County::class);
     }
 
     /**
@@ -30,6 +38,6 @@ class Region extends Model
      */
     public function markets(): HasManyThrough
     {
-        return $this->hasManyThrough(Market::class, Center::class);
+        return $this->hasManyThrough(Market::class, Center::class, 'county_id', 'center_id');
     }
 }

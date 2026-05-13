@@ -271,8 +271,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/map-data', [\App\Http\Controllers\Admin\StallMapController::class, 'getMapData']);
         Route::post('/allocations', [\App\Http\Controllers\Admin\StallAllocationController::class, 'store']);
 
-        // Locations (Regions & Centers)
+        // Locations (Regions, Counties & Centers)
         Route::apiResource('regions', \App\Http\Controllers\Admin\RegionController::class);
+        Route::apiResource('counties', \App\Http\Controllers\Admin\CountyController::class);
         Route::apiResource('centers', \App\Http\Controllers\Admin\CenterController::class);
 
         // Stall Application Review
