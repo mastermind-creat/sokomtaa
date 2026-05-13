@@ -44,7 +44,7 @@ class MarketController extends Controller
         // If coordinates supplied, add distance column + filter by radius
         if ($lat !== null && $lng !== null) {
             $query->selectRaw(
-                "*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitude ) ) ) ), 2) AS distance_km",
+                "markets.*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitude ) ) ) ), 2) AS distance_km",
                 [$lat, $lng, $lat]
             )->having('distance_km', '<=', $radius)
              ->orderBy('distance_km');
@@ -73,7 +73,7 @@ class MarketController extends Controller
 
         // Haversine formula to find markets within radius
         $markets = Market::where('is_active', true)
-            ->selectRaw("*, ( 6371 * acos( cos( radians(?) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitude ) ) ) ) AS distance", [$lat, $lng, $lat])
+            ->selectRaw("markets.*, ( 6371 * acos( cos( radians(?) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitude ) ) ) ) AS distance", [$lat, $lng, $lat])
             ->having('distance', '<=', $radius)
             ->orderBy('distance')
             ->withCount('traders')

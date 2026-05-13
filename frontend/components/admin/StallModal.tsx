@@ -12,7 +12,8 @@ import {
     Coins, 
     Info, 
     Save, 
-    Loader2 
+    Loader2,
+    AlertCircle 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Stall, Market } from '@/types';
@@ -67,6 +68,8 @@ export const StallModal: React.FC<StallModalProps> = ({
             notes: '',
         }
     });
+
+    const [serverError, setServerError] = React.useState<string | null>(null);
 
     const watchedBlock = watch('block');
     const watchedZone = watch('zone');
@@ -167,8 +170,19 @@ export const StallModal: React.FC<StallModalProps> = ({
                         </button>
                     </div>
 
-                    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+                    <form onSubmit={handleSubmit((data) => {
+                        setServerError(null);
+                        onSubmit(data);
+                    })} className="flex flex-col flex-1 overflow-hidden">
                         <div className="p-8 space-y-6 overflow-y-auto no-scrollbar flex-1">
+                            {serverError && (
+                                <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 animate-shake">
+                                    <AlertCircle className="text-red-600 shrink-0 mt-0.5" size={16} />
+                                    <p className="text-[10px] font-bold text-red-600 uppercase tracking-tight leading-normal">
+                                        {serverError}
+                                    </p>
+                                </div>
+                            )}
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     {/* Stall Number */}

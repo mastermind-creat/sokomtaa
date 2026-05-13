@@ -304,3 +304,17 @@ export interface Center {
     created_at: string;
     updated_at: string;
 }
+
+export interface Report {
+    id: number;
+    user_id: number;
+    title: string;
+    type: 'sales' | 'revenue' | 'receipt' | 'audit' | 'activity';
+    format: 'pdf' | 'xlsx' | 'csv';
+    file_path: string | null;
+    parameters: any;
+    status: 'pending' | 'completed' | 'failed';
+    metadata: any;
+    generated_at: string | null;
+    created_at: string;
+}

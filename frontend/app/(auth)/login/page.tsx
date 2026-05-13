@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ApiResponse, AuthResponse } from '@/types';
+import { Logo } from '@/components/shared/Logo';
 import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
 import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
 
@@ -28,7 +29,6 @@ interface LoginFormData {
     phone: string;
     password: string;
 }
-import { Logo } from '@/components/shared/Logo';
 
 export default function LoginPage() {
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>();

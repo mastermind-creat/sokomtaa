@@ -50,14 +50,16 @@ class Trader extends Model
         'last_fee_deduction_at' => 'datetime',
     ];
 
+    protected $appends = ['is_currently_open'];
+
     /**
      * Get the effective open status of the trader.
      * Respects both the manual toggle and the business hours.
      */
-    public function getIsOpenAttribute($value): bool
+    public function getIsCurrentlyOpenAttribute(): bool
     {
         // If manually closed or unset, it's definitely closed
-        if (!$value) {
+        if (!$this->attributes['is_open']) {
             return false;
         }
 
@@ -78,6 +80,7 @@ class Trader extends Model
         // Handle overnight shifts if any (e.g., 20:00 to 05:00)
         return $currentTime >= $this->opening_time || $currentTime <= $this->closing_time;
     }
+
 
     public function user(): BelongsTo
     {

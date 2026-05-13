@@ -201,9 +201,9 @@ function SearchPageContent() {
                                 {t('search.results_count').replace('{total}', searchData?.data.total.toString() || '0')}
                             </h2>
                             {results.some((r: any) => r.search_type === 'product') && (
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-lg border border-amber-200">
-                                    <TrendingUp size={12} />
-                                    <span className="text-[9px] font-black uppercase tracking-widest">Price Comparison Active</span>
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500 text-white rounded-lg border border-amber-400 shadow-sm shadow-amber-200 animate-pulse">
+                                    <Package size={12} className="fill-white" />
+                                    <span className="text-[9px] font-black uppercase tracking-widest">Market Comparison Active</span>
                                 </div>
                             )}
                         </div>
@@ -213,8 +213,8 @@ function SearchPageContent() {
                                 <div 
                                     key={`${result.search_type}-${result.id}`} 
                                     className={cn(
-                                        "flex flex-col bg-white rounded-3xl border shadow-sm transition-all group overflow-hidden relative",
-                                        result.is_grouped ? "border-brand-200 ring-2 ring-brand-50" : "border-border-default"
+                                        "flex flex-col bg-white rounded-[2.5rem] border shadow-sm transition-all group overflow-hidden relative",
+                                        result.is_grouped ? "border-amber-400 ring-4 ring-amber-500/10 shadow-xl shadow-amber-900/5" : "border-border-default"
                                     )}
                                 >
                                     <div className={`aspect-square w-full flex items-center justify-center shrink-0 overflow-hidden relative ${result.search_type === 'market' ? 'bg-amber-50 text-amber-600' : 'bg-brand-50 text-brand-500'}`}>
@@ -231,20 +231,20 @@ function SearchPageContent() {
                                             <MapPin size={32} className="opacity-20" />
                                         )}
                                         
-                                        <div className="absolute top-3 left-3 flex flex-col gap-1 items-start">
+                                        <div className="absolute top-4 left-4 flex flex-col gap-1.5 items-start">
                                             <span className={cn(
-                                                "text-[8px] uppercase font-black tracking-widest px-2 py-1 rounded-lg backdrop-blur-md border",
-                                                result.is_grouped ? "bg-brand-600 text-white border-brand-500 shadow-lg" : (
-                                                    result.search_type === 'product' ? 'bg-green-500/10 text-green-700 border-green-200' :
-                                                    result.search_type === 'trader' ? 'bg-blue-500/10 text-blue-700 border-blue-200' :
-                                                    'bg-amber-500/10 text-amber-700 border-amber-200'
+                                                "text-[8px] uppercase font-black tracking-widest px-2.5 py-1.5 rounded-xl backdrop-blur-md border shadow-sm",
+                                                result.is_grouped ? "bg-amber-500 text-white border-amber-400 animate-bounce-subtle" : (
+                                                    result.search_type === 'product' ? 'bg-white/90 text-green-700 border-green-100' :
+                                                    result.search_type === 'trader' ? 'bg-white/90 text-blue-700 border-blue-100' :
+                                                    'bg-white/90 text-amber-700 border-amber-100'
                                                 )
                                             )}>
-                                                {result.is_grouped ? 'Best Price' : t(`common.${result.search_type}`)}
+                                                {result.is_grouped ? '✨ Smart Deal' : t(`common.${result.search_type}`)}
                                             </span>
                                             {result.is_grouped && (
-                                                <span className="text-[7px] uppercase font-black tracking-widest px-2 py-1 rounded-lg bg-white/90 border border-brand-200 text-brand-600 shadow-sm">
-                                                    {result.sellers_count} Sellers
+                                                <span className="text-[7px] uppercase font-black tracking-widest px-2 py-1 rounded-lg bg-amber-950 text-white border border-amber-800 shadow-lg">
+                                                    Save KES {result.max_price - result.min_price}
                                                 </span>
                                             )}
                                         </div>
@@ -252,7 +252,7 @@ function SearchPageContent() {
                                         {/* Closed Status Overlay */}
                                         {!result.is_grouped && (
                                             <div className="absolute top-3 right-3">
-                                                {((result.search_type === 'product' && !result.trader?.is_open) || (result.search_type === 'trader' && !result.is_open)) && (
+                                                {((result.search_type === 'product' && !result.trader?.is_currently_open) || (result.search_type === 'trader' && !result.is_currently_open)) && (
                                                     <span className="text-[7px] font-black bg-neutral-800/80 backdrop-blur-sm text-white px-2 py-1 rounded-lg uppercase tracking-tighter shadow-sm">Closed</span>
                                                 )}
                                             </div>
@@ -260,7 +260,7 @@ function SearchPageContent() {
                                     </div>
                                     
                                     <div className="p-4 flex-1 flex flex-col">
-                                        <h3 className="font-bold text-green-950 text-sm line-clamp-2 mb-1 group-hover:text-brand-700 transition-colors">
+                                        <h3 className="font-bold text-green-950 text-sm line-clamp-2 mb-1 group-hover:text-brand-700 transition-colors uppercase">
                                             {result.search_type === 'product' ? (locale === 'sw' ? (result.name_sw || result.name) : result.name) :
                                              result.search_type === 'trader' ? (locale === 'sw' ? (result.business_name_sw || result.business_name) : result.business_name) :
                                              result.name}
@@ -268,15 +268,30 @@ function SearchPageContent() {
                                         
                                         <div className="mt-auto pt-2 space-y-3">
                                             {result.search_type === 'product' && (
-                                                <div className="flex flex-col gap-0.5">
-                                                    <div className="flex items-baseline gap-1">
-                                                        <span className="text-xs font-black text-brand-600 font-mono">KES {result.price}</span>
-                                                        <span className="text-[10px] text-text-muted lowercase font-bold">/{result.unit}</span>
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-baseline justify-between">
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className={cn(
+                                                                "text-sm font-black font-mono",
+                                                                result.is_grouped ? "text-amber-600" : "text-brand-600"
+                                                            )}>KES {result.price}</span>
+                                                            <span className="text-[10px] text-text-muted lowercase font-bold">/{result.unit}</span>
+                                                        </div>
+                                                        {result.is_grouped && (
+                                                            <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100">
+                                                                {result.sellers_count} Options
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     {result.is_grouped && (
-                                                        <p className="text-[8px] font-bold text-text-muted uppercase tracking-widest">
-                                                            Range: KES {result.min_price} - {result.max_price}
-                                                        </p>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                                <div className="h-full bg-gradient-to-r from-amber-400 to-amber-600 w-full" />
+                                                            </div>
+                                                            <p className="text-[7px] font-black text-amber-700 uppercase tracking-widest whitespace-nowrap">
+                                                                Best vs Peak
+                                                            </p>
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}
@@ -284,9 +299,10 @@ function SearchPageContent() {
                                             {result.is_grouped ? (
                                                 <button 
                                                     onClick={() => setSelectedGroup(result)}
-                                                    className="w-full h-10 bg-brand-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-200 active:scale-95 transition-all"
+                                                    className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-200 active:scale-95 transition-all flex items-center justify-center gap-2 group/btn"
                                                 >
-                                                    Compare Sellers
+                                                    <Package size={14} className="group-hover/btn:rotate-12 transition-transform" />
+                                                    Compare All Prices
                                                 </button>
                                             ) : (
                                                 <Link 
@@ -295,7 +311,7 @@ function SearchPageContent() {
                                                         result.search_type === 'trader' ? `/trader/${result.id}` :
                                                         `/market/${result.id}`
                                                     }
-                                                    className="w-full h-10 bg-brand-50 text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all"
+                                                    className="w-full h-10 bg-brand-50 text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all shadow-sm"
                                                 >
                                                     View Details
                                                 </Link>
@@ -399,6 +415,12 @@ function SearchPageContent() {
                                                 )}
                                                 {seller.distance_km !== undefined && (
                                                     <span className="text-brand-600">{seller.distance_km} km</span>
+                                                )}
+                                                {(!seller.trader?.is_currently_open) && (
+                                                    <>
+                                                        <span className="w-1 h-1 rounded-full bg-gray-200" />
+                                                        <span className="text-red-500 font-black">CLOSED</span>
+                                                    </>
                                                 )}
                                             </div>
                                         </div>

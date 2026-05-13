@@ -6,6 +6,7 @@ import { Logo } from '@/components/shared/Logo';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, TrendingUp, Users, ShoppingBag, Store } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import Image from 'next/image';
 import api from '@/lib/api';
 
 interface AuthCinematicSideProps {

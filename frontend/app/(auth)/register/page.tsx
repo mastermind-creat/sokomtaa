@@ -19,6 +19,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { motion } from 'framer-motion';
 import { ApiResponse, AuthResponse } from '@/types';
+import { Logo } from '@/components/shared/Logo';
 import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
 import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
 
@@ -30,7 +31,6 @@ interface RegisterFormData {
     password_confirmation: string;
     preferred_language: string;
 }
-import { Logo } from '@/components/shared/Logo';
 
 export default function RegisterPage() {
     const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterFormData>({

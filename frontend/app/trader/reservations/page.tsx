@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Package, Clock, CheckCircle2, ShoppingBag,
-    Phone, ChevronRight, AlertCircle, RefreshCw
+    Phone, ChevronRight, AlertCircle, RefreshCw, Download
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
@@ -83,11 +83,12 @@ function formatDeadline(deadline: string | null): string {
 
 // ─── Order Card ───────────────────────────────────────────────────────────────
 
-function OrderCard({ order, onMarkReady, onMarkComplete, isUpdating }: {
+function OrderCard({ order, onMarkReady, onMarkComplete, isUpdating, onDownloadReceipt }: {
     order: ReservationItem;
     onMarkReady: (id: number) => void;
     onMarkComplete: (id: number) => void;
     isUpdating: boolean;
+    onDownloadReceipt: (id: number) => void;
 }) {
     const cfg = STATUS_CONFIG[order.status];
     const deadlineStr = formatDeadline(order.pickup_deadline);
@@ -101,7 +102,18 @@ function OrderCard({ order, onMarkReady, onMarkComplete, isUpdating }: {
         >
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-4 pb-2">
-                <span className="font-mono text-xs font-bold text-text-secondary tracking-widest">{order.reservation_code}</span>
+                <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-text-secondary tracking-widest">{order.reservation_code}</span>
+                    {['paid', 'completed', 'ready'].includes(order.status) && (
+                        <button
+                            onClick={() => onDownloadReceipt(order.id)}
+                            className="w-6 h-6 bg-brand-50 text-brand-600 rounded-lg flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all shadow-sm"
+                            title="Download Receipt"
+                        >
+                            <Download size={12} />
+                        </button>
+                    )}
+                </div>
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${cfg.bg} ${cfg.color}`}>
                     {cfg.label}
                 </span>
@@ -247,6 +259,17 @@ export default function TraderOrdersPage() {
 
     const orders: ReservationItem[] = Array.isArray(ordersData) ? ordersData : ((ordersData as { data?: ReservationItem[] })?.data ?? []);
 
+    const handleDownloadReceipt = async (id: number) => {
+        try {
+            const res = await api.post(`/reports/receipt/${id}`);
+            const { download_url } = res.data;
+            window.open(download_url, '_blank');
+        } catch (error) {
+            console.error('Failed to download receipt:', error);
+            alert('Failed to generate receipt. Please try again.');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-transparent">
             {/* Page Header */}
@@ -333,6 +356,7 @@ export default function TraderOrdersPage() {
                                     onMarkReady={(id) => updateStatus({ id, status: 'ready' })}
                                     onMarkComplete={(id) => updateStatus({ id, status: 'completed' })}
                                     isUpdating={isUpdating}
+                                    onDownloadReceipt={handleDownloadReceipt}
                                 />
                             ))}
                         </div>

@@ -239,11 +239,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::patch('/{id}/resolve', [\App\Http\Controllers\ComplaintController::class, 'resolve']);
     });
 
-    // ── Notice Board ─────────────────────────────────────────────────────────
-    Route::prefix('notices')->group(function () {
-        Route::get('/', [\App\Http\Controllers\NoticeController::class, 'index']);
-        Route::post('/', [\App\Http\Controllers\NoticeController::class, 'store']);
-        Route::delete('/{id}', [\App\Http\Controllers\NoticeController::class, 'destroy']);
+    // ── Reports & Receipts ──────────────────────────────────────────────────
+    Route::prefix('reports')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ReportController::class, 'index']);
+        Route::post('/receipt/{reservation}', [\App\Http\Controllers\ReportController::class, 'generateReceipt']);
+        Route::post('/activity', [\App\Http\Controllers\ReportController::class, 'generateActivityReport']);
+        Route::get('/{report}/download', [\App\Http\Controllers\ReportController::class, 'download']);
+        Route::delete('/{report}', [\App\Http\Controllers\ReportController::class, 'destroy']);
     });
 
     // ── ADMIN ROUTES ─────────────────────────────────────────────────────────
@@ -267,6 +269,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/stalls', [\App\Http\Controllers\Admin\StallController::class, 'store']);
         Route::patch('/stalls/{stall}', [\App\Http\Controllers\Admin\StallController::class, 'update']);
         Route::delete('/stalls/{stall}', [\App\Http\Controllers\Admin\StallController::class, 'destroy']);
+        Route::delete('/stalls/bulk', [\App\Http\Controllers\Admin\StallController::class, 'bulkDestroy']);
         Route::post('/stalls/bulk', [\App\Http\Controllers\Admin\StallController::class, 'bulkGenerate']);
         Route::post('/stalls/bulk-update-fees', [\App\Http\Controllers\Admin\StallController::class, 'bulkUpdateFees']);
         Route::get('/map-data', [\App\Http\Controllers\Admin\StallMapController::class, 'getMapData']);

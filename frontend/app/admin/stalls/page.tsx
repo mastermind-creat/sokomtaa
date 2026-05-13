@@ -40,6 +40,7 @@ export default function AdminStallsPage() {
     const [view, setView] = useState<'list' | 'map' | 'bulk'>('list');
     const [selectedMarketId, setSelectedMarketId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedStallIds, setSelectedStallIds] = useState<number[]>([]);
     
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -99,6 +100,16 @@ export default function AdminStallsPage() {
         mutationFn: (id: number) => api.delete(`/admin/stalls/${id}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-stalls'] });
+            setSelectedStallIds(prev => prev.filter(sid => sid !== selectedStall?.id));
+        }
+    });
+
+    const bulkDeleteMutation = useMutation({
+        mutationFn: (ids: number[]) => api.delete('/admin/stalls/bulk', { data: { ids } }),
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ['admin-stalls'] });
+            setSelectedStallIds([]);
+            alert(res.message || 'Selected stalls deleted successfully.');
         }
     });
 
@@ -128,6 +139,26 @@ export default function AdminStallsPage() {
     const handleDelete = (id: number) => {
         if (window.confirm('Are you sure you want to delete this stall? This action cannot be undone.')) {
             deleteMutation.mutate(id);
+        }
+    };
+
+    const handleBulkDelete = () => {
+        if (window.confirm(`Are you sure you want to delete ${selectedStallIds.length} stalls? This action cannot be undone.`)) {
+            bulkDeleteMutation.mutate(selectedStallIds);
+        }
+    };
+
+    const toggleStallSelection = (id: number) => {
+        setSelectedStallIds(prev => 
+            prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedStallIds.length === filteredStalls.length) {
+            setSelectedStallIds([]);
+        } else {
+            setSelectedStallIds(filteredStalls.map(s => s.id));
         }
     };
 
@@ -198,36 +229,61 @@ export default function AdminStallsPage() {
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                     />
                                 </div>
-                                <button 
-                                    onClick={() => {
-                                        setSelectedStall(null);
-                                        setIsModalOpen(true);
-                                    }}
-                                    className="h-14 px-8 bg-brand-600 text-white rounded-[1.25rem] shadow-lg shadow-brand-900/10 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
-                                >
-                                    <Plus size={18} /> New Stall
-                                </button>
-                            </div>
+                                    <button 
+                                        onClick={() => {
+                                            setSelectedStall(null);
+                                            setIsModalOpen(true);
+                                        }}
+                                        className="h-14 px-8 bg-brand-600 text-white rounded-[1.25rem] shadow-lg shadow-brand-900/10 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                    >
+                                        <Plus size={18} /> New Stall
+                                    </button>
+                                    {selectedStallIds.length > 0 && (
+                                        <button 
+                                            onClick={toggleSelectAll}
+                                            className="h-14 px-6 bg-gray-100 text-text-secondary rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all"
+                                        >
+                                            {selectedStallIds.length === filteredStalls.length ? 'Deselect All' : 'Select All'}
+                                        </button>
+                                    )}
+                                </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                 {stallsLoading ? (
                                     Array(8).fill(0).map((_, i) => <div key={i} className="h-40 bg-white rounded-[2rem] animate-pulse" />)
-                                ) : filteredStalls.map((stall) => (
-                                    <div key={stall.id} className="group bg-white border border-gray-50 p-6 rounded-[2rem] shadow-sm hover:shadow-xl hover:border-brand-200 transition-all cursor-pointer relative overflow-hidden flex flex-col min-h-[160px]">
-                                        <div className="flex items-start justify-between relative z-10">
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Zone {stall.zone} • Block {stall.block}</p>
-                                                <h3 className="text-2xl font-black text-green-950 uppercase leading-none">{stall.stall_number}</h3>
-                                            </div>
+                                ) : filteredStalls.map((stall) => {
+                                    const isSelected = selectedStallIds.includes(stall.id);
+                                    return (
+                                        <div 
+                                            key={stall.id} 
+                                            onClick={() => toggleStallSelection(stall.id)}
+                                            className={cn(
+                                                "group bg-white border p-6 rounded-[2rem] shadow-sm hover:shadow-xl transition-all cursor-pointer relative overflow-hidden flex flex-col min-h-[160px]",
+                                                isSelected ? "border-brand-500 ring-2 ring-brand-500/20" : "border-gray-50 hover:border-brand-200"
+                                            )}
+                                        >
+                                            {/* Selection Indicator */}
                                             <div className={cn(
-                                                "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border shrink-0",
-                                                stall.status === 'occupied' ? "bg-brand-50 text-brand-700 border-brand-100" :
-                                                stall.status === 'available' ? "bg-blue-50 text-blue-700 border-blue-100" :
-                                                "bg-rose-50 text-rose-700 border-rose-100"
+                                                "absolute top-6 left-6 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all z-20",
+                                                isSelected ? "bg-brand-600 border-brand-600 text-white" : "bg-white border-gray-200"
                                             )}>
-                                                {stall.status}
+                                                {isSelected && <Plus size={14} className="rotate-45" />}
                                             </div>
-                                        </div>
+
+                                            <div className="flex items-start justify-between relative z-10 pl-8">
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Zone {stall.zone} • Block {stall.block}</p>
+                                                    <h3 className="text-2xl font-black text-green-950 uppercase leading-none">{stall.stall_number}</h3>
+                                                </div>
+                                                <div className={cn(
+                                                    "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border shrink-0",
+                                                    stall.status === 'occupied' ? "bg-brand-50 text-brand-700 border-brand-100" :
+                                                    stall.status === 'available' ? "bg-blue-50 text-blue-700 border-blue-100" :
+                                                    "bg-rose-50 text-rose-700 border-rose-100"
+                                                )}>
+                                                    {stall.status}
+                                                </div>
+                                            </div>
 
                                         <div className="mt-auto flex items-end justify-between relative z-10 pt-4">
                                             <div className="flex-1 min-w-0">
@@ -265,7 +321,8 @@ export default function AdminStallsPage() {
 
                                         <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-brand-50 rounded-full opacity-20 group-hover:scale-125 transition-transform" />
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </motion.div>
                     )}
@@ -383,6 +440,44 @@ export default function AdminStallsPage() {
                                         Warning: This will skip existing stall numbers to prevent duplicates.
                                     </p>
                                 </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                    {selectedStallIds.length > 0 && (
+                        <motion.div 
+                            initial={{ y: 100 }}
+                            animate={{ y: 0 }}
+                            exit={{ y: 100 }}
+                            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[80] w-[95%] max-w-2xl bg-gray-900 text-white rounded-[2.5rem] p-4 shadow-2xl flex items-center justify-between gap-4 border border-white/10 backdrop-blur-md"
+                        >
+                            <div className="flex items-center gap-4 pl-4">
+                                <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center font-black">
+                                    {selectedStallIds.length}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-widest">Stalls Selected</p>
+                                    <p className="text-[10px] font-medium text-white/60">Perform collective operations</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={handleBulkDelete}
+                                    disabled={bulkDeleteMutation.isPending}
+                                    className="h-12 px-6 bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 border border-red-600/30"
+                                >
+                                    {bulkDeleteMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                    Delete Selected
+                                </button>
+                                <button 
+                                    onClick={() => setSelectedStallIds([])}
+                                    className="h-12 w-12 bg-white/10 hover:bg-white/20 text-white rounded-2xl flex items-center justify-center transition-all"
+                                >
+                                    <X size={20} />
+                                </button>
                             </div>
                         </motion.div>
                     )}

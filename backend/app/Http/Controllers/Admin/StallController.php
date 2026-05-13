@@ -48,7 +48,19 @@ class StallController extends Controller
     {
         $validated = $request->validate([
             'market_id'    => 'required|exists:markets,id',
-            'stall_number' => 'required|string',
+            'stall_number' => [
+                'required', 
+                'string',
+                function ($attribute, $value, $fail) use ($request) {
+                    $exists = Stall::where('market_id', $request->market_id)
+                        ->where('block', $request->block)
+                        ->where('stall_number', $value)
+                        ->exists();
+                    if ($exists) {
+                        $fail('The stall number already exists in this block.');
+                    }
+                }
+            ],
             'zone'         => 'required|in:A,B,C',
             'block'        => 'required|string',
             'size_sqm'     => 'nullable|numeric',
@@ -67,7 +79,22 @@ class StallController extends Controller
     public function update(Request $request, Stall $stall): JsonResponse
     {
         $validated = $request->validate([
-            'stall_number' => 'sometimes|string',
+            'stall_number' => [
+                'sometimes',
+                'string',
+                function ($attribute, $value, $fail) use ($request, $stall) {
+                    $marketId = $request->market_id ?? $stall->market_id;
+                    $block = $request->block ?? $stall->block;
+                    $exists = Stall::where('market_id', $marketId)
+                        ->where('block', $block)
+                        ->where('stall_number', $value)
+                        ->where('id', '!=', $stall->id)
+                        ->exists();
+                    if ($exists) {
+                        $fail('The stall number already exists in this block.');
+                    }
+                }
+            ],
             'zone'         => 'sometimes|in:A,B,C',
             'block'        => 'sometimes|string',
             'size_sqm'     => 'nullable|numeric',
@@ -95,6 +122,36 @@ class StallController extends Controller
         $stall->delete();
 
         return $this->success(null, 'Stall deleted successfully.');
+    }
+
+    /**
+     * Bulk remove stalls.
+     */
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:stalls,id'
+        ]);
+
+        $stalls = Stall::whereIn('id', $validated['ids'])->get();
+        $deletedCount = 0;
+        $failedCount = 0;
+
+        foreach ($stalls as $stall) {
+            if ($stall->status === 'occupied') {
+                $failedCount++;
+                continue;
+            }
+            $stall->delete();
+            $deletedCount++;
+        }
+
+        if ($failedCount > 0) {
+            return $this->success(null, "Deleted {$deletedCount} stalls. {$failedCount} stalls were occupied and skipped.");
+        }
+
+        return $this->success(null, "Successfully deleted {$deletedCount} stalls.");
     }
 
     /**

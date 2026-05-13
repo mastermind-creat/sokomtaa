@@ -76,7 +76,8 @@ export default function AdminMarketsPage() {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
         },
         onError: (err: any) => {
-            alert(err.message || 'Failed to delete market. Check if it has active traders.');
+            const msg = err.response?.data?.message || err.message || 'Failed to delete market.';
+            alert(`ACTION BLOCKED: ${msg}\n\nPlease ensure the market has no active traders or stalls before deleting.`);
         }
     });
 

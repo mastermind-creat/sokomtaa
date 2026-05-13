@@ -38,6 +38,17 @@ export default function ResidentReservationsPage() {
         queryFn: () => api.get('/reservations', { params: { status: activeTab !== 'all' ? activeTab : undefined } }).then(res => res.data),
     });
 
+    const handleDownloadReceipt = async (id: number) => {
+        try {
+            const res = await api.post(`/reports/receipt/${id}`);
+            const { download_url } = res.data;
+            window.open(download_url, '_blank');
+        } catch (error) {
+            console.error('Failed to download receipt:', error);
+            alert('Failed to generate receipt. Please try again.');
+        }
+    };
+
     const reservations = reservationsData?.data || [];
 
     const filteredReservations = useMemo(() => {
@@ -198,7 +209,21 @@ export default function ResidentReservationsPage() {
                                     <div className="flex-1 min-w-0 space-y-0.5 px-0.5">
                                         <div className="flex items-center justify-between gap-1">
                                             <p className="text-[6px] font-mono font-black text-text-muted">#{res.reservation_code}</p>
-                                            <p className="text-[8px] font-black text-green-950">KES {Math.round(parseFloat(res.total_amount))}</p>
+                                            <div className="flex items-center gap-1">
+                                                {['paid', 'completed', 'ready'].includes(res.status) && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDownloadReceipt(res.id);
+                                                        }}
+                                                        className="w-5 h-5 bg-brand-50 text-brand-600 rounded-md flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all shadow-sm"
+                                                        title="Download Receipt"
+                                                    >
+                                                        <Download size={10} />
+                                                    </button>
+                                                )}
+                                                <p className="text-[8px] font-black text-green-950">KES {Math.round(parseFloat(res.total_amount))}</p>
+                                            </div>
                                         </div>
                                         <h4 className="font-black text-green-950 text-[9px] truncate group-hover:text-brand-700 transition-colors uppercase leading-tight">{res.product?.name}</h4>
                                         <p className="text-[7px] font-bold text-text-secondary truncate">{res.trader?.business_name}</p>
