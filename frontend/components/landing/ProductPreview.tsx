@@ -90,38 +90,40 @@ export const ProductPreview = () => {
                       initial={{ opacity: 0, scale: 0.95 }}
                       whileInView={{ opacity: 1, scale: 1 }}
                       viewport={{ once: true }}
-                      className="group relative flex bg-white border border-amber-100 rounded-[28px] overflow-hidden shadow-lg shadow-amber-500/5 hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-500 p-3 gap-4 items-center"
+                      className="group relative"
                     >
-                      <div className="w-24 h-24 bg-gray-50 rounded-2xl relative overflow-hidden flex-shrink-0">
-                        {product.image_url ? (
-                          <Image
-                            src={product.image_url}
-                            alt={product.name}
-                            fill
-                            className="object-cover transition-transform duration-700 group-hover:scale-110"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-200">
-                            <ShoppingBag size={24} />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0 pr-2">
-                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 rounded-md text-[9px] font-black uppercase tracking-widest text-amber-600 mb-1">
-                          Promoted
+                      <Link
+                        href={hasHydrated && isAuthenticated ? `/trader/${product.trader_id}` : "/login"}
+                        className="flex bg-white border border-amber-100 rounded-[28px] overflow-hidden shadow-lg shadow-amber-500/5 hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-500 p-3 gap-4 items-center"
+                      >
+                        <div className="w-24 h-24 bg-gray-50 rounded-2xl relative overflow-hidden flex-shrink-0">
+                          {product.image_url ? (
+                            <Image
+                              src={product.image_url}
+                              alt={product.name}
+                              fill
+                              className="object-cover transition-transform duration-700 group-hover:scale-110"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-200">
+                              <ShoppingBag size={24} />
+                            </div>
+                          )}
                         </div>
-                        <h4 className="font-display text-base font-black text-green-950 tracking-tight mb-0.5 truncate group-hover:text-brand-600 transition-colors">
-                          {product.name}
-                        </h4>
-                        <p className="text-brand-600 font-black text-sm mb-2">KES {product.price}</p>
-                        <Link
-                          href={hasHydrated && isAuthenticated ? `/market/${product.trader?.market_id}` : "/login"}
-                          className="inline-flex w-full items-center justify-center gap-2 py-1.5 bg-green-50 text-brand-700 rounded-lg font-bold text-[10px] hover:bg-brand-600 hover:text-white transition-colors"
-                        >
-                          Reserve
-                        </Link>
-                      </div>
+                        
+                        <div className="flex-1 min-w-0 pr-2">
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 rounded-md text-[9px] font-black uppercase tracking-widest text-amber-600 mb-1">
+                            Promoted
+                          </div>
+                          <h4 className="font-display text-base font-black text-green-950 tracking-tight mb-0.5 truncate group-hover:text-brand-600 transition-colors">
+                            {product.name}
+                          </h4>
+                          <p className="text-brand-600 font-black text-sm mb-2">KES {product.price}</p>
+                          <div className="inline-flex w-full items-center justify-center gap-2 py-1.5 bg-green-50 text-brand-700 rounded-lg font-bold text-[10px] group-hover:bg-brand-600 group-hover:text-white transition-colors">
+                            Reserve
+                          </div>
+                        </div>
+                      </Link>
                     </motion.div>
                   ))}
                 </div>
@@ -138,60 +140,62 @@ export const ProductPreview = () => {
                 className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
               >
                 {popularProducts.map((product) => (
-                  <motion.div variants={itemVariants} key={`popular-${product.id}`} className="group flex flex-col bg-white border border-gray-100 rounded-[28px] overflow-hidden hover:shadow-2xl hover:shadow-gray-200/50 hover:-translate-y-1 transition-all duration-500">
-                    <div className="aspect-square bg-gray-50 relative overflow-hidden">
-                      {product.image_url ? (
-                        <Image
-                          src={product.image_url}
-                          alt={product.name}
-                          fill
-                          className="object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-200">
-                          <ShoppingBag size={32} />
+                  <motion.div variants={itemVariants} key={`popular-${product.id}`} className="group relative">
+                    <Link
+                      href={hasHydrated && isAuthenticated ? `/trader/${product.trader_id}` : "/login"}
+                      className="flex flex-col h-full bg-white border border-gray-100 rounded-[28px] overflow-hidden hover:shadow-2xl hover:shadow-gray-200/50 hover:-translate-y-1 transition-all duration-500"
+                    >
+                      <div className="aspect-square bg-gray-50 relative overflow-hidden">
+                        {product.image_url ? (
+                          <Image
+                            src={product.image_url}
+                            alt={product.name}
+                            fill
+                            className="object-cover transition-transform duration-700 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-200">
+                            <ShoppingBag size={32} />
+                          </div>
+                        )}
+                        
+                        {/* Price Badge */}
+                        <div className="absolute top-3 right-3">
+                          <div className="px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-lg text-[10px] font-black uppercase tracking-widest text-green-950 shadow-sm border border-white/20">
+                            KES {product.price}
+                          </div>
                         </div>
-                      )}
-                      
-                      {/* Price Badge */}
-                      <div className="absolute top-3 right-3">
-                        <div className="px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-lg text-[10px] font-black uppercase tracking-widest text-green-950 shadow-sm border border-white/20">
-                          KES {product.price}
+
+                        {/* Quick Action Overlay (Indicator) */}
+                        <div className="absolute inset-x-3 bottom-3 translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                          <div className="w-full bg-brand-600 text-white py-2.5 rounded-lg flex items-center justify-center gap-2 text-xs font-bold shadow-lg hover:bg-brand-500 transition-colors">
+                            <ShoppingBag size={14} />
+                            Quick Reserve
+                          </div>
                         </div>
                       </div>
 
-                      {/* Quick Action Overlay */}
-                      <div className="absolute inset-x-3 bottom-3 translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                        <Link
-                          href={hasHydrated && isAuthenticated ? `/market/${product.trader?.market_id}` : "/login"}
-                          className="w-full bg-brand-600 text-white py-2.5 rounded-lg flex items-center justify-center gap-2 text-xs font-bold shadow-lg hover:bg-brand-500 transition-colors"
-                        >
-                          <ShoppingBag size={14} />
-                          Quick Reserve
-                        </Link>
-                      </div>
-                    </div>
-
-                    <div className="p-4">
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <Tag size={10} className="text-brand-500" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
-                          {product.category?.name || 'General'}
-                        </span>
-                      </div>
-                      <h3 className="font-display text-sm font-black text-green-950 tracking-tight mb-3 group-hover:text-brand-600 transition-colors line-clamp-1">
-                        {product.name}
-                      </h3>
-
-                      <div className="flex items-center gap-2 pt-3 border-t border-gray-50">
-                        <div className="w-6 h-6 bg-brand-50 rounded-lg flex items-center justify-center text-brand-600">
-                          <Store size={12} />
+                      <div className="p-4 flex-1 flex flex-col">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Tag size={10} className="text-brand-500" />
+                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                            {product.category?.name || 'General'}
+                          </span>
                         </div>
-                        <span className="text-[10px] font-bold text-gray-600 truncate">
-                          {product.trader?.business_name || 'Trader'}
-                        </span>
+                        <h3 className="font-display text-sm font-black text-green-950 tracking-tight mb-3 group-hover:text-brand-600 transition-colors line-clamp-1">
+                          {product.name}
+                        </h3>
+
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-50 mt-auto">
+                          <div className="w-6 h-6 bg-brand-50 rounded-lg flex items-center justify-center text-brand-600">
+                            <Store size={12} />
+                          </div>
+                          <span className="text-[10px] font-bold text-gray-600 truncate">
+                            {product.trader?.business_name || 'Trader'}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    </Link>
                   </motion.div>
                 ))}
               </motion.div>

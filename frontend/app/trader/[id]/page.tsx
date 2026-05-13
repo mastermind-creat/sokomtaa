@@ -258,7 +258,7 @@ export default function TraderStorefrontPage() {
                                                 disabled={product.stock_status === 'out_of_stock'}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    addItem(product, trader.id, trader.business_name);
+                                                    addItem(product);
                                                 }}
                                                 className={cn(
                                                     "w-full h-10 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 border",
@@ -443,7 +443,6 @@ export default function TraderStorefrontPage() {
                 
                 {showCart && (
                     <CartFlow 
-                        traderId={trader.id}
                         onClose={() => setShowCart(false)} 
                     />
                 )}

@@ -16,7 +16,13 @@ import {
     GanttChartSquare,
     ShieldCheck,
     LogOut,
-    Terminal
+    Terminal,
+    MessageSquare,
+    CreditCard,
+    Ticket,
+    ShoppingBag,
+    Star,
+    Bell
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -28,6 +34,28 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
+
+const Building2 = ({ size, className, strokeWidth }: { size?: number; className?: string; strokeWidth?: number }) => (
+    <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+    >
+        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+        <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+        <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+        <path d="M10 6h4" />
+        <path d="M10 10h4" />
+        <path d="M10 14h4" />
+        <path d="M10 18h4" />
+    </svg>
+);
 
 interface MenuCounts {
     applications: number;
@@ -82,31 +110,48 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             title: 'Operations',
             items: [
                 { icon: LayoutDashboard, label: t('admin.dashboard_title'), path: '/admin/dashboard' },
-                { icon: MapIcon, label: t('common.market_map') || 'Market Map', path: '/admin/map' },
                 { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
+                { icon: MapIcon, label: t('common.market_map') || 'Market Map', path: '/admin/map' },
             ]
         },
         {
-            title: 'Market',
+            title: 'Infrastructure',
             items: [
+                { icon: MapPin, label: 'Regions & Centers', path: '/admin/locations' },
                 { icon: MapPin, label: 'Markets', path: '/admin/markets' },
                 { icon: Store, label: 'Stalls', path: '/admin/stalls' },
                 { icon: GanttChartSquare, label: 'Allocations', path: '/admin/allocations' },
             ]
         },
         {
-            title: 'Users',
+            title: 'Traders & Users',
             items: [
                 { icon: FileText, label: 'Applications', path: '/admin/applications', badge: counts?.applications },
                 { icon: Users, label: 'Traders', path: '/admin/traders', badge: counts?.traders_pending },
-                { icon: UsersRound, label: 'Users', path: '/admin/users' },
+                { icon: UsersRound, label: 'User Management', path: '/admin/users' },
             ]
         },
         {
-            title: 'Audit & System',
+            title: 'Commerce',
+            items: [
+                { icon: Ticket, label: 'Fees', path: '/admin/fees' },
+                { icon: CreditCard, label: 'Payment History', path: '/admin/payments' },
+                { icon: ShoppingBag, label: 'Reservations', path: '/admin/reservations' },
+                { icon: Star, label: 'Reviews', path: '/admin/reviews' },
+            ]
+        },
+        {
+            title: 'Communication',
+            items: [
+                { icon: MessageSquare, label: 'Complaints', path: '/admin/complaints', badge: counts?.complaints },
+                { icon: Bell, label: 'Notifications', path: '/admin/notices' },
+            ]
+        },
+        {
+            title: 'System',
             items: [
                 { icon: ShieldCheck, label: 'Audit Log', path: '/admin/audit-log' },
-                { icon: Settings, label: 'Maintenance', path: '/admin/maintenance' },
+                { icon: Terminal, label: 'Maintenance', path: '/admin/maintenance' },
                 { icon: Settings, label: 'Settings', path: '/admin/settings' },
             ]
         }

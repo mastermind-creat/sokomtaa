@@ -61,7 +61,7 @@ export default function ResidentSidebar() {
 
     const menuItems: MenuItem[] = [
         { icon: Home, label: t('common.dashboard'), path: '/resident/dashboard', badge: null },
-        { icon: Search, label: t('nav.discover'), path: '/search', badge: null },
+        { icon: Search, label: t('nav.discover'), path: '/resident', badge: null },
         { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: counts?.active_reservations || null },
         { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: counts?.watchlist || null },
         { icon: MapPin, label: t('common.markets'), path: '/market/map', badge: null },

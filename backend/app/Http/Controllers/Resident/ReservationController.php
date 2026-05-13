@@ -69,7 +69,8 @@ class ReservationController extends Controller
     }
 
     /**
-     * Create multiple reservations at once (Cart checkout).
+     * Create multiple reservations at once (Global Cart checkout).
+     * Now supports items from different traders.
      */
     public function bulkStore(Request $request): JsonResponse
     {
@@ -77,12 +78,14 @@ class ReservationController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'trader_id' => 'required|exists:traders,id',
         ]);
 
         return DB::transaction(function () use ($request) {
             $user = Auth::user();
             $totalCartAmount = 0;
+            $createdReservations = [];
+
+            // Preliminary check and total calculation
             foreach ($request->items as $itemData) {
                 $product = Product::findOrFail($itemData['product_id']);
                 $totalCartAmount += $product->price * $itemData['quantity'];
@@ -93,7 +96,7 @@ class ReservationController extends Controller
             $applyFee = $totalCartAmount > $serviceFeeThreshold;
             
             foreach ($request->items as $index => $itemData) {
-                $product = Product::findOrFail($itemData['product_id']);
+                $product = Product::with('trader')->findOrFail($itemData['product_id']);
 
                 // Availability check
                 if (!$product->is_active || $product->stock_status === 'out_of_stock') {
@@ -110,7 +113,7 @@ class ReservationController extends Controller
                     $code = 'SM-' . strtoupper(Str::random(6));
                 }
 
-                // Apply service fee only to the first item if total > threshold
+                // Apply service fee only once to the first item in the whole cart if total > threshold
                 $currentServiceFee = ($index === 0 && $applyFee) ? $serviceFeeAmount : 0.00;
                 $subtotal = $product->price * $itemData['quantity'];
                 $totalAmount = $subtotal + $currentServiceFee;
@@ -118,7 +121,7 @@ class ReservationController extends Controller
                 $reservation = Reservation::create([
                     'reservation_code' => $code,
                     'resident_id' => $user->id,
-                    'trader_id' => $request->trader_id,
+                    'trader_id' => $product->trader_id,
                     'product_id' => $product->id,
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $product->price,
@@ -141,10 +144,22 @@ class ReservationController extends Controller
                 }
 
                 $product->increment('total_reservations');
-                $createdReservations[] = $reservation->load('product');
+                
+                // Notify Trader
+                if ($product->trader && $product->trader->user) {
+                    $this->notificationService->send(
+                        $product->trader->user,
+                        'New Reservation',
+                        "New reservation for {$product->name} (Qty: {$itemData['quantity']})",
+                        'reservation',
+                        ['reservation_id' => $reservation->id]
+                    );
+                }
+
+                $createdReservations[] = $reservation->load('product', 'trader');
             }
 
-            return $this->success($createdReservations, 'Reservations created successfully.', 201);
+            return $this->success($createdReservations, 'Global cart reservations created successfully.', 201);
         });
     }
 

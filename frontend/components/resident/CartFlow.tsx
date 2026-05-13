@@ -30,13 +30,12 @@ import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
 
 
 interface CartFlowProps {
-    traderId: number;
     onClose: () => void;
 }
 
 type Step = 'cart' | 'payment' | 'processing' | 'success';
 
-export default function CartFlow({ traderId, onClose }: CartFlowProps) {
+export default function CartFlow({ onClose }: CartFlowProps) {
     const { t } = useTranslation();
     const [step, setStep] = useState<Step>('cart');
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -45,7 +44,7 @@ export default function CartFlow({ traderId, onClose }: CartFlowProps) {
     const [checkoutId, setCheckoutId] = useState<string | null>(null);
     const [reservations, setReservations] = useState<Reservation[]>([]);
     
-    const { items, updateQuantity, removeItem, getTotalAmount, clearCart, traderName } = useCartStore();
+    const { items, updateQuantity, removeItem, getTotalAmount, clearCart } = useCartStore();
     const { user } = useAuthStore();
     const router = useRouter();
     const { initiateStk, isPolling, status, error } = useMpesa();
@@ -98,13 +97,12 @@ export default function CartFlow({ traderId, onClose }: CartFlowProps) {
                 throw new Error('Please enter a valid phone number');
             }
 
-            // 1. Create bulk reservations
+            // 1. Create bulk reservations (Derives trader_id from each product on backend)
             const response = await api.post<ApiResponse<Reservation[]>>('/reservations/bulk', {
                 items: items.map(item => ({
                     product_id: item.id,
                     quantity: item.cartQuantity
-                })),
-                trader_id: traderId
+                }))
             });
             
             // The axios interceptor returns response.data, so response IS {success, data, message}
@@ -123,7 +121,6 @@ export default function CartFlow({ traderId, onClose }: CartFlowProps) {
             console.error('Bulk reservation failed', err);
             setLocalError(handleApiError(err));
         }
-
     };
 
     const serviceFee = 10.00;
@@ -161,8 +158,8 @@ export default function CartFlow({ traderId, onClose }: CartFlowProps) {
                             className="space-y-6"
                         >
                             <div className="text-left">
-                                <h3 className="text-2xl font-black text-green-950">{t('storefront.your_cart') || 'Your Cart'}</h3>
-                                <p className="text-sm text-text-secondary font-medium">{traderName}</p>
+                                <h3 className="text-2xl font-black text-green-950">{t('storefront.your_cart') || 'Market Cart'}</h3>
+                                <p className="text-sm text-text-secondary font-medium">Items from different traders</p>
                             </div>
 
                             <div className="space-y-4 max-h-[40vh] overflow-y-auto no-scrollbar py-2">
@@ -252,7 +249,7 @@ export default function CartFlow({ traderId, onClose }: CartFlowProps) {
                                     <CreditCard size={32} />
                                 </div>
                                 <h3 className="text-2xl font-black text-green-950">M-Pesa Payment</h3>
-                                <p className="text-sm text-text-secondary font-medium">Payment will be sent to <strong>{traderName}</strong></p>
+                                <p className="text-sm text-text-secondary font-medium">Pay for your marketplace items</p>
                             </div>
 
                             <div className="space-y-4">
@@ -339,7 +336,7 @@ export default function CartFlow({ traderId, onClose }: CartFlowProps) {
                             </div>
                             <div className="space-y-2">
                                 <h3 className="text-3xl font-black text-green-950">Success!</h3>
-                                <p className="text-sm text-text-secondary font-medium">Your items from {traderName} have been reserved.</p>
+                                <p className="text-sm text-text-secondary font-medium">Your marketplace items have been reserved.</p>
                             </div>
                             
                             <div className="grid grid-cols-1 gap-2 max-h-[20vh] overflow-y-auto no-scrollbar">
