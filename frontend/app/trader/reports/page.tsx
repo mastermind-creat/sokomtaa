@@ -13,7 +13,8 @@ import {
     BarChart3,
     FileSpreadsheet,
     Loader2,
-    CheckCircle2
+    CheckCircle2,
+    History
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
