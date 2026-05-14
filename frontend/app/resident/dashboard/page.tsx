@@ -250,14 +250,14 @@ export default function ResidentDashboard() {
                     </div>
 
                     {/* Quick Support Card */}
-                    <div className="bg-brand-600 rounded-[3rem] p-8 shadow-2xl relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all">
+                    <div onClick={() => router.push('/help')} className="bg-brand-600 rounded-[3rem] p-8 shadow-2xl relative overflow-hidden group cursor-pointer active:scale-[0.98] transition-all">
                         <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform">
                             <MessageSquare size={120} className="text-white" />
                         </div>
                         <h3 className="text-2xl font-black text-white tracking-tight mb-2">Need Support?</h3>
                         <p className="text-brand-100 text-xs font-medium mb-8 leading-relaxed">Our neighborhood support team is ready to help you with any issues.</p>
-                        <button className="h-12 px-6 bg-white text-brand-700 rounded-2xl font-black text-[10px] uppercase tracking-widest group-hover:bg-amber-400 group-hover:text-amber-950 transition-all flex items-center gap-2">
-                            Contact Admin
+                        <button className="relative z-10 h-12 px-6 bg-white text-brand-700 rounded-2xl font-black text-[10px] uppercase tracking-widest group-hover:bg-amber-400 group-hover:text-amber-950 transition-all flex items-center gap-2 cursor-pointer">
+                            Visit Help Center
                         </button>
                     </div>
                 </div>

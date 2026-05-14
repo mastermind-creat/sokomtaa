@@ -162,7 +162,7 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
                                 <p className="text-xs font-bold leading-tight mb-3">Having trouble with your reservation?</p>
                                 <button 
                                     onClick={() => handleNavigate('/help')}
-                                    className="w-full py-2.5 bg-white text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform"
+                                    className="relative z-10 w-full py-2.5 bg-white text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform cursor-pointer"
                                 >
                                     Visit Help Center
                                 </button>

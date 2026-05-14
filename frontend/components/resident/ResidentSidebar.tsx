@@ -132,7 +132,7 @@ export default function ResidentSidebar() {
                     <p className="text-sm font-bold leading-tight mb-4">Having trouble with your reservation?</p>
                     <button 
                         onClick={() => router.push('/help')}
-                        className="w-full py-3 bg-white text-brand-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-50 transition-colors"
+                        className="relative z-10 w-full py-3 bg-white text-brand-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-50 transition-colors cursor-pointer"
                     >
                         Visit Help Center
                     </button>
