@@ -1,11 +1,105 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send, Loader2, Bot, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
+
+// ── Custom Markdown-to-JSX renderer ─────────────────────────────────────────
+function AiMessageRenderer({ text }: { text: string }) {
+    const lines = text.split('\n');
+
+    const parseInline = (line: string, key: number) => {
+        // Parse **bold** and *italic*
+        const parts = line.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+        return (
+            <span key={key}>
+                {parts.map((part, i) => {
+                    if (part.startsWith('**') && part.endsWith('**')) {
+                        return <strong key={i} className="font-bold text-green-900">{part.slice(2, -2)}</strong>;
+                    }
+                    if (part.startsWith('*') && part.endsWith('*')) {
+                        return <em key={i} className="italic">{part.slice(1, -1)}</em>;
+                    }
+                    return <span key={i}>{part}</span>;
+                })}
+            </span>
+        );
+    };
+
+    const elements: React.ReactNode[] = [];
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i].trim();
+
+        if (!line) {
+            // Empty line = spacing
+            elements.push(<div key={`gap-${i}`} className="h-1" />);
+        } else if (/^#{1,3}\s/.test(line)) {
+            // Headings
+            const level = line.match(/^(#{1,3})/)?.[1].length ?? 1;
+            const content = line.replace(/^#{1,3}\s/, '');
+            const cls = level === 1
+                ? 'text-sm font-black text-green-900 mt-1'
+                : level === 2
+                    ? 'text-xs font-black text-green-800 uppercase tracking-wide mt-1'
+                    : 'text-xs font-bold text-green-700 mt-1';
+            elements.push(<p key={i} className={cls}>{parseInline(content, i)}</p>);
+        } else if (/^[-*]\s/.test(line)) {
+            // Bullet list — collect consecutive items
+            const items: string[] = [];
+            while (i < lines.length && /^[-*]\s/.test(lines[i].trim())) {
+                items.push(lines[i].trim().replace(/^[-*]\s/, ''));
+                i++;
+            }
+            elements.push(
+                <ul key={`ul-${i}`} className="space-y-1 mt-1">
+                    {items.map((item, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-[13px] leading-relaxed">
+                            <span className="mt-[5px] w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                            <span>{parseInline(item, idx)}</span>
+                        </li>
+                    ))}
+                </ul>
+            );
+            continue;
+        } else if (/^\d+\.\s/.test(line)) {
+            // Numbered list — collect consecutive items
+            const items: string[] = [];
+            while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) {
+                items.push(lines[i].trim().replace(/^\d+\.\s/, ''));
+                i++;
+            }
+            elements.push(
+                <ol key={`ol-${i}`} className="space-y-1 mt-1">
+                    {items.map((item, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-[13px] leading-relaxed">
+                            <span className="font-black text-green-600 text-[11px] mt-0.5 shrink-0 w-4">{idx + 1}.</span>
+                            <span>{parseInline(item, idx)}</span>
+                        </li>
+                    ))}
+                </ol>
+            );
+            continue;
+        } else if (/^---+$/.test(line)) {
+            elements.push(<hr key={i} className="border-gray-200 my-2" />);
+        } else {
+            // Regular paragraph
+            elements.push(
+                <p key={i} className="text-[13px] leading-relaxed text-green-950">
+                    {parseInline(line, i)}
+                </p>
+            );
+        }
+        i++;
+    }
+
+    return <div className="space-y-1">{elements}</div>;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function AiAssistantFab() {
     const [isOpen, setIsOpen] = useState(false);
@@ -13,6 +107,16 @@ export default function AiAssistantFab() {
     const [chat, setChat] = useState<{ role: 'user' | 'bot', text: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const { user } = useAuthStore();
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [chat, isLoading]);
+
     const handleSend = async () => {
         if (!message.trim() || isLoading) return;
 
@@ -107,11 +211,15 @@ export default function AiAssistantFab() {
 
                                 {chat.map((msg, i) => (
                                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[85%] p-4 rounded-2xl text-sm font-medium shadow-sm ${msg.role === 'user'
-                                                ? 'bg-brand-600 text-white rounded-tr-none'
-                                                : 'bg-white text-green-950 rounded-tl-none border border-gray-100'
+                                        <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${msg.role === 'user'
+                                                ? 'bg-brand-600 text-white text-sm font-medium rounded-tr-none'
+                                                : 'bg-white rounded-tl-none border border-gray-100'
                                             }`}>
-                                            {msg.text}
+                                            {msg.role === 'bot' ? (
+                                                <AiMessageRenderer text={msg.text} />
+                                            ) : (
+                                                msg.text
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -123,6 +231,7 @@ export default function AiAssistantFab() {
                                         </div>
                                     </div>
                                 )}
+                                <div ref={messagesEndRef} />
                             </div>
 
                             {/* Input Area */}

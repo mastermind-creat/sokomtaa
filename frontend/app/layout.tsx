@@ -50,8 +50,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plusJakarta.variable} ${dmSans.variable} ${jetbrainsMono.variable} h-full antialiased transition-colors duration-500`}>
-      <body className="bg-surface-base text-text-primary min-h-full flex flex-col selection:bg-brand-100 selection:text-brand-900 overflow-x-hidden">
+    <html lang="en" suppressHydrationWarning className={`${plusJakarta.variable} ${dmSans.variable} ${jetbrainsMono.variable} h-full antialiased transition-colors duration-500`}>
+      <body suppressHydrationWarning className="bg-surface-base text-text-primary min-h-full flex flex-col selection:bg-brand-100 selection:text-brand-900 overflow-x-hidden">
         <Providers>
           <NextTopLoader 
             color="#2D9653"

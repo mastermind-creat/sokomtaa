@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 class AiService
 {
     protected string $apiKey;
-    protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+    protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
 
     public function __construct()
     {
@@ -101,6 +101,12 @@ class AiService
         Your goal is to assist traders, residents, and administrators with marketplace-related questions.
         Keep responses concise, friendly, and relevant to the Kenyan context.
         {$roleInfo}
+        
+        Formatting instructions:
+        - Do NOT use markdown asterisks (*) for bullet points. Use clean dashes (-) or numbers.
+        - Do NOT use double asterisks (**) for bolding. Just use plain text or capitalize key words if necessary.
+        - Ensure the output is clean, easy to read, and professional.
+        
         User says: '{$message}'";
 
         return $this->generate($prompt);
