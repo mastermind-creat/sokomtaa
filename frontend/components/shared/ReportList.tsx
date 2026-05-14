@@ -23,10 +23,10 @@ export default function ReportList() {
 
     const { data: reportsData, isLoading } = useQuery<ApiResponse<any>>({
         queryKey: ['reports'],
-        queryFn: () => api.get('/reports').then(res => res.data),
+        queryFn: () => api.get('/reports'),
     });
 
-    const reports = reportsData?.data || [];
+    const reports = Array.isArray(reportsData) ? reportsData : reportsData?.data || [];
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => api.delete(`/reports/${id}`),
@@ -82,15 +82,27 @@ export default function ReportList() {
                             </div>
 
                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <a
-                                    href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/reports/${report.id}/download`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const blob = await api.get(`/reports/${report.id}/download`, { responseType: 'blob' });
+                                            const url = window.URL.createObjectURL(new Blob([blob as any]));
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.setAttribute('download', `${report.title.replace(/\s+/g, '_')}.${report.format}`);
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            link.remove();
+                                        } catch (error) {
+                                            console.error('Download failed', error);
+                                            alert('Failed to download report.');
+                                        }
+                                    }}
                                     className="w-10 h-10 bg-brand-50 text-brand-600 rounded-xl flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all shadow-sm"
                                     title="Download"
                                 >
                                     <Download size={18} />
-                                </a>
+                                </button>
                                 <button
                                     onClick={() => {
                                         if (confirm('Are you sure you want to delete this report?')) {

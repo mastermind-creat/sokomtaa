@@ -152,9 +152,9 @@ class ReportController extends Controller
         ]);
     }
 
-    public function download(Report $report)
+    public function download(Request $request, Report $report)
     {
-        if (auth()->user()->id !== $report->user_id && auth()->user()->role !== 'admin') {
+        if ($request->user()->id !== $report->user_id && $request->user()->role !== 'admin') {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -162,12 +162,12 @@ class ReportController extends Controller
             return response()->json(['message' => 'File not found'], 404);
         }
 
-        return Storage::disk('public')->download($report->file_path, $report->title . '.' . $report->format);
+        return response()->download(storage_path('app/public/' . $report->file_path), $report->title . '.' . $report->format);
     }
 
-    public function destroy(Report $report)
+    public function destroy(Request $request, Report $report)
     {
-        if (auth()->user()->id !== $report->user_id && auth()->user()->role !== 'admin') {
+        if ($request->user()->id !== $report->user_id && $request->user()->role !== 'admin') {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 

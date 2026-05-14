@@ -8,7 +8,7 @@ import {
     Camera, Store, Clock, Phone, Upload, User,
     Key, Save, Eye, EyeOff, Loader2, ShieldCheck,
     FileText, ChevronRight, AlertCircle, CheckCircle2,
-    BadgeCheck, XCircle
+    BadgeCheck, XCircle, ShoppingBag
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
@@ -847,8 +847,24 @@ export default function TraderProfilePage() {
                                 </div>
                             </section>
 
-                            {/* Security Actions */}
+                            {/* User Actions */}
                             <section className="space-y-4">
+                                <button
+                                    onClick={() => router.push('/reservations')}
+                                    className="w-full py-4 px-6 bg-brand-50 border border-brand-100 rounded-3xl flex items-center justify-between group hover:border-brand-600 transition-all"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-brand-600 shadow-sm">
+                                            <ShoppingBag size={20} />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-sm font-black text-green-950">My Purchases</p>
+                                            <p className="text-xs font-bold text-brand-600/70">View items you bought as a resident</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={20} className="text-brand-300 group-hover:text-brand-600 group-hover:translate-x-1 transition-all" />
+                                </button>
+
                                 <button
                                     onClick={() => setShowChangePassword(!showChangePassword)}
                                     className="w-full py-4 px-6 bg-white border border-gray-100 rounded-3xl flex items-center justify-between group hover:border-brand-600 transition-all"

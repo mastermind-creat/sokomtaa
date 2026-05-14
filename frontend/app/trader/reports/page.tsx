@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import DashboardLayout from '@/components/shared/DashboardLayout';
+
 import ReportList from '@/components/shared/ReportList';
 import { 
     FileText, 
@@ -57,7 +57,7 @@ export default function TraderReportsPage() {
     };
 
     return (
-        <DashboardLayout title="Business Reports">
+        <>
             <div className="max-w-6xl mx-auto space-y-10 pb-32">
                 
                 {/* Header Section */}
@@ -204,7 +204,7 @@ export default function TraderReportsPage() {
                 </div>
 
             </div>
-        </DashboardLayout>
+        </>
     );
 }
 

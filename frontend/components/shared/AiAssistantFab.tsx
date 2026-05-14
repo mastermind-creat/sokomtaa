@@ -106,6 +106,7 @@ export default function AiAssistantFab() {
     const [message, setMessage] = useState('');
     const [chat, setChat] = useState<{ role: 'user' | 'bot', text: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [showTooltip, setShowTooltip] = useState(false);
     const { user } = useAuthStore();
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -116,6 +117,17 @@ export default function AiAssistantFab() {
     useEffect(() => {
         scrollToBottom();
     }, [chat, isLoading]);
+
+    useEffect(() => {
+        // Show tooltip after 3 seconds if chat hasn't been opened
+        const timer = setTimeout(() => {
+            if (!isOpen && chat.length === 0) {
+                setShowTooltip(true);
+            }
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [isOpen, chat.length]);
 
     const handleSend = async () => {
         if (!message.trim() || isLoading) return;
@@ -138,15 +150,40 @@ export default function AiAssistantFab() {
 
     return (
         <>
-            {/* FAB Button */}
-            <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setIsOpen(true)}
-                className="fixed bottom-24 right-6 w-16 h-16 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 border-4 border-white/20 backdrop-blur-sm"
-            >
-                <Sparkles size={28} className="animate-pulse" />
-            </motion.button>
+            {/* FAB Button & Tooltip Container */}
+            <div className="fixed bottom-24 right-6 z-40 flex items-center gap-4">
+                <AnimatePresence>
+                    {showTooltip && !isOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, x: 20, scale: 0.9 }}
+                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                            exit={{ opacity: 0, x: 10, scale: 0.9 }}
+                            className="bg-white px-4 py-2 rounded-2xl shadow-xl border border-brand-100 flex items-center gap-2 cursor-pointer relative"
+                            onClick={() => {
+                                setShowTooltip(false);
+                                setIsOpen(true);
+                            }}
+                        >
+                            <span className="text-[11px] font-black text-brand-700 uppercase tracking-widest">Need Help?</span>
+                            <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
+                            {/* Triangle pointer */}
+                            <div className="absolute top-1/2 -right-1.5 -translate-y-1/2 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[6px] border-l-white" />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => {
+                        setShowTooltip(false);
+                        setIsOpen(true);
+                    }}
+                    className="w-16 h-16 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center border-4 border-white/20 backdrop-blur-sm"
+                >
+                    <Sparkles size={28} className="animate-pulse" />
+                </motion.button>
+            </div>
 
             {/* Chat Interface */}
             <AnimatePresence>

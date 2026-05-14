@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import DashboardLayout from '@/components/shared/DashboardLayout';
 import ReportList from '@/components/shared/ReportList';
 import { 
     FileText, 
@@ -60,7 +59,7 @@ export default function AdminReportsPage() {
     };
 
     return (
-        <DashboardLayout title="County Intelligence">
+        <div className="w-full">
             <div className="max-w-[1400px] mx-auto space-y-10 pb-32 px-4 md:px-8">
                 
                 {/* Header Section */}
@@ -239,7 +238,7 @@ export default function AdminReportsPage() {
                 </div>
 
             </div>
-        </DashboardLayout>
+        </div>
     );
 }
 

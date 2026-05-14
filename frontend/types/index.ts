@@ -90,6 +90,7 @@ export interface Market {
     icon_url?: string | null;
     stalls_count?: number;
     occupied_stalls_count?: number;
+    active_stalls_count?: number;
     traders_count?: number;
     center_id?: number | null;
     center?: Center;
@@ -154,6 +155,8 @@ export interface Trader {
     average_rating: number;
     total_reviews: number;
     profile_views: number;
+    is_currently_open?: boolean;
+    products_count?: number;
     user?: User;
     stall?: Stall;
     market?: Market;
@@ -173,6 +176,7 @@ export interface Product {
     stock_quantity: number | null;
     image_url?: string | null;
     is_active: boolean;
+    is_boosted?: boolean;
     total_reservations: number;
     category?: Category;
     trader?: Trader;

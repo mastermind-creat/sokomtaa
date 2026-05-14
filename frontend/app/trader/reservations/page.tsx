@@ -263,7 +263,18 @@ export default function TraderOrdersPage() {
         try {
             const res = await api.post(`/reports/receipt/${id}`);
             const { download_url } = res.data;
-            window.open(download_url, '_blank');
+            
+            // Force download using Blob
+            const fileRes = await fetch(download_url);
+            const blob = await fileRes.blob();
+            const url = window.URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Receipt_${id}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
         } catch (error) {
             console.error('Failed to download receipt:', error);
             alert('Failed to generate receipt. Please try again.');

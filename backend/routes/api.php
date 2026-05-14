@@ -54,6 +54,9 @@ Route::get('/centers', [\App\Http\Controllers\Public\LocationController::class, 
 Route::get('/search', [\App\Http\Controllers\SearchController::class, 'index']);
 Route::get('/recommendations', [\App\Http\Controllers\SearchController::class, 'recommendations']);
 
+// Geographic Map Discovery
+Route::get('/map/discover', [\App\Http\Controllers\Public\MapController::class, 'discover']);
+
 // Trader Discovery (Public)
 Route::prefix('traders')->group(function () {
     Route::get('/nearby', [\App\Http\Controllers\Resident\TraderController::class, 'nearby']);
@@ -224,28 +227,30 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
     // ─────────────────────────────────────────────────────────────────────────
 
-    // ── Notifications (all roles) ────────────────────────────────────────────
-    Route::prefix('notifications')->group(function () {
-        Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index']);
-        Route::get('/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount']);
-        Route::patch('/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
-        Route::post('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
-    });
+    Route::middleware(['auth:sanctum'])->group(function () {
+        // ── Notifications (all roles) ────────────────────────────────────────────
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index']);
+            Route::get('/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount']);
+            Route::patch('/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
+            Route::post('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
+        });
 
-    // ── Complaints (general — shared endpoint) ───────────────────────────────
-    Route::prefix('complaints')->group(function () {
-        Route::get('/', [\App\Http\Controllers\ComplaintController::class, 'index']);
-        Route::post('/', [\App\Http\Controllers\ComplaintController::class, 'store']);
-        Route::patch('/{id}/resolve', [\App\Http\Controllers\ComplaintController::class, 'resolve']);
-    });
+        // ── Complaints (general — shared endpoint) ───────────────────────────────
+        Route::prefix('complaints')->group(function () {
+            Route::get('/', [\App\Http\Controllers\ComplaintController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\ComplaintController::class, 'store']);
+            Route::patch('/{id}/resolve', [\App\Http\Controllers\ComplaintController::class, 'resolve']);
+        });
 
-    // ── Reports & Receipts ──────────────────────────────────────────────────
-    Route::prefix('reports')->group(function () {
-        Route::get('/', [\App\Http\Controllers\ReportController::class, 'index']);
-        Route::post('/receipt/{reservation}', [\App\Http\Controllers\ReportController::class, 'generateReceipt']);
-        Route::post('/activity', [\App\Http\Controllers\ReportController::class, 'generateActivityReport']);
-        Route::get('/{report}/download', [\App\Http\Controllers\ReportController::class, 'download']);
-        Route::delete('/{report}', [\App\Http\Controllers\ReportController::class, 'destroy']);
+        // ── Reports & Receipts ──────────────────────────────────────────────────
+        Route::prefix('reports')->group(function () {
+            Route::get('/', [\App\Http\Controllers\ReportController::class, 'index']);
+            Route::post('/receipt/{reservation}', [\App\Http\Controllers\ReportController::class, 'generateReceipt']);
+            Route::post('/activity', [\App\Http\Controllers\ReportController::class, 'generateActivityReport']);
+            Route::get('/{report}/download', [\App\Http\Controllers\ReportController::class, 'download']);
+            Route::delete('/{report}', [\App\Http\Controllers\ReportController::class, 'destroy']);
+        });
     });
 
     // ── ADMIN ROUTES ─────────────────────────────────────────────────────────
