@@ -11,7 +11,8 @@ import {
     Heart,
     HelpCircle,
     LogOut,
-    FileText
+    FileText,
+    Loader2
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -48,6 +49,11 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
     const { t } = useTranslation();
     const { logout } = useLogout();
     const { user } = useAuthStore();
+    const [isNavigating, setIsNavigating] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        setIsNavigating(null);
+    }, [pathname]);
 
     // Fetch dynamic menu counts
     const { data: menuCountsRaw } = useQuery({
@@ -71,8 +77,20 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
     ];
 
     const handleNavigate = (path: string) => {
+        if (pathname === path) {
+            onClose();
+            return;
+        }
+        setIsNavigating(path);
         router.push(path);
-        onClose();
+        // Do not onClose() immediately to show loader, or just let it be.
+        // Actually, it's a mobile sidebar, we can close it right away or let it stay until route changes.
+        // We'll close it right away for better UX on mobile, or maybe not close it so they see the loader?
+        // Let's not close it immediately so the loader is visible. It will close on unmount/re-render if handled higher up, 
+        // or we can let the new page load and user closes it. Usually we close it.
+        // But since we want to show progress, let's keep it open until navigation finishes.
+        // The mobile sidebar is usually controlled by a state in the layout.
+        // But let's just show loader.
     };
 
     return (
@@ -120,13 +138,18 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
                                         <button
                                             key={item.path}
                                             onClick={() => handleNavigate(item.path)}
+                                            disabled={isNavigating !== null}
                                             className={`w-full flex items-center gap-4 p-3.5 rounded-2xl transition-all ${
                                                 isActive 
                                                     ? 'bg-white text-green-950 shadow-lg border border-gray-100' 
                                                     : 'text-text-secondary active:bg-white'
-                                            }`}
+                                            } ${isNavigating === item.path ? 'opacity-70 cursor-not-allowed' : ''}`}
                                         >
-                                            <item.icon size={18} className={isActive ? 'text-brand-600' : 'text-gray-400'} />
+                                            {isNavigating === item.path ? (
+                                                <Loader2 size={18} className="animate-spin text-brand-600" />
+                                            ) : (
+                                                <item.icon size={18} className={isActive ? 'text-brand-600' : 'text-gray-400'} />
+                                            )}
                                             <span className={`text-sm font-bold tracking-tight ${isActive ? 'text-green-950 font-black' : ''}`}>
                                                 {item.label}
                                             </span>
@@ -140,13 +163,18 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
                                 })}
                                 <button
                                     onClick={() => handleNavigate('/profile')}
+                                    disabled={isNavigating !== null}
                                     className={`w-full flex items-center gap-4 p-3.5 rounded-2xl transition-all mt-4 ${
                                         pathname === '/profile' 
                                             ? 'bg-white text-green-950 shadow-lg border border-gray-100' 
                                             : 'text-text-secondary active:bg-white'
-                                    }`}
+                                    } ${isNavigating === '/profile' ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
-                                    <User size={18} className={pathname === '/profile' ? 'text-brand-600' : 'text-gray-400'} />
+                                    {isNavigating === '/profile' ? (
+                                        <Loader2 size={18} className="animate-spin text-brand-600" />
+                                    ) : (
+                                        <User size={18} className={pathname === '/profile' ? 'text-brand-600' : 'text-gray-400'} />
+                                    )}
                                     <span className={`text-sm font-bold tracking-tight ${pathname === '/profile' ? 'text-green-950 font-black' : ''}`}>
                                         {t('common.profile')}
                                     </span>
@@ -162,8 +190,10 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
                                 <p className="text-xs font-bold leading-tight mb-3">Having trouble with your reservation?</p>
                                 <button 
                                     onClick={() => handleNavigate('/help')}
-                                    className="relative z-10 w-full py-2.5 bg-white text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform cursor-pointer"
+                                    disabled={isNavigating !== null}
+                                    className="relative z-10 w-full py-2.5 bg-white text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform cursor-pointer flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                                 >
+                                    {isNavigating === '/help' ? <Loader2 size={14} className="animate-spin" /> : null}
                                     Visit Help Center
                                 </button>
                             </div>

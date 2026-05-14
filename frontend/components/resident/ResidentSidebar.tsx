@@ -11,7 +11,8 @@ import {
     MapPin,
     Heart,
     HelpCircle,
-    FileText
+    FileText,
+    Loader2
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -43,10 +44,22 @@ export default function ResidentSidebar() {
     const { t } = useTranslation();
     const { user } = useAuthStore();
     const [mounted, setMounted] = React.useState(false);
+    const [isNavigating, setIsNavigating] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Reset navigation state when pathname changes
+    React.useEffect(() => {
+        setIsNavigating(null);
+    }, [pathname]);
+
+    const handleNavigate = (path: string) => {
+        if (pathname === path) return;
+        setIsNavigating(path);
+        router.push(path);
+    };
 
     // Fetch dynamic menu counts
     const { data: menuCountsRaw } = useQuery({
@@ -80,7 +93,7 @@ export default function ResidentSidebar() {
             {/* Logo Area */}
             <div className="p-8 pb-10">
                 <div 
-                    onClick={() => router.push('/')} 
+                    onClick={() => handleNavigate('/')} 
                     className="cursor-pointer active:scale-95 transition-transform"
                 >
                     <Logo variant="light" width={160} />
@@ -95,19 +108,24 @@ export default function ResidentSidebar() {
                     return (
                         <button
                             key={item.path}
-                            onClick={() => router.push(item.path)}
+                            onClick={() => handleNavigate(item.path)}
+                            disabled={isNavigating !== null}
                             className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group active:scale-[0.98] ${
                                 isActive 
                                     ? 'bg-white text-green-950 shadow-xl shadow-gray-200/50 border border-gray-100' 
                                     : 'text-text-secondary hover:bg-white/50'
-                            }`}
+                            } ${isNavigating === item.path ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
                             <div className="flex items-center gap-4">
-                                <item.icon 
-                                    size={20} 
-                                    className={isActive ? 'text-brand-600' : 'text-gray-400 group-hover:text-brand-600 transition-colors'} 
-                                    strokeWidth={isActive ? 2.5 : 2}
-                                />
+                                {isNavigating === item.path ? (
+                                    <Loader2 size={20} className="animate-spin text-brand-600" />
+                                ) : (
+                                    <item.icon 
+                                        size={20} 
+                                        className={isActive ? 'text-brand-600' : 'text-gray-400 group-hover:text-brand-600 transition-colors'} 
+                                        strokeWidth={isActive ? 2.5 : 2}
+                                    />
+                                )}
                                 <span className={`text-sm font-bold tracking-tight ${isActive ? 'text-green-950 font-black' : ''}`}>
                                     {item.label}
                                 </span>
@@ -131,9 +149,11 @@ export default function ResidentSidebar() {
                     <p className="text-xs font-black uppercase tracking-widest opacity-80 mb-2">Need help?</p>
                     <p className="text-sm font-bold leading-tight mb-4">Having trouble with your reservation?</p>
                     <button 
-                        onClick={() => router.push('/help')}
-                        className="relative z-10 w-full py-3 bg-white text-brand-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-50 transition-colors cursor-pointer"
+                        onClick={() => handleNavigate('/help')}
+                        disabled={isNavigating !== null}
+                        className="relative z-10 w-full py-3 bg-white text-brand-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-50 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                     >
+                        {isNavigating === '/help' ? <Loader2 size={16} className="animate-spin" /> : null}
                         Visit Help Center
                     </button>
                 </div>
@@ -142,10 +162,15 @@ export default function ResidentSidebar() {
             {/* Footer Area */}
             <div className="p-6 space-y-4">
                 <button 
-                    onClick={() => router.push('/profile')}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl text-text-secondary hover:bg-white transition-all font-bold text-sm"
+                    onClick={() => handleNavigate('/profile')}
+                    disabled={isNavigating !== null}
+                    className="w-full flex items-center justify-center gap-4 p-4 rounded-2xl text-text-secondary hover:bg-white transition-all font-bold text-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                    <User size={20} className="text-gray-400" />
+                    {isNavigating === '/profile' ? (
+                        <Loader2 size={20} className="animate-spin text-brand-600" />
+                    ) : (
+                        <User size={20} className="text-gray-400" />
+                    )}
                     {t('common.profile')}
                 </button>
                 

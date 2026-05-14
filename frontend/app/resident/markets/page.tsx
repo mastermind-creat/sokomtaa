@@ -204,7 +204,7 @@ export default function ExploreMarketsPage() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: idx * 0.05 }}
-                                    onClick={() => router.push(`/resident/markets/${market.id}`)}
+                                    onClick={() => router.push(`/market/${market.id}`)}
                                     className="group relative bg-white rounded-[2.5rem] p-6 md:p-8 shadow-sm border border-gray-100 hover:shadow-2xl hover:shadow-brand-100/50 transition-all cursor-pointer overflow-hidden flex flex-col gap-6"
                                 >
                                     {/* Decorative circle */}

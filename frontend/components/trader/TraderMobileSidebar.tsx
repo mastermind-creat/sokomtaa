@@ -15,7 +15,8 @@ import {
     MessageSquare,
     MapPin,
     LogOut,
-    FileText
+    FileText,
+    Loader2
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -39,6 +40,11 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
     const { logout } = useLogout();
     const { user } = useAuthStore();
     const [isStoreOpen, setIsStoreOpen] = React.useState(true);
+    const [isNavigating, setIsNavigating] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        setIsNavigating(null);
+    }, [pathname]);
 
     // Fetch stall application status for badge
     const { data: stallApp } = useQuery({
@@ -83,8 +89,12 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
     ];
 
     const handleNavigate = (path: string) => {
+        if (pathname === path) {
+            onClose();
+            return;
+        }
+        setIsNavigating(path);
         router.push(path);
-        onClose();
     };
 
     return (
@@ -166,13 +176,18 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
                                                 <button
                                                     key={item.path}
                                                     onClick={() => handleNavigate(item.path)}
+                                                    disabled={isNavigating !== null}
                                                     className={`w-full flex items-center gap-4 p-3.5 rounded-2xl transition-all ${
                                                         isActive 
                                                             ? 'bg-brand-600 text-white shadow-lg shadow-brand-900/20' 
                                                             : 'text-text-secondary active:bg-gray-50'
-                                                    }`}
+                                                    } ${isNavigating === item.path ? 'opacity-70 cursor-not-allowed' : ''}`}
                                                 >
-                                                    <item.icon size={18} className={isActive ? 'text-brand-200' : 'text-gray-400'} />
+                                                    {isNavigating === item.path ? (
+                                                        <Loader2 size={18} className={`animate-spin ${isActive ? 'text-brand-200' : 'text-brand-600'}`} />
+                                                    ) : (
+                                                        <item.icon size={18} className={isActive ? 'text-brand-200' : 'text-gray-400'} />
+                                                    )}
                                                     <span className={`text-sm font-bold tracking-tight ${isActive ? 'text-white' : ''}`}>
                                                         {item.label}
                                                     </span>
