@@ -90,39 +90,51 @@ class AnalyticsController extends Controller
             ->limit(5)
             ->get();
 
-        // 7. Planning Insights (LOGIC-BASED)
-        $planningInsights = [];
+        // 7. Planning Insights (AI-POWERED with Fallback)
+        $aiService = new \App\Services\AiService();
+        $topHourLabel = $peakHours->sortByDesc('count')->first()['hour'] ?? 'N/A';
+        $topCategoryName = $categoryDemand->first()->name ?? 'N/A';
         
-        // Insight: Occupancy vs Demand
-        if ($occupancyRate > 85) {
-            $planningInsights[] = [
-                'type' => 'infrastructure',
-                'title' => 'Expansion Opportunity',
-                'description' => "Market occupancy is at {$occupancyRate}%. Consider developing additional stalls or secondary market centers to accommodate growing trader demand.",
-                'priority' => 'high'
-            ];
-        }
+        $aiInsights = $aiService->generatePlanningInsights([
+            'occupancy_rate' => $occupancyRate,
+            'peak_hour' => $topHourLabel,
+            'top_category' => $topCategoryName,
+            'reservation_trend' => $reservationVolume->take(-7) // Last 7 data points
+        ]);
 
-        // Insight: Peak Hours Operational Planning
-        $topHour = $peakHours->sortByDesc('count')->first();
-        if ($topHour) {
-            $planningInsights[] = [
-                'type' => 'operations',
-                'title' => 'Peak Staffing Strategy',
-                'description' => "Activity peaks at {$topHour['hour']}. Ensure maximum security presence and waste management operations are scheduled during this window.",
-                'priority' => 'medium'
-            ];
-        }
+        $planningInsights = !empty($aiInsights) ? $aiInsights : [];
+        
+        // Fallback to Logic-Based Insights if AI fails
+        if (empty($planningInsights)) {
+            // Insight: Occupancy vs Demand
+            if ($occupancyRate > 85) {
+                $planningInsights[] = [
+                    'type' => 'infrastructure',
+                    'title' => 'Expansion Opportunity',
+                    'description' => "Market occupancy is at {$occupancyRate}%. Consider developing additional stalls or secondary market centers to accommodate growing trader demand.",
+                    'priority' => 'high'
+                ];
+            }
 
-        // Insight: Top Category Growth
-        $topCategory = $categoryDemand->first();
-        if ($topCategory) {
-            $planningInsights[] = [
-                'type' => 'category',
-                'title' => 'Sector Specialization',
-                'description' => "The '{$topCategory->name}' category dominates trade volume. Evaluate physical zoning to provide specialized amenities (e.g., cold storage) for this sector.",
-                'priority' => 'medium'
-            ];
+            // Insight: Peak Hours Operational Planning
+            if ($topHourLabel !== 'N/A') {
+                $planningInsights[] = [
+                    'type' => 'operations',
+                    'title' => 'Peak Staffing Strategy',
+                    'description' => "Activity peaks at {$topHourLabel}. Ensure maximum security presence and waste management operations are scheduled during this window.",
+                    'priority' => 'medium'
+                ];
+            }
+
+            // Insight: Top Category Growth
+            if ($topCategoryName !== 'N/A') {
+                $planningInsights[] = [
+                    'type' => 'category',
+                    'title' => 'Sector Specialization',
+                    'description' => "The '{$topCategoryName}' category dominates trade volume. Evaluate physical zoning to provide specialized amenities (e.g., cold storage) for this sector.",
+                    'priority' => 'medium'
+                ];
+            }
         }
         
         return response()->json([

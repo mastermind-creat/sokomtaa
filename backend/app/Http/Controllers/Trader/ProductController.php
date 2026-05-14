@@ -173,6 +173,28 @@ class ProductController extends Controller
     }
 
     /**
+     * Generate an AI-powered product description.
+     */
+    public function generateAiDescription(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id'
+        ]);
+
+        $category = \App\Models\Category::find($request->category_id);
+        $aiService = new \App\Services\AiService();
+
+        $description = $aiService->suggestDescription($request->name, $category->name);
+
+        if (!$description) {
+            return $this->error('Failed to generate AI description.', 'AI_ERROR', 500);
+        }
+
+        return $this->success(['description' => $description], 'AI description generated.');
+    }
+
+    /**
      * Helper to ensure the trader owns the product.
      */
     protected function authorizeProduct(Product $product): void

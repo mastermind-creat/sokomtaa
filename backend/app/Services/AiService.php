@@ -2,92 +2,155 @@
 
 namespace App\Services;
 
-use App\Models\Product;
-use App\Models\Trader;
-use App\Models\Market;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class AiService
 {
-    protected $gemini;
+    protected string $apiKey;
+    protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
-    public function __construct(GeminiService $gemini)
+    public function __construct()
     {
-        $this->gemini = $gemini;
+        $this->apiKey = config('services.gemini.key');
     }
 
     /**
-     * Get AI-powered search intent expansion.
-     * e.g. "greens" -> "sukuma wiki, spinach, terere"
+     * Generate content using Gemini API.
      */
-    public function expandQuery(string $query)
+    public function generate(string $prompt): ?string
     {
-        $prompt = "You are a Kenyan marketplace assistant. The user is searching for '{$query}'. 
-        Return a comma-separated list of related product names or keywords common in Kenyan markets (both in English and Swahili) that might match this intent. 
-        Keep it concise, max 10 terms. Format: 'term1, term2, term3'.";
-
-        $expanded = $this->gemini->generateText($prompt, ['temperature' => 0.3]);
-        
-        if (!$expanded) return [$query];
-
-        $terms = array_map('trim', explode(',', $expanded));
-        return array_unique(array_merge([$query], $terms));
-    }
-
-    /**
-     * Chat with Soko AI Assistant.
-     */
-    public function chat(string $message, $user = null)
-    {
-        $context = "You are 'Soko AI', a helpful and friendly assistant for Soko Mtaa, a digital marketplace in Kenya. 
-        You help residents find products, traders, and markets. You help traders with business advice.
-        Current context: The user is a " . ($user ? $user->role : 'guest') . " named " . ($user ? $user->name : 'Guest') . ".
-        Always be polite, use a mix of English and Swahili (Sheng is okay if appropriate), and keep responses concise (max 3 paragraphs).
-        If asked for products, suggest that they use the search bar for the most up-to-date listings.";
-
-        $prompt = "Context: {$context}\n\nUser: {$message}\n\nSoko AI:";
-
-        return $this->gemini->generateText($prompt);
-    }
-
-    /**
-     * Suggest a product description for a trader.
-     */
-    public function suggestDescription(string $productName, ?string $category = null)
-    {
-        $prompt = "Write a catchy, professional, and locally-appealing product description for '{$productName}'" . 
-        ($category ? " in the '{$category}' category" : "") . 
-        " for a Kenyan marketplace app called Soko Mtaa. Mention quality, freshness (if food), or value. Keep it under 200 characters.";
-
-        return $this->gemini->generateText($prompt, ['temperature' => 0.8]);
-    }
-
-    /**
-     * Get trending item types based on current listings.
-     */
-    public function getTrends()
-    {
-        // Simple logic: get top categories and ask AI to summarize trends
-        $topCategories = \App\Models\Category::withCount('products')
-            ->orderByDesc('products_count')
-            ->take(5)
-            ->get()
-            ->pluck('name')
-            ->toArray();
-
-        $categoriesStr = implode(', ', $topCategories);
-        
-        $prompt = "Based on these top product categories in a Kenyan digital market: {$categoriesStr}, 
-        what are 3 specific trending items or 'Hot Picks' you would recommend to users this week? 
-        Format as JSON: [{\"title\": \"...\", \"reason\": \"...\"}, ...]";
-
-        $response = $this->gemini->generateText($prompt, ['temperature' => 0.5]);
-        
-        // Try to parse JSON from response
-        if (preg_match('/\[.*\]/s', $response, $matches)) {
-            return json_decode($matches[0], true);
+        if (!$this->apiKey) {
+            Log::warning('Gemini API key is not configured.');
+            return null;
         }
 
-        return null;
+        try {
+            $response = Http::post("{$this->baseUrl}?key={$this->apiKey}", [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.7,
+                    'topK' => 40,
+                    'topP' => 0.95,
+                    'maxOutputTokens' => 1024,
+                ]
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+            }
+
+            Log::error('Gemini API Error: ' . $response->body());
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('Gemini API Exception: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Expand a search query into related terms and synonyms (English + Swahili).
+     */
+    public function expandQuery(string $query): array
+    {
+        $prompt = "Expand the following search query into a list of 5 related keywords or synonyms that a shopper might use in a Kenyan marketplace. 
+        Include both English and Swahili terms if applicable.
+        Query: '{$query}'
+        
+        Return the result as a simple comma-separated list of words. No other text.";
+
+        $result = $this->generate($prompt);
+
+        if (!$result) return [$query];
+
+        $terms = explode(',', $result);
+        return array_map('trim', array_merge([$query], $terms));
+    }
+
+    /**
+     * Generate a professional product description for traders.
+     */
+    public function suggestDescription(string $productName, ?string $category = null): ?string
+    {
+        $prompt = "Write a catchy, professional, and trust-building product description for a Kenyan market item.
+        Product: {$productName}
+        " . ($category ? "Category: {$category}" : "") . "
+        
+        Style: Energetic, marketplace-friendly, mentions quality and freshness (if applicable).
+        Length: 2-3 sentences.
+        Include a touch of Swahili local flair (e.g. 'Karibu', 'Safisha').";
+
+        return $this->generate($prompt);
+    }
+
+    /**
+     * Interactive chat with Soko AI.
+     */
+    public function chat(string $message, $user = null): ?string
+    {
+        $roleInfo = $user ? "The user is a {$user->role} on Soko Mtaa." : "";
+        $prompt = "You are 'Soko AI', a helpful and knowledgeable assistant for Soko Mtaa, a Kenyan neighbourhood marketplace. 
+        Your goal is to assist traders, residents, and administrators with marketplace-related questions.
+        Keep responses concise, friendly, and relevant to the Kenyan context.
+        {$roleInfo}
+        User says: '{$message}'";
+
+        return $this->generate($prompt);
+    }
+
+    /**
+     * Get simulated or AI-generated marketplace trends.
+     */
+    public function getTrends(): array
+    {
+        $prompt = "Generate a list of 5 currently trending items or categories in a Kenyan urban marketplace (e.g., 'Fresh Sukuma Wiki', 'Organic Avocadoes').
+        Return as a simple comma-separated list.";
+
+        $result = $this->generate($prompt);
+        if (!$result) return [];
+
+        return array_map('trim', explode(',', $result));
+    }
+
+    /**
+     * Generate strategic planning insights based on market data.
+     */
+    public function generatePlanningInsights(array $data): array
+    {
+        $prompt = "You are an AI urban planning consultant for Soko Mtaa, a Kenyan marketplace platform. 
+        Based on the following market data, generate 3 professional, actionable strategic insights for county administrators.
+        Data:
+        - Occupancy Rate: {$data['occupancy_rate']}%
+        - Peak Activity Hour: {$data['peak_hour']}
+        - Top Trading Category: {$data['top_category']}
+        - Reservation Volume Trend: " . json_encode($data['reservation_trend']) . "
+        
+        Return the response as a JSON array of objects with these fields:
+        'type': (string, one of: infrastructure, operations, category, security, financial)
+        'title': (string, short punchy title)
+        'description': (string, 2-3 sentences of professional advice)
+        'priority': (string, one of: high, medium, low)
+        
+        ONLY return the raw JSON array. No markdown, no triple backticks.";
+
+        $result = $this->generate($prompt);
+
+        if (!$result) return [];
+
+        try {
+            // Clean markdown if AI included it
+            $cleaned = preg_replace('/^```json\n?|\n?```$/', '', trim($result));
+            return json_decode($cleaned, true) ?? [];
+        } catch (\Exception $e) {
+            return [];
+        }
     }
 }
