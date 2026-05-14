@@ -156,6 +156,24 @@
     "trader": "Trader",
     "market": "Market"
   },
+  "help": {
+    "title": "Help Center",
+    "how_can_we_help": "How can we help you?",
+    "search_placeholder": "Search for answers...",
+    "categories": {
+      "all": "All",
+      "getting_started": "Getting Started",
+      "orders": "Orders",
+      "payments": "Payments",
+      "rules": "Rules"
+    },
+    "faqs_title": "Frequently Asked Questions",
+    "no_results": "Sorry, we couldn't find an answer to your question.",
+    "show_all": "Show all questions",
+    "contact_title": "Still need help?",
+    "contact_subtitle": "Our support team is ready to assist you.",
+    "contact_button": "CONTACT US NOW"
+  },
   "storefront": {
     "products": "Products",
     "about": "About",

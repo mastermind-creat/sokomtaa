@@ -38,7 +38,6 @@ export const Footer = () => {
               title: "Product",
               links: [
                 { label: "How it works", id: "#how-it-works" },
-                { label: "Features", id: "#features" },
                 { label: "Market Preview", id: "#market-preview" }
               ]
             },
@@ -53,9 +52,9 @@ export const Footer = () => {
             {
               title: "County",
               links: [
-                { label: "Kolenyo", id: "#" },
-                { label: "Kombewa", id: "#" },
-                { label: "Akala", id: "#" }
+                { label: "Nairobi", id: "#" },
+                { label: "Mombasa", id: "#" },
+                { label: "Kisumu", id: "#" }
               ]
             }
           ].map((col) => (
