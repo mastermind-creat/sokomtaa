@@ -66,90 +66,106 @@ class ReportController extends Controller
 
     public function generateActivityReport(Request $request)
     {
-        $type = $request->input('type', 'activity'); // sales, revenue, fees
-        $format = $request->input('format', 'pdf'); // pdf, xlsx
-        $startDate = $request->input('start_date', now()->startOfMonth());
-        $endDate = $request->input('end_date', now()->endOfMonth());
-
-        $data = [];
-        $title = "Activity Report";
-
-        if ($request->user()->role === 'trader') {
-            $trader = $request->user()->trader;
-            $title = "Sales Report: " . $trader->business_name;
+        try {
+            $type = $request->input('type', 'activity'); // sales, revenue, fees
+            $format = $request->input('format', 'pdf'); // pdf, xlsx
             
-            $reservations = Reservation::where('trader_id', $trader->id)
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereIn('status', ['paid', 'ready', 'completed'])
-                ->with(['product', 'resident'])
-                ->get();
-
-            foreach ($reservations as $res) {
-                $data[] = [
-                    'created_at' => $res->created_at->toDateTimeString(),
-                    'reference' => $res->reservation_code,
-                    'description' => $res->product->name . ' (Qty: ' . $res->quantity . ')',
-                    'entity' => $res->resident->name,
-                    'total_amount' => $res->total_amount,
-                    'status' => $res->status
-                ];
+            try {
+                $startDate = Carbon::parse($request->input('start_date', now()->startOfMonth()->toDateString()))->startOfDay();
+                $endDate = Carbon::parse($request->input('end_date', now()->endOfMonth()->toDateString()))->endOfDay();
+            } catch (\Exception $e) {
+                $startDate = now()->startOfMonth()->startOfDay();
+                $endDate = now()->endOfMonth()->endOfDay();
             }
-        } elseif ($request->user()->role === 'admin') {
-            $title = "County Revenue Report";
-            
-            $fees = MarketFee::whereBetween('created_at', [$startDate, $endDate])
-                ->where('status', 'paid')
-                ->with(['trader', 'market'])
-                ->get();
 
-            foreach ($fees as $fee) {
-                $data[] = [
-                    'created_at' => $fee->created_at->toDateTimeString(),
-                    'reference' => 'FEE-' . $fee->id,
-                    'description' => 'Market Fee (' . $fee->period . ')',
-                    'entity' => $fee->trader->business_name . ' (' . $fee->market->name . ')',
-                    'total_amount' => $fee->amount,
-                    'status' => $fee->status
-                ];
+            $data = [];
+            $title = "Activity Report";
+
+            if ($request->user()->role === 'trader') {
+                $trader = $request->user()->trader;
+                if (!$trader) {
+                    return response()->json(['message' => 'Trader profile not found'], 404);
+                }
+                $title = "Sales Report: " . $trader->business_name;
+                
+                $reservations = Reservation::where('trader_id', $trader->id)
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->whereIn('status', ['paid', 'ready', 'completed'])
+                    ->with(['product', 'resident'])
+                    ->get();
+
+                foreach ($reservations as $res) {
+                    $data[] = [
+                        'created_at' => $res->created_at->toDateTimeString(),
+                        'reference' => $res->reservation_code,
+                        'description' => ($res->product ? $res->product->name : 'Deleted Product') . ' (Qty: ' . $res->quantity . ')',
+                        'entity' => $res->resident ? $res->resident->name : 'Unknown Resident',
+                        'total_amount' => $res->total_amount,
+                        'status' => $res->status
+                    ];
+                }
+            } elseif ($request->user()->role === 'admin') {
+                $title = "County Revenue Report";
+                
+                $fees = MarketFee::whereBetween('created_at', [$startDate, $endDate])
+                    ->where('status', 'paid')
+                    ->with(['trader', 'market'])
+                    ->get();
+
+                foreach ($fees as $fee) {
+                    $data[] = [
+                        'created_at' => $fee->created_at->toDateTimeString(),
+                        'reference' => 'FEE-' . $fee->id,
+                        'description' => 'Market Fee (' . $fee->period . ')',
+                        'entity' => ($fee->trader ? $fee->trader->business_name : 'Deleted Trader') . ' (' . ($fee->market ? $fee->market->name : 'Unknown Market') . ')',
+                        'total_amount' => $fee->amount,
+                        'status' => $fee->status
+                    ];
+                }
             }
-        }
 
-        $filename = Str::slug($title) . '_' . time() . '.' . $format;
-        $path = 'reports/' . $filename;
+            $filename = Str::slug($title) . '_' . time() . '.' . $format;
+            $path = 'reports/' . $filename;
 
-        if ($format === 'pdf') {
-            $pdf = Pdf::loadView('reports.activity', [
+            if ($format === 'pdf') {
+                $pdf = Pdf::loadView('reports.activity', [
+                    'title' => $title,
+                    'data' => $data,
+                    'user' => $request->user(),
+                    'start_date' => $startDate,
+                    'end_date' => $endDate
+                ]);
+                Storage::disk('public')->put($path, $pdf->output());
+            } else {
+                Excel::store(new ActivityExport($data), $path, 'public');
+            }
+
+            $report = Report::create([
+                'user_id' => $request->user()->id,
                 'title' => $title,
-                'data' => $data,
-                'user' => $request->user(),
-                'start_date' => $startDate,
-                'end_date' => $endDate
+                'type' => $type,
+                'format' => $format,
+                'file_path' => $path,
+                'status' => 'completed',
+                'generated_at' => now(),
+                'parameters' => $request->all(),
+                'metadata' => [
+                    'total_amount' => collect($data)->sum('total_amount'),
+                    'count' => count($data)
+                ]
             ]);
-            Storage::disk('public')->put($path, $pdf->output());
-        } else {
-            Excel::store(new ActivityExport($data), $path, 'public');
+
+            return response()->json([
+                'message' => 'Report generated successfully',
+                'report' => $report,
+                'download_url' => asset('storage/' . $path)
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Failed to generate report: ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
         }
-
-        $report = Report::create([
-            'user_id' => $request->user()->id,
-            'title' => $title,
-            'type' => $type,
-            'format' => $format,
-            'file_path' => $path,
-            'status' => 'completed',
-            'generated_at' => now(),
-            'parameters' => $request->all(),
-            'metadata' => [
-                'total_amount' => collect($data)->sum('total_amount'),
-                'count' => count($data)
-            ]
-        ]);
-
-        return response()->json([
-            'message' => 'Report generated successfully',
-            'report' => $report,
-            'download_url' => asset('storage/' . $path)
-        ]);
     }
 
     public function download(Request $request, Report $report)
