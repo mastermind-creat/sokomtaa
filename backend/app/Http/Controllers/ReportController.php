@@ -36,6 +36,12 @@ class ReportController extends Controller
 
         $reservation->load(['resident', 'trader.stall', 'trader.market', 'product.category', 'payment']);
 
+        if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            return response()->json([
+                'message' => 'PDF receipt generation is not available on this server because the laravel-dompdf package is not installed. Please run "composer install" on the server.'
+            ], 400);
+        }
+
         $pdf = Pdf::loadView('reports.receipt', ['reservation' => $reservation]);
         
         $filename = 'receipt_' . $reservation->reservation_code . '_' . time() . '.pdf';
@@ -128,6 +134,12 @@ class ReportController extends Controller
             $path = 'reports/' . $filename;
 
             if ($format === 'pdf') {
+                if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+                    return response()->json([
+                        'message' => 'PDF generation is not available on this server because the laravel-dompdf package is not installed. Please select "Excel" format instead, or run "composer install" on the server.'
+                    ], 400);
+                }
+
                 $pdf = Pdf::loadView('reports.activity', [
                     'title' => $title,
                     'data' => $data,
