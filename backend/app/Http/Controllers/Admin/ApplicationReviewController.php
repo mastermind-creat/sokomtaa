@@ -98,7 +98,10 @@ class ApplicationReviewController extends Controller
                 // 3. Update Trader Profile
                 $trader->update([
                     'stall_id'   => $stall ? $stall->id : null,
-                    'stall_type' => $application->stall_type
+                    'stall_type' => $application->stall_type,
+                    'market_id'  => $application->market_id,
+                    'latitude'   => $application->market?->latitude,
+                    'longitude'  => $application->market?->longitude,
                 ]);
 
                 // 4. Update Application

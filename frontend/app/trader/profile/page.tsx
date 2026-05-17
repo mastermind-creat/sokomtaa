@@ -325,6 +325,7 @@ export default function TraderProfilePage() {
     });
 
     const isFirstTimeSetup = profileError?.code === 'NOT_FOUND';
+    const isAllocated = !!profile?.stall?.stall_number;
 
     const [form, setForm] = useState<Partial<TraderProfile & { market_id: number; stall_number: string }>>({});
     
@@ -632,9 +633,10 @@ export default function TraderProfilePage() {
                                         <div className="relative">
                                             <select
                                                 id="marketId"
+                                                disabled={isAllocated}
                                                 value={current.market_id ?? ''}
                                                 onChange={e => set('market_id', parseInt(e.target.value))}
-                                                className="w-full h-14 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-base font-bold text-green-950 focus:bg-white focus:ring-4 focus:ring-brand-600/5 focus:border-brand-600 transition-all appearance-none"
+                                                className="w-full h-14 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-base font-bold text-green-950 focus:bg-white focus:ring-4 focus:ring-brand-600/5 focus:border-brand-600 transition-all appearance-none disabled:opacity-75 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             >
                                                 <option value="">Select a market</option>
                                                 {markets?.map(m => (
@@ -651,21 +653,31 @@ export default function TraderProfilePage() {
                                         <input
                                             id="stallNum"
                                             type="text"
+                                            disabled={isAllocated}
                                             value={current.stall_number ?? ''}
                                             onChange={e => set('stall_number', e.target.value)}
-                                            className="w-full h-14 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-base font-bold text-green-950 focus:bg-white focus:ring-4 focus:ring-brand-600/5 focus:border-brand-600 transition-all"
+                                            className="w-full h-14 px-5 bg-gray-50 border border-gray-100 rounded-2xl text-base font-bold text-green-955 focus:bg-white focus:ring-4 focus:ring-brand-600/5 focus:border-brand-600 transition-all disabled:opacity-75 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             placeholder="e.g. A1, B12"
                                         />
                                     </FormField>
                                     
                                     <div className="md:col-span-2">
-                                        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 flex gap-3 items-start">
-                                            <AlertCircle size={20} className="text-amber-600 shrink-0 mt-0.5" />
-                                            <p className="text-sm text-amber-900 font-medium">
-                                                Changing your stall or market may require administrative re-verification. 
-                                                Ensure you select the correct physical location.
-                                            </p>
-                                        </div>
+                                        {isAllocated ? (
+                                            <div className="p-4 rounded-2xl bg-brand-50 border border-brand-100 flex gap-3 items-start">
+                                                <CheckCircle2 size={20} className="text-brand-600 shrink-0 mt-0.5" />
+                                                <p className="text-sm text-brand-900 font-medium">
+                                                    Your market and stall are officially allocated by the county office and cannot be changed here.
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 flex gap-3 items-start">
+                                                <AlertCircle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                                                <p className="text-sm text-amber-900 font-medium">
+                                                    Changing your stall or market may require administrative re-verification. 
+                                                    Ensure you select the correct physical location.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </section>

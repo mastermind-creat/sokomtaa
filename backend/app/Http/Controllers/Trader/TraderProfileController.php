@@ -247,6 +247,8 @@ class TraderProfileController extends Controller
             unset($validated['permit']);
         }
 
+        $payload = $validated;
+
         // Sync avatar_url to User table when updating from client-side upload
         if (isset($validated['avatar_url']) && $validated['avatar_url']) {
             $user->update(['avatar_url' => $validated['avatar_url']]);

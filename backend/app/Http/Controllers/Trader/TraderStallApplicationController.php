@@ -35,7 +35,8 @@ class TraderStallApplicationController extends Controller
             return $this->error('User is not a trader.', 'NOT_TRADER', 403);
         }
 
-        $application = StallApplication::where('trader_id', $user->trader->id)
+        $application = StallApplication::with(['market', 'preferredStall', 'trader.stall'])
+            ->where('trader_id', $user->trader->id)
             ->latest()
             ->first();
 

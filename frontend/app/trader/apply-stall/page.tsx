@@ -24,6 +24,20 @@ interface StallApplication {
     admin_notes: string | null;
     created_at: string;
     reviewed_at: string | null;
+    trader?: {
+        id: number;
+        stall?: {
+            id: number;
+            stall_number: string;
+            block: string;
+            zone: string;
+            size_sqm: string;
+            monthly_fee: string;
+            daily_fee: string;
+            weekly_fee: string;
+            status: string;
+        } | null;
+    } | null;
 }
 
 type StallType = 'managed' | 'independent';
@@ -359,6 +373,7 @@ function StatusCard({ application, onWithdraw, isWithdrawing, error }: {
     isWithdrawing: boolean;
     error: string | null;
 }) {
+    const router = useRouter();
     const s = STATUS_MAP[application.status] ?? STATUS_MAP.pending;
     const Icon = s.icon;
 
@@ -421,15 +436,43 @@ function StatusCard({ application, onWithdraw, isWithdrawing, error }: {
 
             {/* Next Steps */}
             {application.status === 'approved' && (
-                <div className="bg-brand-600 rounded-[2.5rem] p-8 text-white">
-                    <h4 className="font-black text-sm uppercase tracking-tight mb-2">🎉 Congratulations!</h4>
-                    <p className="text-[12px] text-brand-100 leading-relaxed font-medium mb-4">
-                        Your stall application has been approved. Visit the county market office with your permit to complete the allocation process.
-                    </p>
-                    <button onClick={() => router.push('/trader/dashboard')}
-                        className="w-full h-12 bg-white text-brand-700 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">
-                        Go to Dashboard
-                    </button>
+                <div className="space-y-4">
+                    {application.trader?.stall && (
+                        <div className="bg-white rounded-[2.5rem] border-2 border-brand-200 p-8 shadow-md space-y-4">
+                            <h4 className="font-black text-green-950 text-sm uppercase tracking-tight flex items-center gap-2">
+                                <Store className="text-brand-600" size={16} /> Allocated Stall Details
+                            </h4>
+                            <div className="grid grid-cols-2 gap-4 bg-brand-50/50 p-6 rounded-3xl border border-brand-100">
+                                <div>
+                                    <span className="text-[10px] font-black text-brand-600 uppercase tracking-wider block">Stall Number</span>
+                                    <span className="text-base font-black text-green-955">{application.trader.stall.stall_number}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-brand-600 uppercase tracking-wider block">Block / Zone</span>
+                                    <span className="text-base font-black text-green-955">Block {application.trader.stall.block || 'N/A'} (Zone {application.trader.stall.zone || 'N/A'})</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-brand-600 uppercase tracking-wider block">Size</span>
+                                    <span className="text-base font-black text-green-955">{application.trader.stall.size_sqm ? `${application.trader.stall.size_sqm} m²` : 'N/A'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-brand-600 uppercase tracking-wider block">Monthly Fee</span>
+                                    <span className="text-base font-black text-green-955">KES {parseFloat(application.trader.stall.monthly_fee || '0').toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="bg-brand-600 rounded-[2.5rem] p-8 text-white">
+                        <h4 className="font-black text-sm uppercase tracking-tight mb-2">🎉 Congratulations!</h4>
+                        <p className="text-[12px] text-brand-100 leading-relaxed font-medium mb-4">
+                            Your stall application has been approved. Visit the county market office with your permit to complete the allocation process.
+                        </p>
+                        <button onClick={() => router.push('/trader/dashboard')}
+                            className="w-full h-12 bg-white text-brand-700 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">
+                            Go to Dashboard
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
