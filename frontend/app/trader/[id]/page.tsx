@@ -406,33 +406,33 @@ export default function TraderStorefrontPage() {
             </div>
 
             {/* 6. Sticky Bottom Action Bar */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-6 lg:pb-10 pointer-events-none">
-                <div className="max-w-[480px] mx-auto bg-white/80 backdrop-blur-2xl border border-white p-3 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex gap-3 pointer-events-auto">
+            <div className="fixed bottom-[80px] md:bottom-0 left-0 right-0 z-50 px-6 pb-4 md:pb-6 lg:pb-10 pointer-events-none">
+                <div className="max-w-[480px] mx-auto bg-white/80 backdrop-blur-2xl border border-white p-2 md:p-3 rounded-2xl md:rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex gap-2 md:gap-3 pointer-events-auto">
                     <a 
                         href={`tel:0712345678`}
-                        className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center text-green-950 active:scale-95 transition-all border border-gray-100"
+                        className="w-12 h-12 md:w-16 md:h-16 bg-neutral-100 rounded-xl md:rounded-2xl flex items-center justify-center text-green-955 active:scale-95 transition-all border border-gray-100 shrink-0"
                     >
-                        <Phone size={24} />
+                        <Phone className="w-5 h-5 md:w-6 md:h-6" />
                     </a>
                     
                     {items.length > 0 ? (
                         <button 
                             onClick={() => setShowCart(true)}
-                            className="flex-1 h-16 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-brand-200 active:scale-95 transition-all flex items-center justify-between px-8"
+                            className="flex-1 h-12 md:h-16 bg-brand-600 text-white rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em] shadow-lg shadow-brand-200 active:scale-95 transition-all flex items-center justify-between px-4 md:px-8"
                         >
                             <div className="flex flex-col items-start leading-none">
-                                <span className="text-[10px] opacity-60 mb-1">{getTotalItems()} {t('common.items')}</span>
+                                <span className="text-[8px] md:text-[10px] opacity-60 mb-0.5 md:mb-1">{getTotalItems()} {t('common.items')}</span>
                                 <span>{t('storefront.view_cart') || 'View Cart'}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-mono text-sm">KES {getTotalAmount()}</span>
-                                <ChevronRight size={18} />
+                            <div className="flex items-center gap-1 md:gap-2">
+                                <span className="font-mono text-xs md:text-sm">KES {getTotalAmount()}</span>
+                                <ChevronRight className="w-4 h-4 md:w-[18px] md:h-[18px]" />
                             </div>
                         </button>
                     ) : (
                         <button 
                             disabled
-                            className="flex-1 h-16 bg-neutral-100 text-neutral-400 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-not-allowed"
+                            className="flex-1 h-12 md:h-16 bg-neutral-100 text-neutral-400 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-[0.1em] md:tracking-[0.2em] transition-all flex items-center justify-center gap-2 cursor-not-allowed"
                         >
                             {t('storefront.cart_empty') || 'Cart is Empty'}
                         </button>
