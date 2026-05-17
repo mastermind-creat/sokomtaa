@@ -70,6 +70,9 @@ class MarketController extends Controller
             $data['icon_url'] = $this->cloudinaryService->uploadImage($request->file('icon_image'), 'markets/icons');
         }
 
+        // Auto-geocode if coordinates not provided
+        $this->autoGeocode($data);
+
         $market = Market::create($data);
 
         // Auto-generate standard stall infrastructure
@@ -132,6 +135,19 @@ class MarketController extends Controller
             }
         }
 
+        // Auto-geocode if coordinates not provided or changed
+        if (
+            (empty($data['latitude']) && empty($market->latitude)) ||
+            (empty($data['longitude']) && empty($market->longitude))
+        ) {
+            $geocodeData = array_merge($market->toArray(), $data);
+            $this->autoGeocode($geocodeData);
+            if (!empty($geocodeData['latitude'])) {
+                $data['latitude'] = $geocodeData['latitude'];
+                $data['longitude'] = $geocodeData['longitude'];
+            }
+        }
+
         $market->update($data);
 
         return $this->success($market, 'Market updated successfully');
@@ -183,5 +199,50 @@ class MarketController extends Controller
         $this->stallService->generateStandardInfrastructure($market);
 
         return $this->success($market, 'Market infrastructure reset to standard template');
+    }
+
+    /**
+     * Auto-geocode the market location if coordinates are not provided.
+     */
+    private function autoGeocode(array &$data): void
+    {
+        if (empty($data['latitude']) || empty($data['longitude'])) {
+            try {
+                $queries = [
+                    ($data['name'] ?? '') . ', ' . ($data['estate'] ?? '') . ', ' . ($data['location'] ?? '') . ', ' . ($data['county'] ?? '') . ', Kenya',
+                    ($data['location'] ?? '') . ', ' . ($data['county'] ?? '') . ', Kenya',
+                    ($data['county'] ?? '') . ', Kenya'
+                ];
+
+                foreach ($queries as $query) {
+                    // Clean query of double commas and extra spaces
+                    $query = preg_replace('/,\s*,/', ',', $query);
+                    $query = trim($query, ', ');
+
+                    $response = \Illuminate\Support\Facades\Http::withHeaders([
+                        'User-Agent' => 'SokoMtaaApp/1.0'
+                    ])->get('https://nominatim.openstreetmap.org/search', [
+                        'q' => $query,
+                        'format' => 'json',
+                        'limit' => 1
+                    ]);
+
+                    if ($response->successful()) {
+                        $json = $response->json();
+                        if (!empty($json) && isset($json[0]['lat']) && isset($json[0]['lon'])) {
+                            $data['latitude'] = (float) $json[0]['lat'];
+                            $data['longitude'] = (float) $json[0]['lon'];
+                            Log::info("Market auto-geocoded successfully using query: {$query}", [
+                                'lat' => $data['latitude'],
+                                'lng' => $data['longitude']
+                            ]);
+                            return;
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('Market auto-geocoding failed: ' . $e->getMessage());
+            }
+        }
     }
 }

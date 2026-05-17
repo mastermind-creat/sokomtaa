@@ -144,16 +144,16 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                 center_id: initialData.center_id || '',
             });
             
-            // Set hierarchical IDs
+            // Set hierarchy values if available
             if (initialData.center) {
-                setValue('center_id', initialData.center.id);
+                setValue('center_id', initialData.center_id ? initialData.center_id.toString() : '');
                 if (initialData.center.county_id) {
-                    setValue('county_id', initialData.center.county_id);
+                    setValue('county_id', initialData.center.county_id.toString());
                 }
                 if (initialData.center.region_id) {
-                    setValue('region_id', initialData.center.region_id);
+                    setValue('region_id', initialData.center.region_id.toString());
                 } else if (initialData.center.county?.region_id) {
-                    setValue('region_id', initialData.center.county.region_id);
+                    setValue('region_id', initialData.center.county.region_id.toString());
                 }
             }
         } else {
@@ -246,13 +246,12 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                                                 Region
                                             </label>
                                             <select 
-                                                {...register('region_id')}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setValue('region_id', val);
-                                                    setValue('county_id', '');
-                                                    setValue('center_id', '');
-                                                }}
+                                                {...register('region_id', {
+                                                    onChange: (e) => {
+                                                        setValue('county_id', '');
+                                                        setValue('center_id', '');
+                                                    }
+                                                })}
                                                 className="w-full h-10 px-3 bg-white border border-gray-100 rounded-xl text-xs font-bold focus:border-brand-500 outline-none"
                                             >
                                                 <option value="">Region...</option>
@@ -268,17 +267,16 @@ export const MarketModal: React.FC<MarketModalProps> = ({
                                                 County
                                             </label>
                                             <select 
-                                                {...register('county_id')}
+                                                {...register('county_id', {
+                                                    onChange: (e) => {
+                                                        setValue('center_id', '');
+                                                        
+                                                        // Auto-fill the text county field for compatibility
+                                                        const countyName = counties?.data?.find(c => c.id.toString() === e.target.value.toString())?.name;
+                                                        if (countyName) setValue('county', countyName);
+                                                    }
+                                                })}
                                                 disabled={!selectedRegionId}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setValue('county_id', val);
-                                                    setValue('center_id', '');
-                                                    
-                                                    // Auto-fill the text county field for compatibility
-                                                    const countyName = counties?.data?.find(c => c.id.toString() === val.toString())?.name;
-                                                    if (countyName) setValue('county', countyName);
-                                                }}
                                                 className="w-full h-10 px-3 bg-white border border-gray-100 rounded-xl text-xs font-bold focus:border-brand-500 outline-none disabled:opacity-50"
                                             >
                                                 <option value="">County...</option>

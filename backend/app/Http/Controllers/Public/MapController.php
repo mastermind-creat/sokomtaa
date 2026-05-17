@@ -78,4 +78,80 @@ class MapController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Find markets and independent traders within a radius of a given location.
+     * Uses the Haversine formula to calculate great-circle distances.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     *   - lat    float  Latitude of the user's location (required)
+     *   - lng    float  Longitude of the user's location (required)
+     *   - radius float  Search radius in kilometres (default: 50, max: 200)
+     */
+    public function nearby(Request $request): JsonResponse
+    {
+        $request->validate([
+            'lat'    => 'required|numeric|between:-90,90',
+            'lng'    => 'required|numeric|between:-180,180',
+            'radius' => 'nullable|numeric|min:1|max:200',
+        ]);
+
+        $lat    = (float) $request->lat;
+        $lng    = (float) $request->lng;
+        $radius = (float) ($request->radius ?? 50);
+
+        // Haversine raw SQL snippet (reusable)
+        $haversine = "(
+            6371 * acos(
+                cos( radians(?) )
+                * cos( radians( latitude ) )
+                * cos( radians( longitude ) - radians(?) )
+                + sin( radians(?) ) * sin( radians( latitude ) )
+            )
+        )";
+
+        // ── Markets ──────────────────────────────────────────────────────────
+        $markets = Market::where('is_active', true)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->selectRaw(
+                "markets.*, ROUND({$haversine}, 2) AS distance_km",
+                [$lat, $lng, $lat]
+            )
+            ->withCount(['stalls as active_stalls_count' => function ($q) {
+                $q->where('status', 'occupied');
+            }])
+            ->having('distance_km', '<=', $radius)
+            ->orderBy('distance_km')
+            ->limit(50)
+            ->get();
+
+        // ── Independent Traders ───────────────────────────────────────────────
+        $traders = Trader::whereHas('user', function ($q) {
+                $q->where('is_active', true);
+            })
+            ->where('stall_type', 'independent')
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->selectRaw(
+                "traders.*, ROUND({$haversine}, 2) AS distance_km",
+                [$lat, $lng, $lat]
+            )
+            ->withCount('products')
+            ->having('distance_km', '<=', $radius)
+            ->orderBy('distance_km')
+            ->limit(100)
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'markets'       => $markets,
+                'traders'       => $traders,
+                'user_location' => ['latitude' => $lat, 'longitude' => $lng],
+                'radius_km'     => $radius,
+                'total'         => $markets->count() + $traders->count(),
+            ]
+        ]);
+    }
 }

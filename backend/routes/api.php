@@ -56,6 +56,7 @@ Route::get('/recommendations', [\App\Http\Controllers\SearchController::class, '
 
 // Geographic Map Discovery
 Route::get('/map/discover', [\App\Http\Controllers\Public\MapController::class, 'discover']);
+Route::get('/map/nearby',   [\App\Http\Controllers\Public\MapController::class, 'nearby']);
 
 // Trader Discovery (Public)
 Route::prefix('traders')->group(function () {

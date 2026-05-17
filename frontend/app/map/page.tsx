@@ -7,21 +7,29 @@ import {
     ChevronLeft, 
     Search, 
     MapPin, 
-    Filter, 
     Store, 
     Loader2, 
     ShoppingBag, 
     Star,
     Phone,
-    ArrowUpRight
+    ArrowUpRight,
+    Globe,
+    LayoutGrid
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import dynamic from 'next/dynamic';
+
 const MarketSchematicMap = dynamic(() => import('@/components/map/MarketSchematicMap'), { 
     ssr: false,
     loading: () => <div className="w-full h-full bg-neutral-50 animate-pulse rounded-[2.5rem] flex items-center justify-center text-xs font-black text-brand-700 uppercase tracking-widest">Loading Map...</div>
 });
+
+const DiscoveryMap = dynamic(() => import('@/components/map/DiscoveryMap'), {
+    ssr: false,
+    loading: () => <div className="w-full h-[calc(100vh-200px)] bg-neutral-50 animate-pulse rounded-[2.5rem] flex items-center justify-center text-xs font-black text-brand-700 uppercase tracking-widest">Loading Discovery Map...</div>
+});
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { ApiResponse } from '@/types';
 
@@ -44,6 +52,7 @@ interface Stall {
 
 export default function ResidentMapPage() {
     const router = useRouter();
+    const [mapView, setMapView] = useState<'street' | 'schematic'>('street');
     const [selectedBlock, setSelectedBlock] = useState('A');
     const [selectedStall, setSelectedStall] = useState<Stall | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -74,100 +83,159 @@ export default function ResidentMapPage() {
 
     return (
         <DashboardLayout title="Ramani ya Soko (Market Map)">
-            <div className="h-[calc(100vh-140px)] flex flex-col gap-4">
-                
-                {/* 1. Header & Controls */}
-                <div className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <button 
-                                onClick={() => router.back()}
-                                className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-text-primary shadow-sm border border-gray-100 active:scale-90 transition-all"
-                            >
-                                <ChevronLeft size={20} />
-                            </button>
-                            <h1 className="text-xl font-black text-green-950 tracking-tight">Kolenyo Market</h1>
-                        </div>
-                        <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
-                            {['A', 'B', 'C'].map((block) => (
-                                <button
-                                    key={block}
-                                    onClick={() => setSelectedBlock(block)}
-                                    className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${
-                                        selectedBlock === block 
-                                            ? 'bg-brand-600 text-white shadow-lg shadow-brand-200' 
-                                            : 'text-text-muted hover:text-text-primary'
-                                    }`}
-                                >
-                                    Block {block}
-                                </button>
-                            ))}
+            <div className="flex flex-col gap-4">
+
+                {/* Header & View Toggle */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => router.back()}
+                            className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-text-primary shadow-sm border border-gray-100 active:scale-90 transition-all"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                        <div>
+                            <h1 className="text-xl font-black text-green-950 tracking-tight">
+                                {mapView === 'street' ? 'Discover Nearby' : 'Kolenyo Market'}
+                            </h1>
+                            <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+                                {mapView === 'street' ? 'Markets & traders near you' : 'Stall layout view'}
+                            </p>
                         </div>
                     </div>
 
-                    <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-600 transition-colors" size={18} />
-                        <input 
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full h-14 pl-12 pr-4 bg-white rounded-2xl border border-gray-100 shadow-sm focus:border-brand-500 transition-all outline-none font-medium placeholder:text-text-muted"
-                            placeholder="Tafuta duka au nambari ya stall..."
-                        />
-                    </div>
-                </div>
-
-                {/* 2. Map Area */}
-                <div className="flex-1 relative min-h-[400px]">
-                    {isLoading ? (
-                        <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-[2.5rem]">
-                            <Loader2 className="animate-spin text-brand-600 mb-2" size={32} />
-                            <p className="text-xs font-black text-brand-700 tracking-widest uppercase">Loading Schematic...</p>
-                        </div>
-                    ) : null}
-                    
-                    <MarketSchematicMap 
-                        stalls={filteredStalls} 
-                        onStallClick={(stall) => setSelectedStall(stall)} 
-                    />
-
-                    {/* Legend Strip */}
-                    <div className="absolute bottom-6 left-6 right-6 lg:right-auto lg:w-fit bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-white shadow-xl z-10 flex items-center gap-4 overflow-x-auto no-scrollbar">
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            <div className="w-3 h-3 bg-brand-50 border border-brand-500 rounded-full" />
-                            <span className="text-[10px] font-black text-brand-700 uppercase">Open</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            <div className="w-3 h-3 bg-amber-50 border border-amber-500 rounded-full" />
-                            <span className="text-[10px] font-black text-amber-700 uppercase">Closed</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            <div className="w-3 h-3 bg-blue-50 border border-blue-500 border-dashed rounded-full" />
-                            <span className="text-[10px] font-black text-blue-600 uppercase">Vacant</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            <div className="w-3 h-3 bg-amber-50 border border-amber-300 rounded-full" />
-                            <span className="text-[10px] font-black text-text-muted uppercase">Maintenance</span>
-                        </div>
+                    {/* View Toggle */}
+                    <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
+                        <button
+                            onClick={() => setMapView('street')}
+                            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                                mapView === 'street'
+                                    ? 'bg-brand-600 text-white shadow-md'
+                                    : 'text-text-muted hover:text-text-primary'
+                            }`}
+                        >
+                            <Globe size={14} /> Street
+                        </button>
+                        <button
+                            onClick={() => setMapView('schematic')}
+                            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                                mapView === 'schematic'
+                                    ? 'bg-green-950 text-white shadow-md'
+                                    : 'text-text-muted hover:text-text-primary'
+                            }`}
+                        >
+                            <LayoutGrid size={14} /> Schematic
+                        </button>
                     </div>
                 </div>
 
-                {/* 3. Occupancy Stat Bar */}
-                <div className="bg-white p-4 lg:p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Occupancy</p>
-                        <h4 className="text-lg font-black text-green-950">{stats.occupied}/{stats.total} <span className="text-brand-600">({stats.percent}%)</span></h4>
-                    </div>
-                    <div className="flex gap-2">
-                        {stats.vacant > 0 && (
-                            <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-blue-100">
-                                {stats.vacant} Vacant
+                {/* Street Discovery Map */}
+                <AnimatePresence mode="wait">
+                    {mapView === 'street' && (
+                        <motion.div
+                            key="street"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <DiscoveryMap />
+                        </motion.div>
+                    )}
+
+                    {/* Schematic Controls + Map — only when in schematic mode */}
+                    {mapView === 'schematic' && (
+                        <motion.div
+                            key="schematic"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex flex-col gap-4"
+                        >
+                            {/* Search */}
+                            <div className="relative group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-600 transition-colors" size={18} />
+                                <input 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full h-14 pl-12 pr-4 bg-white rounded-2xl border border-gray-100 shadow-sm focus:border-brand-500 transition-all outline-none font-medium placeholder:text-text-muted"
+                                    placeholder="Tafuta duka au nambari ya stall..."
+                                />
                             </div>
-                        )}
-                        <div className="bg-green-50 text-brand-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-green-100">
-                            Block Active
-                        </div>
-                    </div>
-                </div>
+
+                            {/* Block switcher */}
+                            <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-100 w-fit">
+                                {['A', 'B', 'C'].map((block) => (
+                                    <button
+                                        key={block}
+                                        onClick={() => setSelectedBlock(block)}
+                                        className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${
+                                            selectedBlock === block 
+                                                ? 'bg-green-950 text-white shadow-lg'
+                                                : 'text-text-muted hover:text-text-primary'
+                                        }`}
+                                    >
+                                        Block {block}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Schematic Map */}
+                            <div className="relative min-h-[400px]">
+                                {isLoading ? (
+                                    <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-[2.5rem]">
+                                        <Loader2 className="animate-spin text-brand-600 mb-2" size={32} />
+                                        <p className="text-xs font-black text-brand-700 tracking-widest uppercase">Loading Schematic...</p>
+                                    </div>
+                                ) : null}
+                                
+                                <MarketSchematicMap 
+                                    stalls={filteredStalls} 
+                                    onStallClick={(stall) => setSelectedStall(stall as unknown as Stall)} 
+                                />
+
+                                {/* Legend */}
+                                <div className="absolute bottom-6 left-6 right-6 lg:right-auto lg:w-fit bg-white/90 backdrop-blur-md p-3 rounded-2xl border border-white shadow-xl z-10 flex items-center gap-4 overflow-x-auto no-scrollbar">
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <div className="w-3 h-3 bg-brand-50 border border-brand-500 rounded-full" />
+                                        <span className="text-[10px] font-black text-brand-700 uppercase">Open</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <div className="w-3 h-3 bg-amber-50 border border-amber-500 rounded-full" />
+                                        <span className="text-[10px] font-black text-amber-700 uppercase">Closed</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <div className="w-3 h-3 bg-blue-50 border border-blue-500 border-dashed rounded-full" />
+                                        <span className="text-[10px] font-black text-blue-600 uppercase">Vacant</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <div className="w-3 h-3 bg-amber-50 border border-amber-300 rounded-full" />
+                                        <span className="text-[10px] font-black text-text-muted uppercase">Maintenance</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Occupancy Bar */}
+                            <div className="bg-white p-4 lg:p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Occupancy</p>
+                                    <h4 className="text-lg font-black text-green-950">{stats.occupied}/{stats.total} <span className="text-brand-600">({stats.percent}%)</span></h4>
+                                </div>
+                                <div className="flex gap-2">
+                                    {stats.vacant > 0 && (
+                                        <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-blue-100">
+                                            {stats.vacant} Vacant
+                                        </div>
+                                    )}
+                                    <div className="bg-green-50 text-brand-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-green-100">
+                                        Block Active
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* 4. Stall Detail Bottom Sheet (Resident View) */}

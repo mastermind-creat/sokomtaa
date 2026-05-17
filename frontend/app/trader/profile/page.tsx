@@ -8,7 +8,7 @@ import {
     Camera, Store, Clock, Phone, Upload, User,
     Key, Save, Eye, EyeOff, Loader2, ShieldCheck,
     FileText, ChevronRight, AlertCircle, CheckCircle2,
-    BadgeCheck, XCircle, ShoppingBag
+    BadgeCheck, XCircle, ShoppingBag, Navigation2, MapPin
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
@@ -167,6 +167,113 @@ function extractError(err: unknown): string {
     }
     return e?.message || 'Something went wrong. Please try again.';
 }
+
+// ── LocationSection sub-component ────────────────────────────────────────────
+// Shown to independent traders so they can pin their stall's coordinates.
+// Uses browser Geolocation API (high accuracy). The detected coords are
+// stored in parent form state and saved alongside the next profile save.
+interface LocationSectionProps {
+    latitude: number | null;
+    longitude: number | null;
+    onCoordsChange: (lat: number, lng: number) => void;
+}
+
+function LocationSection({ latitude, longitude, onCoordsChange }: LocationSectionProps) {
+    const [isLocating, setIsLocating] = React.useState(false);
+    const [locError, setLocError]     = React.useState<string | null>(null);
+    const [justDetected, setJustDetected] = React.useState(false);
+
+    const detect = () => {
+        if (!navigator.geolocation) {
+            setLocError('Your browser does not support location services.');
+            return;
+        }
+        setIsLocating(true);
+        setLocError(null);
+        setJustDetected(false);
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                onCoordsChange(pos.coords.latitude, pos.coords.longitude);
+                setIsLocating(false);
+                setJustDetected(true);
+                setTimeout(() => setJustDetected(false), 4000);
+            },
+            (err) => {
+                setIsLocating(false);
+                if (err.code === err.PERMISSION_DENIED) {
+                    setLocError('Location access denied. Please allow it in your browser settings and try again.');
+                } else if (err.code === err.TIMEOUT) {
+                    setLocError('Location timed out. Please try again in a clear outdoor area.');
+                } else {
+                    setLocError('Could not determine your location. Please try again.');
+                }
+            },
+            { timeout: 12000, maximumAge: 60000, enableHighAccuracy: true }
+        );
+    };
+
+    const hasCoords = latitude !== null && longitude !== null;
+
+    return (
+        <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8">
+            <h3 className="text-lg font-black text-green-950 mb-2 flex items-center gap-3">
+                <MapPin className="text-brand-600" /> Your Stall Location
+            </h3>
+            <p className="text-sm text-gray-500 font-medium mb-6 leading-relaxed">
+                Adding your GPS coordinates lets customers find you on the map.
+                Stand at your stall and tap the button below for best accuracy.
+            </p>
+
+            {/* Current coordinates display */}
+            {hasCoords && (
+                <div className="mb-5 p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center gap-3">
+                    <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                        <CheckCircle2 size={20} />
+                    </div>
+                    <div>
+                        <p className="text-xs font-black text-green-950">Location Pinned</p>
+                        <p className="text-[11px] font-mono text-green-700 mt-0.5">
+                            {Number(latitude).toFixed(6)}, {Number(longitude).toFixed(6)}
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Success flash */}
+            {justDetected && (
+                <div className="mb-4 p-3 bg-brand-50 border border-brand-100 rounded-2xl text-sm font-bold text-brand-700 flex items-center gap-2">
+                    <Navigation2 size={16} /> Location detected! Tap Save below to keep it.
+                </div>
+            )}
+
+            {/* Error */}
+            {locError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-2xl text-sm font-bold text-red-700 flex items-center gap-2">
+                    <AlertCircle size={16} /> {locError}
+                </div>
+            )}
+
+            {/* Detect button */}
+            <button
+                type="button"
+                onClick={detect}
+                disabled={isLocating}
+                className="w-full h-14 flex items-center justify-center gap-3 bg-brand-600 text-white rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg shadow-brand-200 hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-60"
+            >
+                {isLocating
+                    ? <><Loader2 size={20} className="animate-spin" /> Detecting Location…</>
+                    : <><Navigation2 size={20} /> {hasCoords ? 'Update My Location' : 'Detect My Location'}</>
+                }
+            </button>
+
+            <p className="text-[10px] text-text-muted font-medium text-center mt-3">
+                Your browser will ask for location permission. This only runs when you tap the button.
+            </p>
+        </section>
+    );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function TraderProfilePage() {
     const router = useRouter();
@@ -562,6 +669,17 @@ export default function TraderProfilePage() {
                                     </div>
                                 </div>
                             </section>
+
+                            {/* GPS Location Section — independent traders only */}
+                            {(current.stall_type === 'independent' || isFirstTimeSetup) && (
+                                <LocationSection
+                                    latitude={current.latitude ?? null}
+                                    longitude={current.longitude ?? null}
+                                    onCoordsChange={(lat, lng) => {
+                                        setForm(f => ({ ...f, latitude: lat, longitude: lng }));
+                                    }}
+                                />
+                            )}
 
                             {/* Trading Hours Section */}
                             <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8">

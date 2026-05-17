@@ -54,6 +54,10 @@ export default function AdminMarketsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
             setIsModalOpen(false);
+        },
+        onError: (err: any) => {
+            const msg = err.response?.data?.message || err.message || 'Failed to create market.';
+            alert(`Error: ${msg}`);
         }
     });
 
@@ -67,6 +71,10 @@ export default function AdminMarketsPage() {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
             setIsModalOpen(false);
             setSelectedMarket(null);
+        },
+        onError: (err: any) => {
+            const msg = err.response?.data?.message || err.message || 'Failed to update market.';
+            alert(`Error: ${msg}`);
         }
     });
 

@@ -76,14 +76,25 @@ class TraderProfileController extends Controller
                 }
             }
 
+            // Resolve latitude/longitude, defaulting to market's coordinates if null
+            $lat = $request->latitude;
+            $lng = $request->longitude;
+            if (!$lat || !$lng) {
+                $market = \App\Models\Market::find($marketId);
+                if ($market && $market->latitude && $market->longitude) {
+                    $lat = $market->latitude;
+                    $lng = $market->longitude;
+                }
+            }
+
             // Create Trader Profile
             $trader = Trader::create([
                 'user_id'             => $user->id,
                 'stall_id'            => $stallId,
                 'market_id'           => $marketId,
                 'stall_type'          => $stallType,
-                'latitude'            => $request->latitude,
-                'longitude'           => $request->longitude,
+                'latitude'            => $lat,
+                'longitude'           => $lng,
                 'business_name'       => $request->business_name,
                 'business_name_sw'    => $request->business_name_sw,
                 'description'         => $request->description,
@@ -273,6 +284,22 @@ class TraderProfileController extends Controller
 
         // Remove null / empty strings so we don't accidentally blank out fields
         $payload = array_filter($payload, fn($v) => !is_null($v) && $v !== '');
+
+        // ── Auto-inherit market coordinates for ALL traders ──────────────────
+        // If a trader has no coordinates of their own, copy them from
+        // their assigned market so they appear in location-based searches.
+        $resolvedMarketId = $payload['market_id'] ?? $validated['market_id'] ?? $trader->market_id;
+        $traderHasCoords  = ($trader->latitude && $trader->longitude)
+                          || isset($payload['latitude']) || isset($validated['latitude']);
+
+        if (!$traderHasCoords && $resolvedMarketId) {
+            $market = \App\Models\Market::find($resolvedMarketId);
+            if ($market && $market->latitude && $market->longitude) {
+                $payload['latitude']  = $market->latitude;
+                $payload['longitude'] = $market->longitude;
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         Log::info('Trader Profile Update:', ['trader_id' => $trader->id, 'fields' => array_keys($payload)]);
 
