@@ -34,7 +34,8 @@
     "product": "Product",
     "trader": "Trader",
     "market": "Market",
-    "reserve": "Reserve"
+    "reserve": "Reserve",
+    "add_to_cart": "Add to Cart"
   },
   "home": {
     "greeting": "Hello",
@@ -194,7 +195,9 @@
     "reserve_item": "Reserve Item",
     "call": "Call",
     "default_description": "Welcome to our neighborhood stall. We provide the freshest local produce and high-quality market goods to our community.",
-    "no_products": "No products available at the moment. Please check back later!"
+    "no_products": "No products available at the moment. Please check back later!",
+    "cart_empty": "Cart is Empty",
+    "view_cart": "View Cart"
   },
   "dashboard": {
     "profile_incomplete": "Profile Incomplete",

@@ -33,7 +33,8 @@
     "orders": "Oda",
     "product": "Bidhaa",
     "trader": "Mfanyabiashara",
-    "market": "Soko"
+    "market": "Soko",
+    "add_to_cart": "Weka Kikapuni"
   },
   "home": {
     "greeting": "Hujambo",
@@ -188,7 +189,9 @@
     "customer_reviews": "Maoni ya Wateja",
     "no_reviews": "Hakuna maoni bado",
     "reserve_item": "Hifadhi Bidhaa",
-    "call": "Piga Simu"
+    "call": "Piga Simu",
+    "cart_empty": "Kikapu Kiko Wazi",
+    "view_cart": "Fungua Kikapu"
   },
   "dashboard": {
     "profile_incomplete": "Wasifu Haijakamilika",

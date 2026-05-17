@@ -11,6 +11,7 @@ import {
     MapPin, 
     CheckCircle2, 
     ShoppingBag, 
+    ShoppingCart,
     Plus, 
     Loader2,
     Store,
@@ -278,7 +279,7 @@ export default function TraderStorefrontPage() {
                                                 {product.stock_status === 'out_of_stock' ? (
                                                     t('common.sold_out') || 'Sold Out'
                                                 ) : (
-                                                    <><Plus size={14} /> {t('common.add_to_cart') || 'Add to Cart'}</>
+                                                    <><ShoppingCart size={14} /> {t('common.add_to_cart') || 'Add to Cart'}</>
                                                 )}
                                             </button>
                                         </div>
