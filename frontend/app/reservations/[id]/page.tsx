@@ -27,6 +27,7 @@ import { useMpesa } from '@/hooks/useMpesa';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import ReviewSheet from '@/components/resident/ReviewSheet';
+import { ApiResponse } from '@/types';
 
 interface Reservation {
     id: number;
@@ -34,6 +35,7 @@ interface Reservation {
     quantity: number;
     total_amount: string;
     unit_price: string;
+    service_fee?: string;
     status: 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled' | 'expired';
     pickup_deadline: string;
     product: {
@@ -330,7 +332,7 @@ export default function ReservationPickupPage() {
             <AnimatePresence>
                 {showReviewSheet && reservation && (
                     <ReviewSheet 
-                        reservation={reservation}
+                        reservation={reservation as any}
                         onClose={() => setShowReviewSheet(false)}
                     />
                 )}
