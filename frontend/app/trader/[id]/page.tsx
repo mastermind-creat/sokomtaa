@@ -54,7 +54,7 @@ export default function TraderStorefrontPage() {
     });
 
     // 2. Fetch Trader Reviews (specifically for the Reviews tab)
-    const { data: reviewsData, isLoading: isReviewsLoading } = useQuery<ApiResponse<Review[]>>({
+    const { data: reviewsData, isLoading: isReviewsLoading } = useQuery<ApiResponse<any>>({
         queryKey: ['trader-reviews', id],
         queryFn: () => api.get(`/traders/${id}/reviews`),
         enabled: selectedTab === 'reviews'
@@ -62,7 +62,7 @@ export default function TraderStorefrontPage() {
 
     const trader = storefrontData?.data?.trader;
     const products = storefrontData?.data?.products?.data || [];
-    const reviews = reviewsData?.data || [];
+    const reviews: Review[] = reviewsData?.data?.data || [];
 
     const stats = useMemo(() => {
         if (!trader) return { avg: "0.0", count: 0 };
