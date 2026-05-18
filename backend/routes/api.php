@@ -263,6 +263,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/stats', [\App\Http\Controllers\Delivery\DeliveryController::class, 'stats']);
             Route::post('/toggle-availability', [\App\Http\Controllers\Delivery\DeliveryController::class, 'toggleAvailability']);
             Route::post('/update-location', [\App\Http\Controllers\Delivery\DeliveryController::class, 'updateLocation']);
+            // KYC document submission
+            Route::post('/kyc', [\App\Http\Controllers\Delivery\DeliveryController::class, 'submitKyc']);
+            Route::get('/profile', [\App\Http\Controllers\Delivery\DeliveryController::class, 'profile']);
         });
     });
 
@@ -338,6 +341,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/reservations/propagate-report', [\App\Http\Controllers\Admin\ReservationController::class, 'propagateReport']);
         Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index']);
         Route::post('/users/{user}/sms', [\App\Http\Controllers\Admin\UserController::class, 'sendSms']);
+        Route::patch('/users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus']);
+        // Delivery rider management
+        Route::get('/delivery-riders', [\App\Http\Controllers\Admin\UserController::class, 'deliveryRiders']);
+        Route::patch('/delivery-riders/{profile}/verify', [\App\Http\Controllers\Admin\UserController::class, 'verifyRider']);
+        Route::patch('/delivery-riders/{profile}/reject', [\App\Http\Controllers\Admin\UserController::class, 'rejectRider']);
         Route::get('/audit-logs', [\App\Http\Controllers\Admin\AuditLogController::class, 'index']);
 
         // System Maintenance

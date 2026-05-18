@@ -41,7 +41,7 @@ class AuthController extends Controller
         if ($user->role === 'delivery') {
             $user->riderProfile()->create([
                 'vehicle_type' => 'motorcycle',
-                'verification_status' => 'pending',
+                'verification_status' => 'not_submitted', // No docs yet — won't show KYC pending banner
                 'is_available' => false,
                 'earnings_balance' => 0.00,
             ]);

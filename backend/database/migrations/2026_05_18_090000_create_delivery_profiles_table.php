@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('vehicle_type')->default('motorcycle'); // motorcycle (boda boda), bicycle, foot
             $table->string('license_plate')->nullable();
             $table->string('license_number')->nullable();
-            $table->enum('verification_status', ['pending', 'verified', 'rejected'])->default('pending');
+            $table->enum('verification_status', ['not_submitted', 'pending', 'verified', 'rejected'])->default('not_submitted');
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();
             $table->boolean('is_available')->default(true);

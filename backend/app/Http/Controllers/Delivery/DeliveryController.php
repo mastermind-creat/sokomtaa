@@ -295,4 +295,64 @@ class DeliveryController extends Controller
 
         return $this->success($profile, 'Location updated successfully.');
     }
+
+    /**
+     * Submit KYC documents for rider verification.
+     * Transitions status from 'not_submitted' → 'pending' (under admin review).
+     */
+    public function submitKyc(Request $request): JsonResponse
+    {
+        $request->validate([
+            'id_document_url'    => 'required|string|url',
+            'license_image_url'  => 'sometimes|nullable|string|url',
+            'vehicle_type'       => 'sometimes|string|max:50',
+            'license_plate'      => 'sometimes|nullable|string|max:20',
+            'license_number'     => 'sometimes|nullable|string|max:50',
+        ]);
+
+        $user = Auth::user();
+        $profile = DeliveryProfile::where('user_id', $user->id)->firstOrFail();
+
+        if ($profile->verification_status === 'verified') {
+            return $this->error('Your account is already verified.', 'ALREADY_VERIFIED', 422);
+        }
+
+        $profile->update([
+            'id_document_url'    => $request->id_document_url,
+            'license_image_url'  => $request->license_image_url,
+            'vehicle_type'       => $request->vehicle_type ?? $profile->vehicle_type,
+            'license_plate'      => $request->license_plate ?? $profile->license_plate,
+            'license_number'     => $request->license_number ?? $profile->license_number,
+            'verification_status' => 'pending', // Now under admin review
+            'kyc_submitted_at'   => now(),
+        ]);
+
+        // Notify admin (best-effort — don't fail if notification fails)
+        try {
+            $admins = \App\Models\User::where('role', 'admin')->get();
+            foreach ($admins as $admin) {
+                $this->notificationService->send(
+                    $admin,
+                    'New Rider KYC Submission',
+                    "Rider {$user->name} ({$user->phone}) has submitted KYC documents for review.",
+                    'kyc',
+                    ['rider_user_id' => $user->id]
+                );
+            }
+        } catch (Exception $e) {
+            // Non-fatal — log and continue
+        }
+
+        return $this->success($profile->fresh(), 'KYC documents submitted successfully. An administrator will review them shortly.');
+    }
+
+    /**
+     * Get the current rider's KYC / profile details.
+     */
+    public function profile(): JsonResponse
+    {
+        $user = Auth::user();
+        $profile = DeliveryProfile::where('user_id', $user->id)->firstOrFail();
+        return $this->success($profile, 'Rider profile retrieved.');
+    }
 }

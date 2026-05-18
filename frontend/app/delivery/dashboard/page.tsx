@@ -5,7 +5,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     MapPin,
     Navigation,
-    DollarSign,
     Package,
     Phone,
     CheckCircle2,
@@ -15,11 +14,13 @@ import {
     Check,
     Loader2,
     RefreshCw,
-    TrendingUp,
-    ChevronRight,
     Search,
-    User,
-    Store
+    Store,
+    Upload,
+    ShieldCheck,
+    XCircle,
+    FileText,
+    ShoppingBag
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useUIStore } from '@/store/uiStore';
@@ -28,6 +29,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 interface RiderProfile {
     id: number;
@@ -188,22 +190,76 @@ export default function RiderDashboard() {
         setCompletingId(null);
     };
 
-    const isPendingKyc = profile?.verification_status === 'pending';
+    const kycStatus = profile?.verification_status; // not_submitted | pending | verified | rejected
     const isOffline = !profile?.is_available;
 
     return (
         <div className="pb-40 -mx-4 md:-mx-0 font-sans">
-            {/* Kyc and verification banner */}
-            {isPendingKyc && (
+            {/* ── KYC Status Banners (only shown when relevant) ── */}
+
+            {/* 1. Not yet submitted — prompt rider to upload docs */}
+            {kycStatus === 'not_submitted' && (
+                <div className="px-4 mb-6">
+                    <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-6 flex items-start gap-4 shadow-sm">
+                        <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-200">
+                            <FileText size={28} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="text-base font-black text-blue-950 uppercase tracking-tight">Complete Your KYC</h3>
+                            <p className="text-blue-700 text-xs font-bold leading-relaxed mb-4">Upload your National ID and driving licence to unlock payments and full access.</p>
+                            <Link
+                                href="/delivery/kyc"
+                                className="inline-flex items-center gap-2 h-10 px-5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-md"
+                            >
+                                <Upload size={14} /> Upload Documents
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 2. Submitted — under admin review */}
+            {kycStatus === 'pending' && (
                 <div className="px-4 mb-6">
                     <div className="bg-amber-50 border border-amber-100 rounded-[2rem] p-6 flex items-center gap-4 shadow-sm">
-                        <div className="w-14 h-14 bg-amber-600 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-amber-200">
+                        <div className="w-14 h-14 bg-amber-500 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-amber-200">
                             <Clock size={28} />
                         </div>
                         <div>
-                            <h3 className="text-base font-black text-amber-950 uppercase tracking-tight">KYC Verification Pending</h3>
-                            <p className="text-amber-700 text-xs font-bold leading-relaxed">Your documents are under review by county administrators. You can explore orders but cannot accept payments yet.</p>
+                            <h3 className="text-base font-black text-amber-950 uppercase tracking-tight">Documents Under Review</h3>
+                            <p className="text-amber-700 text-xs font-bold leading-relaxed">Your KYC documents are being reviewed by county administrators. You can explore orders but cannot accept payments yet.</p>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 3. Rejected — prompt resubmission */}
+            {kycStatus === 'rejected' && (
+                <div className="px-4 mb-6">
+                    <div className="bg-red-50 border border-red-100 rounded-[2rem] p-6 flex items-start gap-4 shadow-sm">
+                        <div className="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-red-200">
+                            <XCircle size={28} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="text-base font-black text-red-950 uppercase tracking-tight">KYC Not Approved</h3>
+                            <p className="text-red-700 text-xs font-bold leading-relaxed mb-4">Your documents were not approved. Please re-upload with the correct documents.</p>
+                            <Link
+                                href="/delivery/kyc"
+                                className="inline-flex items-center gap-2 h-10 px-5 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-md"
+                            >
+                                <Upload size={14} /> Re-submit Documents
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 4. Verified — brief success badge */}
+            {kycStatus === 'verified' && (
+                <div className="px-4 mb-6">
+                    <div className="bg-green-50 border border-green-100 rounded-[2rem] p-4 flex items-center gap-3">
+                        <ShieldCheck size={20} className="text-green-600 shrink-0" />
+                        <p className="text-xs font-black text-green-800 uppercase tracking-widest">KYC Verified — Full access unlocked</p>
                     </div>
                 </div>
             )}
@@ -242,7 +298,7 @@ export default function RiderDashboard() {
                         <div>
                             <span className="text-[10px] font-black text-text-muted uppercase tracking-widest block mb-1">Rider Balance</span>
                             <span className="text-2xl font-black text-green-950">KES {Number(profile?.earnings_balance || 0).toLocaleString()}</span>
-                            <span className="text-[9px] font-bold text-brand-600 block mt-1 tracking-widest uppercase">50/50 Instant Release</span>
+                            <span className="text-[9px] font-bold text-brand-600 block mt-1 tracking-widest uppercase">Instant Wallet Release</span>
                         </div>
                         <div className="text-right border-l border-gray-100 pl-4">
                             <span className="text-[10px] font-black text-text-muted uppercase tracking-widest block mb-1">Deliveries Completed</span>

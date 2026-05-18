@@ -16,6 +16,9 @@ class DeliveryProfile extends Model
         'license_plate',
         'license_number',
         'verification_status',
+        'kyc_submitted_at',
+        'id_document_url',
+        'license_image_url',
         'latitude',
         'longitude',
         'is_available',
@@ -27,6 +30,7 @@ class DeliveryProfile extends Model
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
         'earnings_balance' => 'decimal:2',
+        'kyc_submitted_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
