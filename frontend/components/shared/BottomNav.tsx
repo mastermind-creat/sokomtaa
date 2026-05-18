@@ -40,7 +40,18 @@ export default function BottomNav() {
         { icon: User, label: t('common.profile'), path: '/profile', roles: ['resident', 'trader', 'admin'] },
     ];
 
-    const activeTabs = tabs.filter(tab => !tab.roles || tab.roles.includes(user?.role || 'resident'));
+    const deliveryTabs = [
+        { 
+            icon: LayoutDashboard, 
+            label: "Deck", 
+            path: '/delivery/dashboard'
+        },
+        { icon: User, label: t('common.profile'), path: '/profile' },
+    ];
+
+    const activeTabs = user?.role === 'delivery' 
+        ? deliveryTabs 
+        : tabs.filter(tab => !tab.roles || tab.roles.includes(user?.role || 'resident'));
 
     const getActiveState = (path: string) => {
         if (!mounted) return false;

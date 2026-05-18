@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('phone', 20)->unique();   // Primary identifier
             $table->string('email')->nullable()->unique();
             $table->string('password');
-            $table->enum('role', ['trader', 'resident', 'admin'])->default('resident');
+            $table->enum('role', ['trader', 'resident', 'admin', 'delivery'])->default('resident');
             $table->string('national_id')->nullable();
             $table->string('preferred_language', 5)->default('en');
             $table->boolean('phone_verified')->default(false);

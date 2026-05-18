@@ -3,7 +3,7 @@ export interface User {
     name: string;
     phone: string;
     email?: string;
-    role: 'trader' | 'resident' | 'admin';
+    role: 'trader' | 'resident' | 'admin' | 'delivery';
     preferred_language: string;
     phone_verified: boolean;
     avatar_url?: string;

@@ -14,7 +14,8 @@ import {
     Home, 
     CheckCircle2,
     Eye,
-    EyeOff
+    EyeOff,
+    Package
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { motion } from 'framer-motion';
@@ -26,7 +27,7 @@ import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
 interface RegisterFormData {
     name: string;
     phone: string;
-    role: 'resident' | 'trader';
+    role: 'resident' | 'trader' | 'delivery';
     password: string;
     password_confirmation: string;
     preferred_language: string;
@@ -147,7 +148,7 @@ export default function RegisterPage() {
                         {/* Role Selection */}
                         <div>
                             <label className="block text-sm font-bold text-green-900 mb-3">I am a...</label>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-3 gap-3">
                                 <label className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                                     selectedRole === 'resident'
                                         ? 'border-brand-500 bg-brand-50'
@@ -158,7 +159,7 @@ export default function RegisterPage() {
                                         <Home size={20} className={selectedRole === 'resident' ? 'text-brand-600' : 'text-gray-400'} />
                                     </div>
                                     <span className={`font-black text-sm ${selectedRole === 'resident' ? 'text-brand-700' : 'text-gray-600'}`}>Resident</span>
-                                    <span className="text-[10px] text-gray-400 font-medium text-center">Buy & reserve products</span>
+                                    <span className="text-[9px] text-gray-400 font-bold text-center leading-tight">Buy produce</span>
                                     {selectedRole === 'resident' && (
                                         <div className="absolute top-2 right-2 w-4 h-4 bg-brand-600 rounded-full flex items-center justify-center">
                                             <span className="text-white text-[8px]">✓</span>
@@ -175,8 +176,25 @@ export default function RegisterPage() {
                                         <Store size={20} className={selectedRole === 'trader' ? 'text-brand-600' : 'text-gray-400'} />
                                     </div>
                                     <span className={`font-black text-sm ${selectedRole === 'trader' ? 'text-brand-700' : 'text-gray-600'}`}>Trader</span>
-                                    <span className="text-[10px] text-gray-400 font-medium text-center">Sell at the market</span>
+                                    <span className="text-[9px] text-gray-400 font-bold text-center leading-tight">Sell at market</span>
                                     {selectedRole === 'trader' && (
+                                        <div className="absolute top-2 right-2 w-4 h-4 bg-brand-600 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-[8px]">✓</span>
+                                        </div>
+                                    )}
+                                </label>
+                                <label className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                    selectedRole === 'delivery'
+                                        ? 'border-brand-500 bg-brand-50'
+                                        : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                                }`}>
+                                    <input {...register('role')} type="radio" value="delivery" className="sr-only" />
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selectedRole === 'delivery' ? 'bg-brand-100' : 'bg-gray-100'}`}>
+                                        <Package size={20} className={selectedRole === 'delivery' ? 'text-brand-600' : 'text-gray-400'} />
+                                    </div>
+                                    <span className={`font-black text-sm ${selectedRole === 'delivery' ? 'text-brand-700' : 'text-gray-600'}`}>Rider</span>
+                                    <span className="text-[9px] text-gray-400 font-bold text-center leading-tight">Deliver orders</span>
+                                    {selectedRole === 'delivery' && (
                                         <div className="absolute top-2 right-2 w-4 h-4 bg-brand-600 rounded-full flex items-center justify-center">
                                             <span className="text-white text-[8px]">✓</span>
                                         </div>

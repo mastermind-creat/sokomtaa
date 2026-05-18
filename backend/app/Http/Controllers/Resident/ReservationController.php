@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Reservation;
 use App\Models\Product;
 use App\Services\NotificationService;
+use App\Services\DeliveryService;
 use App\Traits\ApiResponse;
 use App\Models\SystemSetting;
 use Illuminate\Http\JsonResponse;
@@ -19,10 +20,14 @@ class ReservationController extends Controller
     use ApiResponse;
 
     protected $notificationService;
+    protected $deliveryService;
 
-    public function __construct(NotificationService $notificationService)
-    {
+    public function __construct(
+        NotificationService $notificationService,
+        DeliveryService $deliveryService
+    ) {
         $this->notificationService = $notificationService;
+        $this->deliveryService = $deliveryService;
     }
 
     /**
@@ -84,6 +89,10 @@ class ReservationController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'delivery_option' => 'nullable|boolean',
+            'delivery_address' => 'required_if:delivery_option,true|string|max:500',
+            'delivery_latitude' => 'required_if:delivery_option,true|numeric|between:-90,90',
+            'delivery_longitude' => 'required_if:delivery_option,true|numeric|between:-180,180',
         ]);
 
         return DB::transaction(function () use ($request) {
@@ -122,7 +131,27 @@ class ReservationController extends Controller
                 // Apply service fee only once to the first item in the whole cart if total > threshold
                 $currentServiceFee = ($index === 0 && $applyFee) ? $serviceFeeAmount : 0.00;
                 $subtotal = $product->price * $itemData['quantity'];
-                $totalAmount = $subtotal + $currentServiceFee;
+                
+                // Calculate dynamic delivery fee if requested
+                $deliveryFee = 0.00;
+                if ($request->delivery_option) {
+                    $pickupLat = $product->trader->market?->latitude ?? $product->trader->latitude;
+                    $pickupLng = $product->trader->market?->longitude ?? $product->trader->longitude;
+                    
+                    if ($pickupLat && $pickupLng) {
+                        $distance = $this->deliveryService->calculateDistance(
+                            (float) $pickupLat,
+                            (float) $pickupLng,
+                            (float) $request->delivery_latitude,
+                            (float) $request->delivery_longitude
+                        );
+                        $deliveryFee = $this->deliveryService->calculateDeliveryFee($distance);
+                    } else {
+                        $deliveryFee = 100.00; // Base default fee
+                    }
+                }
+                
+                $totalAmount = $subtotal + $currentServiceFee + $deliveryFee;
 
                 $reservation = Reservation::create([
                     'reservation_code' => $code,
@@ -132,6 +161,12 @@ class ReservationController extends Controller
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $product->price,
                     'service_fee' => $currentServiceFee,
+                    'delivery_option' => (bool) $request->delivery_option,
+                    'delivery_status' => $request->delivery_option ? 'pending_assignment' : null,
+                    'delivery_fee' => $deliveryFee,
+                    'delivery_address' => $request->delivery_option ? $request->delivery_address : null,
+                    'delivery_latitude' => $request->delivery_option ? $request->delivery_latitude : null,
+                    'delivery_longitude' => $request->delivery_option ? $request->delivery_longitude : null,
                     'total_amount' => $totalAmount,
                     'status' => 'pending',
                     'pickup_deadline' => now()->addHours(24),
@@ -178,6 +213,10 @@ class ReservationController extends Controller
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer|min:1',
             'notes' => 'nullable|string|max:500',
+            'delivery_option' => 'nullable|boolean',
+            'delivery_address' => 'required_if:delivery_option,true|string|max:500',
+            'delivery_latitude' => 'required_if:delivery_option,true|numeric|between:-90,90',
+            'delivery_longitude' => 'required_if:delivery_option,true|numeric|between:-180,180',
         ]);
 
         $product = Product::findOrFail($request->product_id);
@@ -205,7 +244,28 @@ class ReservationController extends Controller
             $subtotal = $product->price * $request->quantity;
             
             $serviceFee = ($subtotal > $serviceFeeThreshold) ? $serviceFeeAmount : 0.00;
-            $totalAmount = $subtotal + $serviceFee;
+            
+            // Calculate dynamic delivery fee if requested
+            $deliveryFee = 0.00;
+            if ($request->delivery_option) {
+                $product->load('trader.market');
+                $pickupLat = $product->trader->market?->latitude ?? $product->trader->latitude;
+                $pickupLng = $product->trader->market?->longitude ?? $product->trader->longitude;
+                
+                if ($pickupLat && $pickupLng) {
+                    $distance = $this->deliveryService->calculateDistance(
+                        (float) $pickupLat,
+                        (float) $pickupLng,
+                        (float) $request->delivery_latitude,
+                        (float) $request->delivery_longitude
+                    );
+                    $deliveryFee = $this->deliveryService->calculateDeliveryFee($distance);
+                } else {
+                    $deliveryFee = 100.00; // Base default fee
+                }
+            }
+            
+            $totalAmount = $subtotal + $serviceFee + $deliveryFee;
 
             // 3. Create Reservation
             $reservation = Reservation::create([
@@ -216,6 +276,12 @@ class ReservationController extends Controller
                 'quantity' => $request->quantity,
                 'unit_price' => $product->price,
                 'service_fee' => $serviceFee,
+                'delivery_option' => (bool) $request->delivery_option,
+                'delivery_status' => $request->delivery_option ? 'pending_assignment' : null,
+                'delivery_fee' => $deliveryFee,
+                'delivery_address' => $request->delivery_option ? $request->delivery_address : null,
+                'delivery_latitude' => $request->delivery_option ? $request->delivery_latitude : null,
+                'delivery_longitude' => $request->delivery_option ? $request->delivery_longitude : null,
                 'total_amount' => $totalAmount,
                 'status' => 'pending',
                 'notes' => $request->notes,

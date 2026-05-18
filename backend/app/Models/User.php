@@ -45,6 +45,16 @@ class User extends Authenticatable
         return $this->hasOne(Trader::class);
     }
 
+    public function riderProfile(): HasOne
+    {
+        return $this->hasOne(DeliveryProfile::class);
+    }
+
+    public function deliveryTransactions(): HasMany
+    {
+        return $this->hasMany(DeliveryTransaction::class);
+    }
+
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class, 'resident_id');

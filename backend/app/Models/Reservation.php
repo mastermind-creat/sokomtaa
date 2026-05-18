@@ -24,6 +24,13 @@ class Reservation extends Model
         'notes',
         'pickup_deadline',
         'picked_up_at',
+        'delivery_option',
+        'delivery_rider_id',
+        'delivery_status',
+        'delivery_fee',
+        'delivery_address',
+        'delivery_latitude',
+        'delivery_longitude',
     ];
 
     protected $casts = [
@@ -32,6 +39,10 @@ class Reservation extends Model
         'total_amount' => 'decimal:2',
         'pickup_deadline' => 'datetime',
         'picked_up_at' => 'datetime',
+        'delivery_option' => 'boolean',
+        'delivery_fee' => 'decimal:2',
+        'delivery_latitude' => 'double',
+        'delivery_longitude' => 'double',
     ];
 
     public function resident(): BelongsTo

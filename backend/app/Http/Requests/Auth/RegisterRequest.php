@@ -38,7 +38,7 @@ class RegisterRequest extends FormRequest
                     ->symbols()
                     ->mixedCase()
             ],
-            'role' => ['required', 'string', 'in:trader,resident'],
+            'role' => ['required', 'string', 'in:trader,resident,delivery'],
             'national_id' => ['nullable', 'string', 'max:50'],
             'preferred_language' => ['nullable', 'string', 'in:en,sw'],
         ];

@@ -43,6 +43,7 @@ export default function LoginPage() {
             if (user.role === 'admin') router.push('/admin/dashboard');
             else if (user.role === 'trader') router.push('/trader/dashboard');
             else if (user.role === 'resident') router.push('/resident/dashboard');
+            else if (user.role === 'delivery') router.push('/delivery/dashboard');
             else router.push('/');
         }
     }, [isAuthenticated, user, router]);
@@ -70,6 +71,8 @@ export default function LoginPage() {
                 router.push('/trader/dashboard');
             } else if (user.role === 'resident') {
                 router.push('/resident');
+            } else if (user.role === 'delivery') {
+                router.push('/delivery/dashboard');
             } else {
                 router.push('/');
             }

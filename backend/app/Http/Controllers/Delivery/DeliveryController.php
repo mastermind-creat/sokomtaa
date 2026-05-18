@@ -1,0 +1,292 @@
+<?php
+
+namespace App\Http\Controllers\Delivery;
+
+use App\Http\Controllers\Controller;
+use App\Models\Reservation;
+use App\Models\DeliveryProfile;
+use App\Models\DeliveryTransaction;
+use App\Services\DeliveryService;
+use App\Services\NotificationService;
+use App\Services\TalkSasaService;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Exception;
+
+class DeliveryController extends Controller
+{
+    use ApiResponse;
+
+    protected $deliveryService;
+    protected $notificationService;
+    protected $smsService;
+
+    public function __construct(
+        DeliveryService $deliveryService,
+        NotificationService $notificationService,
+        TalkSasaService $smsService
+    ) {
+        $this->deliveryService = $deliveryService;
+        $this->notificationService = $notificationService;
+        $this->smsService = $smsService;
+    }
+
+    /**
+     * View orders awaiting delivery within a 50 km radius.
+     */
+    public function ordersPool(Request $request): JsonResponse
+    {
+        $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+        ]);
+
+        $lat = (float) $request->lat;
+        $lng = (float) $request->lng;
+
+        // Boda Boda default active search radius of 50 km
+        $radius = 50.0;
+
+        $orders = Reservation::where('reservations.delivery_option', true)
+            ->where('reservations.delivery_status', 'pending_assignment')
+            ->whereIn('reservations.status', ['paid', 'ready'])
+            ->with(['trader.market', 'product', 'resident'])
+            ->get()
+            ->map(function ($reservation) use ($lat, $lng) {
+                $pickupLat = $reservation->trader->market?->latitude ?? $reservation->trader->latitude;
+                $pickupLng = $reservation->trader->market?->longitude ?? $reservation->trader->longitude;
+
+                if ($pickupLat && $pickupLng) {
+                    $reservation->distance_to_pickup_km = round($this->deliveryService->calculateDistance(
+                        $lat, $lng, (float)$pickupLat, (float)$pickupLng
+                    ), 2);
+                } else {
+                    $reservation->distance_to_pickup_km = 999.0;
+                }
+                return $reservation;
+            })
+            ->filter(function ($reservation) use ($radius) {
+                return $reservation->distance_to_pickup_km <= $radius;
+            })
+            ->sortBy('distance_to_pickup_km')
+            ->values();
+
+        return $this->success($orders, 'Awaiting deliveries retrieved successfully.');
+    }
+
+    /**
+     * Accept a pending delivery order.
+     */
+    public function acceptOrder($id): JsonResponse
+    {
+        $reservation = Reservation::findOrFail($id);
+        $user = Auth::user();
+
+        if ($reservation->delivery_status !== 'pending_assignment') {
+            return $this->error('This order has already been assigned to another rider.', 'ALREADY_ASSIGNED', 422);
+        }
+
+        $reservation->update([
+            'delivery_rider_id' => $user->id,
+            'delivery_status' => 'assigned',
+        ]);
+
+        // Send Notification to Resident
+        $this->notificationService->send(
+            $reservation->resident,
+            'Delivery Assigned',
+            "Your order is assigned to rider {$user->name} ({$user->phone}). They will pick it up shortly.",
+            'delivery',
+            ['reservation_id' => $reservation->id]
+        );
+
+        return $this->success($reservation, 'Order accepted successfully.');
+    }
+
+    /**
+     * Mark delivery as picked up and package in transit.
+     */
+    public function pickupOrder($id): JsonResponse
+    {
+        $reservation = Reservation::findOrFail($id);
+        $user = Auth::user();
+
+        if ($reservation->delivery_rider_id !== $user->id) {
+            return $this->error('You are not the assigned rider for this delivery.', 'UNAUTHORIZED', 403);
+        }
+
+        if ($reservation->delivery_status !== 'assigned') {
+            return $this->error('Order must be assigned to pick it up.', 'INVALID_STATUS', 422);
+        }
+
+        $reservation->update([
+            'delivery_status' => 'picked_up',
+            'status' => 'ready', // Ensures the state is synchronized in the system
+        ]);
+
+        // Send Alert to Resident
+        $this->notificationService->send(
+            $reservation->resident,
+            'Package in Transit',
+            "Rider {$user->name} has picked up your order and is now in transit to your location.",
+            'delivery',
+            ['reservation_id' => $reservation->id]
+        );
+
+        return $this->success($reservation, 'Order marked as picked up.');
+    }
+
+    /**
+     * Alert resident via in-app notification and SMS that the rider has arrived.
+     */
+    public function notifyArrival($id): JsonResponse
+    {
+        $reservation = Reservation::findOrFail($id);
+        $user = Auth::user();
+
+        if ($reservation->delivery_rider_id !== $user->id) {
+            return $this->error('You are not the assigned rider for this delivery.', 'UNAUTHORIZED', 403);
+        }
+
+        // Send In-app Alert
+        $this->notificationService->send(
+            $reservation->resident,
+            'Rider Arrived!',
+            "Rider {$user->name} has arrived at your address with your package! Please meet them to pick up.",
+            'delivery',
+            ['reservation_id' => $reservation->id]
+        );
+
+        // Send TalkSasa SMS Alert
+        $smsMessage = "Soko Mtaa: Your delivery rider {$user->name} has arrived at your location with your order! Please meet them to collect it. Code: {$reservation->reservation_code}";
+        $this->smsService->sendSms($reservation->resident->phone, $smsMessage);
+
+        return $this->success(null, 'Arrival alerts sent successfully.');
+    }
+
+    /**
+     * Enter resident's code to complete the delivery and release the 50/50 payout.
+     */
+    public function completeDelivery(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'pickup_code' => 'required|string',
+        ]);
+
+        $reservation = Reservation::findOrFail($id);
+        $user = Auth::user();
+
+        if ($reservation->delivery_rider_id !== $user->id) {
+            return $this->error('You are not the assigned rider for this delivery.', 'UNAUTHORIZED', 403);
+        }
+
+        // Verify pickup code matches reservation code
+        if (strtoupper(trim($request->pickup_code)) !== strtoupper($reservation->reservation_code)) {
+            return $this->error('The verification code is incorrect. Please check with the customer.', 'INVALID_CODE', 422);
+        }
+
+        try {
+            // Mark as 'in_transit' temporarily if it was 'picked_up' so the service transitions correctly
+            if ($reservation->delivery_status === 'picked_up') {
+                $reservation->update(['delivery_status' => 'in_transit']);
+            }
+
+            // Execute payout distribution
+            $this->deliveryService->executeDeliveryPayout($reservation);
+
+            // Notify Resident
+            $this->notificationService->send(
+                $reservation->resident,
+                'Delivery Successful',
+                "Your order has been successfully delivered! Thank you for shopping with Soko Mtaa.",
+                'delivery',
+                ['reservation_id' => $reservation->id]
+            );
+
+            // Notify Trader
+            if ($reservation->trader && $reservation->trader->user) {
+                $this->notificationService->send(
+                    $reservation->trader->user,
+                    'Order Delivered',
+                    "Rider {$user->name} has completed the delivery for order {$reservation->reservation_code}.",
+                    'delivery',
+                    ['reservation_id' => $reservation->id]
+                );
+            }
+
+            return $this->success($reservation->fresh(), 'Delivery completed successfully and earnings released.');
+
+        } catch (Exception $e) {
+            return $this->error('Failed to complete delivery: ' . $e->getMessage(), 'PAYOUT_FAILED', 500);
+        }
+    }
+
+    /**
+     * Get stats, wallet balance, and recent transaction log for rider.
+     */
+    public function stats(): JsonResponse
+    {
+        $user = Auth::user();
+        $profile = DeliveryProfile::where('user_id', $user->id)->firstOrFail();
+
+        $completedCount = Reservation::where('delivery_rider_id', $user->id)
+            ->where('delivery_status', 'delivered')
+            ->count();
+
+        $activeCount = Reservation::where('delivery_rider_id', $user->id)
+            ->whereIn('delivery_status', ['assigned', 'picked_up'])
+            ->count();
+
+        $transactions = DeliveryTransaction::where('user_id', $user->id)
+            ->with('reservation.product')
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        return $this->success([
+            'profile' => $profile,
+            'completed_deliveries' => $completedCount,
+            'active_deliveries' => $activeCount,
+            'recent_transactions' => $transactions,
+        ], 'Rider stats retrieved successfully.');
+    }
+
+    /**
+     * Toggle rider availability online/offline.
+     */
+    public function toggleAvailability(): JsonResponse
+    {
+        $user = Auth::user();
+        $profile = DeliveryProfile::where('user_id', $user->id)->firstOrFail();
+
+        $profile->update([
+            'is_available' => !$profile->is_available
+        ]);
+
+        return $this->success($profile, 'Availability toggled successfully.');
+    }
+
+    /**
+     * Update current rider coordinates.
+     */
+    public function updateLocation(Request $request): JsonResponse
+    {
+        $request->validate([
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ]);
+
+        $user = Auth::user();
+        $profile = DeliveryProfile::where('user_id', $user->id)->firstOrFail();
+
+        $profile->update([
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+        ]);
+
+        return $this->success($profile, 'Location updated successfully.');
+    }
+}

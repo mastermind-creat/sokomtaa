@@ -252,6 +252,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/{report}/download', [\App\Http\Controllers\ReportController::class, 'download']);
             Route::delete('/{report}', [\App\Http\Controllers\ReportController::class, 'destroy']);
         });
+
+        // ── Delivery Rider Routes ───────────────────────────────────────────────
+        Route::middleware(['role:delivery'])->prefix('delivery')->group(function () {
+            Route::get('/orders', [\App\Http\Controllers\Delivery\DeliveryController::class, 'ordersPool']);
+            Route::post('/orders/{reservation}/accept', [\App\Http\Controllers\Delivery\DeliveryController::class, 'acceptOrder']);
+            Route::post('/orders/{reservation}/pickup', [\App\Http\Controllers\Delivery\DeliveryController::class, 'pickupOrder']);
+            Route::post('/orders/{reservation}/notify-arrival', [\App\Http\Controllers\Delivery\DeliveryController::class, 'notifyArrival']);
+            Route::post('/orders/{reservation}/complete', [\App\Http\Controllers\Delivery\DeliveryController::class, 'completeDelivery']);
+            Route::get('/stats', [\App\Http\Controllers\Delivery\DeliveryController::class, 'stats']);
+            Route::post('/toggle-availability', [\App\Http\Controllers\Delivery\DeliveryController::class, 'toggleAvailability']);
+            Route::post('/update-location', [\App\Http\Controllers\Delivery\DeliveryController::class, 'updateLocation']);
+        });
     });
 
     // ── ADMIN ROUTES ─────────────────────────────────────────────────────────

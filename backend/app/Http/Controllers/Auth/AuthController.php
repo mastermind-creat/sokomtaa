@@ -38,6 +38,15 @@ class AuthController extends Controller
             'preferred_language' => $request->preferred_language ?? 'en',
         ]);
 
+        if ($user->role === 'delivery') {
+            $user->riderProfile()->create([
+                'vehicle_type' => 'motorcycle',
+                'verification_status' => 'pending',
+                'is_available' => false,
+                'earnings_balance' => 0.00,
+            ]);
+        }
+
         // Generate a 6-digit OTP
         $otp = rand(100000, 999999);
         
@@ -96,6 +105,8 @@ class AuthController extends Controller
         $user = $request->user();
         if ($user->role === 'trader') {
             $user->load('trader');
+        } elseif ($user->role === 'delivery') {
+            $user->load('riderProfile');
         }
         return $this->success($user, 'User profile retrieved.');
     }
