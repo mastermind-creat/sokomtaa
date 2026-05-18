@@ -50,6 +50,11 @@ class Reservation extends Model
         return $this->belongsTo(User::class, 'resident_id');
     }
 
+    public function rider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'delivery_rider_id');
+    }
+
     public function trader(): BelongsTo
     {
         return $this->belongsTo(Trader::class);

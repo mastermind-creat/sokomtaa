@@ -20,7 +20,13 @@ import {
     ShieldCheck,
     XCircle,
     FileText,
-    ShoppingBag
+    ShoppingBag,
+    Truck,
+    History,
+    Bike,
+    User,
+    DollarSign,
+    CheckCircle
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useUIStore } from '@/store/uiStore';
@@ -81,24 +87,25 @@ export default function RiderDashboard() {
     }, [setPageTitle, refreshUser]);
 
     // Fetch stats, wallet balance, and recent transaction log
-    const { data: statsData, isLoading: statsLoading } = useQuery({
+    const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
         queryKey: ['rider-stats'],
         queryFn: () => api.get<never, { data: RiderStats }>('/delivery/stats').then(res => res.data),
-        refetchInterval: 15000 // Auto-refresh wallet/stats every 15s
+        refetchInterval: 10000 // Auto-refresh wallet/stats every 10s
     });
     const stats = statsData;
     const profile = stats?.profile;
 
-    // Fetch orders pool within 50 km
+    // Fetch orders pool within 50 km (with real-time automatic polling)
     const { data: poolData, isLoading: poolLoading, refetch: refetchPool } = useQuery({
         queryKey: ['rider-orders-pool', coords],
         queryFn: () => api.get<never, { data: any[] }>(`/delivery/orders?lat=${coords.lat}&lng=${coords.lng}`).then(res => res.data),
-        enabled: !!profile?.is_available // Only fetch nearby pool if online!
+        enabled: !!profile?.is_available, // Only fetch nearby pool if online!
+        refetchInterval: 5000 // Poll every 5 seconds to sync dynamically!
     });
     const ordersPool = poolData || [];
 
     // Fetch currently assigned active/in-transit deliveries
-    const { data: activeData, isLoading: activeLoading } = useQuery({
+    const { data: activeData, isLoading: activeLoading, refetch: refetchActive } = useQuery({
         queryKey: ['rider-active-orders'],
         queryFn: async () => {
             try {
@@ -113,6 +120,7 @@ export default function RiderDashboard() {
     const toggleMutation = useMutation({
         mutationFn: () => api.post('/delivery/toggle-availability'),
         onSuccess: () => {
+            toast.success("Availability status updated successfully!");
             queryClient.invalidateQueries({ queryKey: ['rider-stats'] });
             queryClient.invalidateQueries({ queryKey: ['rider-orders-pool'] });
         }
@@ -136,7 +144,7 @@ export default function RiderDashboard() {
     const arrivalMutation = useMutation({
         mutationFn: (id: number) => api.post(`/delivery/orders/${id}/notify-arrival`),
         onSuccess: () => {
-            // Success alert shown inline
+            // Success alerts now handled by toast
         }
     });
 
@@ -154,7 +162,14 @@ export default function RiderDashboard() {
         setProcessingId(id);
         try {
             await acceptMutation.mutateAsync(id);
-        } catch {}
+            toast.success("Shipment accepted! It is now in your Active list.");
+            refetchStats();
+        } catch (err: any) {
+            const errMsg = err.response?.data?.message || "This shipment has already been claimed by another rider!";
+            toast.error(errMsg, { duration: 5000 });
+            // Immediately refresh the pool so the claimed order vanishes
+            refetchPool();
+        }
         setProcessingId(null);
     };
 
@@ -162,7 +177,11 @@ export default function RiderDashboard() {
         setProcessingId(id);
         try {
             await pickupMutation.mutateAsync(id);
-        } catch {}
+            toast.success("Stall pickup confirmed! Package is now in transit.");
+            refetchStats();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to confirm pickup.");
+        }
         setProcessingId(null);
     };
 
@@ -170,22 +189,26 @@ export default function RiderDashboard() {
         setProcessingId(id);
         try {
             await arrivalMutation.mutateAsync(id);
-            alert("Customer notified successfully via in-app banner and SMS!");
-        } catch {}
+            toast.success("Customer notified successfully via SMS and in-app banner!", { duration: 4000 });
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to send arrival notification.");
+        }
         setProcessingId(null);
     };
 
     const handleComplete = async (id: number) => {
         const code = otpInputs[id];
         if (!code) {
-            alert("Please enter the resident's verification code.");
+            toast.error("Please enter the resident's verification code to cash out.");
             return;
         }
         setCompletingId(id);
         try {
             await completeMutation.mutateAsync({ id, code });
+            toast.success("Verification successful! Earnings have been credited to your wallet.");
+            refetchStats();
         } catch (err: any) {
-            alert(err.response?.data?.message || "Verification code is incorrect.");
+            toast.error(err.response?.data?.message || "Verification code is incorrect.");
         }
         setCompletingId(null);
     };
@@ -309,50 +332,118 @@ export default function RiderDashboard() {
                 </div>
             </div>
 
-            {/* Active / In Transit Deliveries */}
+              {/* Active / In Transit Deliveries */}
             {profile?.is_available && (
                 <div className="px-4 mb-8">
                     <div className="flex items-center justify-between mb-4 px-2">
                         <h3 className="text-xs font-black text-green-950 uppercase tracking-[0.15em]">Active Shipments</h3>
-                        <span className="text-[9px] font-black px-2.5 py-1 rounded bg-brand-50 text-brand-700 border border-brand-100 uppercase tracking-widest">
-                            In-Transit ({stats?.active_deliveries || 0})
+                        <span className="text-[9px] font-black px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-100 uppercase tracking-widest animate-pulse">
+                            Active ({stats?.active_deliveries || 0})
                         </span>
                     </div>
 
                     {/* Active Cards */}
                     {!stats?.active_orders || stats.active_orders.length === 0 ? (
-                        <div className="py-8 text-center bg-gray-50/50 rounded-[2.5rem] border border-dashed border-gray-100">
-                            <Package className="mx-auto text-gray-300 mb-2" size={36} />
-                            <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">No active deliveries. Go to the Pool to accept.</p>
+                        <div className="py-12 text-center bg-gray-50/50 rounded-[2.5rem] border border-dashed border-gray-100 p-6">
+                            <Package className="mx-auto text-gray-300 mb-3" size={40} />
+                            <p className="text-xs font-black text-text-muted uppercase tracking-widest leading-relaxed">
+                                No active deliveries.<br />Go to the Pool below to accept jobs!
+                            </p>
                         </div>
                     ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             {stats.active_orders.map((res: any) => {
                                 if (!res) return null;
+                                const isAssigned = res.delivery_status === 'assigned';
+                                const isPickedUp = res.delivery_status === 'picked_up';
+                                const isArrived = res.delivery_status === 'in_transit'; // Or custom arrived state
+
                                 return (
-                                    <div key={res.id} className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden p-6">
-                                        <div className="flex items-start justify-between mb-4">
+                                    <div key={res.id} className="bg-white rounded-[2.5rem] border border-gray-100 shadow-brand-md overflow-hidden p-6 space-y-6">
+                                        
+                                        {/* Status Header */}
+                                        <div className="flex items-start justify-between">
                                             <div>
-                                                <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100 uppercase tracking-widest">
-                                                    {res.delivery_status === 'assigned' ? 'Awaiting Pickup' : 'In Transit'}
+                                                <span className={cn(
+                                                    "text-[8px] font-black px-2 py-0.5 rounded-full border uppercase tracking-widest",
+                                                    isAssigned ? "bg-amber-50 text-amber-700 border-amber-100" :
+                                                    isPickedUp ? "bg-blue-50 text-blue-700 border-blue-100" :
+                                                    "bg-brand-50 text-brand-700 border-brand-100"
+                                                )}>
+                                                    {isAssigned ? 'Stall Pickup Required' : 
+                                                     isPickedUp ? 'In Transit to Resident' : 'Arrived / Verification'}
                                                 </span>
-                                                <h4 className="text-base font-black text-green-950 uppercase tracking-tight mt-1">{res.product?.name || 'Produce'}</h4>
-                                                <p className="text-xs font-bold text-gray-500 mt-0.5">{res.delivery_address}</p>
+                                                <h4 className="text-base font-black text-green-950 uppercase tracking-tight mt-2">{res.product?.name || 'Produce'}</h4>
+                                                <div className="flex items-center gap-1 text-[10px] text-text-secondary font-medium mt-0.5">
+                                                    <MapPin size={12} className="text-brand-500 shrink-0" />
+                                                    <span className="truncate max-w-[200px]">{res.delivery_address}</span>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <span className="text-[10px] font-black text-brand-600 block">Payout (50%)</span>
-                                                <span className="text-sm font-black text-green-950">KES {Number(res.delivery_fee / 2).toLocaleString()}</span>
+                                            <div className="text-right shrink-0">
+                                                <span className="text-[9px] font-black text-brand-600 block uppercase tracking-widest">Payout</span>
+                                                <span className="text-base font-black text-green-950">KES {Number(res.delivery_fee).toLocaleString()}</span>
                                             </div>
                                         </div>
 
+                                        {/* Dynamic Progress Stepper */}
+                                        <div className="bg-gray-50/50 p-4 rounded-3xl border border-gray-100/50 space-y-3">
+                                            <div className="flex items-center justify-between text-[9px] font-black text-text-muted uppercase tracking-widest pb-1 border-b border-gray-100/40">
+                                                <span>Job Progress</span>
+                                                <span className="text-brand-600 font-bold">
+                                                    {isAssigned ? 'Stage 1/3' : isPickedUp ? 'Stage 2/3' : 'Stage 3/3'}
+                                                </span>
+                                            </div>
+
+                                            <div className="grid grid-cols-3 gap-2 relative pt-2">
+                                                {/* Stepper Steps */}
+                                                <div className="text-center space-y-1.5">
+                                                    <div className={cn(
+                                                        "h-2 rounded-full transition-all duration-300",
+                                                        isAssigned || isPickedUp || isArrived ? "bg-amber-500" : "bg-neutral-200"
+                                                    )} />
+                                                    <p className={cn(
+                                                        "text-[9px] font-black uppercase tracking-wider",
+                                                        isAssigned ? "text-amber-600" : "text-text-muted"
+                                                    )}>1. Pickup</p>
+                                                </div>
+
+                                                <div className="text-center space-y-1.5">
+                                                    <div className={cn(
+                                                        "h-2 rounded-full transition-all duration-300",
+                                                        isPickedUp || isArrived ? "bg-blue-500" : "bg-neutral-200"
+                                                    )} />
+                                                    <p className={cn(
+                                                        "text-[9px] font-black uppercase tracking-wider",
+                                                        isPickedUp ? "text-blue-600" : "text-text-muted"
+                                                    )}>2. Transit</p>
+                                                </div>
+
+                                                <div className="text-center space-y-1.5">
+                                                    <div className={cn(
+                                                        "h-2 rounded-full transition-all duration-300",
+                                                        isArrived ? "bg-brand-500 animate-pulse" : "bg-neutral-200"
+                                                    )} />
+                                                    <p className={cn(
+                                                        "text-[9px] font-black uppercase tracking-wider",
+                                                        isArrived ? "text-brand-600" : "text-text-muted"
+                                                    )}>3. Arrived</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Stepper Interactive Actions */}
                                         <div className="flex flex-col gap-3">
-                                            {res.delivery_status === 'assigned' ? (
+                                            {isAssigned ? (
                                                 <button
                                                     onClick={() => handlePickup(res.id)}
                                                     disabled={processingId === res.id}
-                                                    className="w-full h-14 bg-gray-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+                                                    className="w-full h-14 bg-gray-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md shadow-gray-950/20"
                                                 >
-                                                    {processingId === res.id ? <Loader2 size={16} className="animate-spin text-brand-400" /> : <Package size={16} className="text-brand-400" />}
+                                                    {processingId === res.id ? (
+                                                        <Loader2 size={16} className="animate-spin text-brand-400" />
+                                                    ) : (
+                                                        <Package size={16} className="text-brand-400" />
+                                                    )}
                                                     Confirm Stall Pickup
                                                 </button>
                                             ) : (
@@ -360,9 +451,13 @@ export default function RiderDashboard() {
                                                     <button
                                                         onClick={() => handleArrival(res.id)}
                                                         disabled={processingId === res.id}
-                                                        className="w-full h-14 bg-brand-50 text-brand-600 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 border border-brand-100"
+                                                        className="w-full h-14 bg-brand-50 text-brand-600 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 border border-brand-100 active:scale-95 transition-all"
                                                     >
-                                                        {processingId === res.id ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} />}
+                                                        {processingId === res.id ? (
+                                                            <Loader2 size={16} className="animate-spin" />
+                                                        ) : (
+                                                            <Navigation size={16} />
+                                                        )}
                                                         Send Arrival Alert (SMS)
                                                     </button>
                                                     <div className="flex gap-2">
@@ -371,15 +466,19 @@ export default function RiderDashboard() {
                                                             placeholder="ENTER CUSTOMER CODE"
                                                             value={otpInputs[res.id] || ''}
                                                             onChange={(e) => setOtpInputs({ ...otpInputs, [res.id]: e.target.value })}
-                                                            className="flex-1 h-14 px-4 bg-gray-50 border border-gray-100 rounded-2xl text-center text-xs font-black uppercase tracking-widest text-green-950"
+                                                            className="flex-1 h-14 px-4 bg-gray-50 border border-gray-100 rounded-2xl text-center text-xs font-black uppercase tracking-widest text-green-950 placeholder:text-neutral-300"
                                                         />
                                                         <button
                                                             onClick={() => handleComplete(res.id)}
                                                             disabled={completingId === res.id}
-                                                            className="h-14 px-6 bg-green-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+                                                            className="h-14 px-6 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md"
                                                         >
-                                                            {completingId === res.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                                                            Confirm Cashout
+                                                            {completingId === res.id ? (
+                                                                <Loader2 size={16} className="animate-spin" />
+                                                            ) : (
+                                                                <CheckCircle size={16} />
+                                                            )}
+                                                            Complete Job
                                                         </button>
                                                     </div>
                                                 </div>
@@ -388,15 +487,15 @@ export default function RiderDashboard() {
                                             <div className="flex gap-2 mt-2">
                                                 <a
                                                     href={`tel:${res.resident?.phone}`}
-                                                    className="flex-1 h-12 bg-white border border-gray-100 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted active:text-green-950"
+                                                    className="flex-1 h-12 bg-white border border-gray-100 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted active:text-green-950 active:scale-95 transition-all shadow-sm"
                                                 >
-                                                    <Phone size={14} /> Call Resident
+                                                    <Phone size={14} className="text-brand-500" /> Call Resident
                                                 </a>
                                                 <a
                                                     href={`tel:${res.trader?.mpesa_number || res.trader?.phone}`}
-                                                    className="flex-1 h-12 bg-white border border-gray-100 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted active:text-green-950"
+                                                    className="flex-1 h-12 bg-white border border-gray-100 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted active:text-green-950 active:scale-95 transition-all shadow-sm"
                                                 >
-                                                    <Store size={14} /> Call Trader
+                                                    <Store size={14} className="text-brand-500" /> Call Trader
                                                 </a>
                                             </div>
                                         </div>
@@ -409,9 +508,12 @@ export default function RiderDashboard() {
             )}
 
             {/* Geographical Radius Order Discovery Pool */}
-            <div className="px-4">
+            <div className="px-4 mb-12">
                 <div className="flex items-center justify-between mb-4 px-2">
-                    <h3 className="text-xs font-black text-green-950 uppercase tracking-[0.15em]">Rider Order Pool</h3>
+                    <div>
+                        <h3 className="text-xs font-black text-green-950 uppercase tracking-[0.15em]">Shipping Near You</h3>
+                        <p className="text-[10px] text-text-muted font-bold mt-0.5">Real-time matching pool</p>
+                    </div>
                     <button
                         onClick={() => refetchPool()}
                         className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-text-muted active:text-green-950 active:scale-95 transition-all shadow-sm"
@@ -421,7 +523,7 @@ export default function RiderDashboard() {
                 </div>
 
                 {isOffline ? (
-                    <div className="py-20 text-center bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-100">
+                    <div className="py-20 text-center bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-100 p-6">
                         <MapPin className="mx-auto text-gray-300 mb-4 animate-bounce" size={48} />
                         <p className="text-xs font-black text-text-muted uppercase tracking-widest leading-relaxed">
                             Offline Mode Active.<br />Go Online to start looking for deliveries.
@@ -430,22 +532,24 @@ export default function RiderDashboard() {
                 ) : poolLoading ? (
                     [1, 2].map(i => <div key={i} className="h-44 bg-gray-50 rounded-[2.5rem] animate-pulse mb-4" />)
                 ) : ordersPool.length === 0 ? (
-                    <div className="py-20 text-center bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-100">
+                    <div className="py-20 text-center bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-100 p-6">
                         <Search className="mx-auto text-gray-300 mb-4" size={48} />
-                        <p className="text-xs font-black text-text-muted uppercase tracking-widest">No nearby orders found. Keep online to receive alerts.</p>
+                        <p className="text-xs font-black text-text-muted uppercase tracking-widest leading-relaxed">
+                            No shipments found within 50 km.<br />Keep online to receive live matching alerts!
+                        </p>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         {ordersPool.map((order) => (
-                            <div key={order.id} className="bg-white rounded-[2.5rem] border border-gray-50 shadow-sm p-6 group">
-                                <div className="flex items-start justify-between mb-4">
+                            <div key={order.id} className="bg-white rounded-[2.5rem] border border-gray-50 shadow-brand-sm p-6 space-y-4 hover:border-brand-200 transition-all duration-300 group">
+                                <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-brand-600">
+                                        <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-brand-600 group-hover:scale-105 transition-all duration-300">
                                             <Navigation size={22} />
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-100 uppercase tracking-widest">
+                                                <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-100 uppercase tracking-widest">
                                                     {order.distance_to_pickup_km} km away
                                                 </span>
                                                 <span className="text-[8px] font-black text-text-muted uppercase tracking-widest">#{order.reservation_code}</span>
@@ -453,20 +557,25 @@ export default function RiderDashboard() {
                                             <h4 className="text-sm font-black text-green-950 uppercase tracking-tight truncate max-w-[150px]">
                                                 {order.product?.name || 'Produce'}
                                             </h4>
+                                            <p className="text-[10px] font-bold text-text-secondary truncate max-w-[170px] mt-0.5">{order.delivery_address}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <span className="text-[8px] font-black text-brand-600 block uppercase tracking-widest mb-0.5">YOUR SHARE</span>
-                                        <span className="text-base font-black text-green-950">KES {Number(order.delivery_fee / 2).toLocaleString()}</span>
+                                    <div className="text-right shrink-0">
+                                        <span className="text-[8px] font-black text-brand-600 block uppercase tracking-widest mb-0.5">Payout</span>
+                                        <span className="text-base font-black text-green-950">KES {Number(order.delivery_fee).toLocaleString()}</span>
                                     </div>
                                 </div>
 
                                 <button
                                     onClick={() => handleAccept(order.id)}
                                     disabled={processingId === order.id}
-                                    className="w-full h-14 bg-gray-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl shadow-gray-950/15"
+                                    className="w-full h-14 bg-gray-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md shadow-gray-950/20"
                                 >
-                                    {processingId === order.id ? <Loader2 size={16} className="animate-spin text-brand-400" /> : <CheckCircle2 size={16} className="text-brand-400" />}
+                                    {processingId === order.id ? (
+                                        <Loader2 size={16} className="animate-spin text-brand-400" />
+                                    ) : (
+                                        <CheckCircle2 size={16} className="text-brand-400" />
+                                    )}
                                     Accept Delivery
                                 </button>
                             </div>
@@ -474,6 +583,52 @@ export default function RiderDashboard() {
                     </div>
                 )}
             </div>
+
+            {/* Recent Delivery History Section */}
+            {profile?.is_available && (
+                <div className="px-4">
+                    <div className="flex items-center justify-between mb-4 px-2">
+                        <div>
+                            <h3 className="text-xs font-black text-green-950 uppercase tracking-[0.15em]">Delivery History</h3>
+                            <p className="text-[10px] text-text-muted font-bold mt-0.5">Recently completed jobs</p>
+                        </div>
+                        <History size={16} className="text-text-muted" />
+                    </div>
+
+                    {!stats?.recent_transactions || stats.recent_transactions.length === 0 ? (
+                        <div className="py-8 text-center bg-gray-50/50 rounded-[2.5rem] border border-dashed border-gray-100 p-6">
+                            <ShoppingBag className="mx-auto text-gray-300 mb-2" size={32} />
+                            <p className="text-[10px] font-black text-text-muted uppercase tracking-widest leading-relaxed">
+                                No completed jobs yet.<br />Accept an assignment to get started!
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {stats.recent_transactions.slice(0, 5).map((tx: any) => (
+                                <div key={tx.id} className="bg-white rounded-3xl border border-gray-100 shadow-brand-xs p-4 flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-brand-600 shrink-0">
+                                            <CheckCircle2 size={18} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h4 className="text-xs font-black text-green-950 truncate uppercase tracking-tight">
+                                                {tx.reservation?.product?.name || 'Produce Delivery'}
+                                            </h4>
+                                            <p className="text-[9px] font-bold text-text-muted mt-0.5">
+                                                {new Date(tx.created_at).toLocaleDateString()} at {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        <span className="text-xs font-black text-brand-600">+KES {Number(tx.amount).toLocaleString()}</span>
+                                        <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mt-0.5">Wallet Credit</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

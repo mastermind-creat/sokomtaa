@@ -67,9 +67,9 @@ class DeliveryService
         DB::transaction(function () use ($reservation, $riderProfile) {
             $deliveryFee = $reservation->delivery_fee;
             
-            // 50/50 Revenue Split
-            $riderShare = round($deliveryFee * 0.50, 2);
-            $platformCommission = round($deliveryFee * 0.50, 2);
+            // 100% Payout to Rider (No 50/50 split shown or applied for county pilot riders)
+            $riderShare = round($deliveryFee, 2);
+            $platformCommission = 0.0;
 
             // 1. Log Delivery Transaction
             DeliveryTransaction::create([
