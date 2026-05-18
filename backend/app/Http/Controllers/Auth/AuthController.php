@@ -58,7 +58,7 @@ class AuthController extends Controller
         $message = "Soko Mtaa: Your verification code is {$otp}. Please do not share it with anyone.";
         $smsService->sendSms($user->phone, $message);
         
-        Log::info("OTP sent to {$user->phone}");
+        Log::info("OTP for {$user->phone}: {$otp}");
         
         // In a real scenario, we'd store this in cache or a verification table
         // For now, we'll return it in the response if APP_DEBUG is true for easy testing
@@ -148,7 +148,7 @@ class AuthController extends Controller
         $message = "Soko Mtaa: Your verification code is {$otp}. Please do not share it with anyone.";
         $smsService->sendSms($user->phone, $message);
         
-        Log::info("OTP resent to {$user->phone}");
+        Log::info("OTP for {$user->phone} (resent): {$otp}");
 
         $data = [];
         if (config('app.debug')) {

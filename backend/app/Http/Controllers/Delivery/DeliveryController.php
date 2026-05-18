@@ -246,11 +246,17 @@ class DeliveryController extends Controller
             ->limit(10)
             ->get();
 
+        $activeOrders = Reservation::where('delivery_rider_id', $user->id)
+            ->whereIn('delivery_status', ['assigned', 'picked_up'])
+            ->with(['trader.market', 'product', 'resident'])
+            ->get();
+
         return $this->success([
             'profile' => $profile,
             'completed_deliveries' => $completedCount,
             'active_deliveries' => $activeCount,
             'recent_transactions' => $transactions,
+            'active_orders' => $activeOrders,
         ], 'Rider stats retrieved successfully.');
     }
 

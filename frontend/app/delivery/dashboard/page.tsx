@@ -45,6 +45,7 @@ interface RiderStats {
     completed_deliveries: number;
     active_deliveries: number;
     recent_transactions: any[];
+    active_orders?: any[];
 }
 
 export default function RiderDashboard() {
@@ -263,15 +264,14 @@ export default function RiderDashboard() {
                     </div>
 
                     {/* Active Cards */}
-                    {stats?.recent_transactions && stats.recent_transactions.filter((t: any) => t.reservation?.delivery_status === 'assigned' || t.reservation?.delivery_status === 'picked_up').length === 0 ? (
+                    {!stats?.active_orders || stats.active_orders.length === 0 ? (
                         <div className="py-8 text-center bg-gray-50/50 rounded-[2.5rem] border border-dashed border-gray-100">
                             <Package className="mx-auto text-gray-300 mb-2" size={36} />
                             <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">No active deliveries. Go to the Pool to accept.</p>
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {stats?.recent_transactions && stats.recent_transactions.filter((t: any) => t.reservation?.delivery_status === 'assigned' || t.reservation?.delivery_status === 'picked_up').map((tx: any) => {
-                                const res = tx.reservation;
+                            {stats.active_orders.map((res: any) => {
                                 if (!res) return null;
                                 return (
                                     <div key={res.id} className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden p-6">
