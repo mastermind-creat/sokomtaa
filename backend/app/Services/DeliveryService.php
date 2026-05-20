@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Reservation;
 use App\Models\DeliveryProfile;
 use App\Models\DeliveryTransaction;
+use App\Models\SystemSetting;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
@@ -31,28 +32,53 @@ class DeliveryService
 
     /**
      * Calculate dynamic delivery fee:
-     * - Base fare: 100 KES (covers up to 3 km)
-     * - Per-km fare: 30 KES for every km thereafter
+     * - Base fare: KES 100 (covers up to 3 km), +KES 30/km beyond that
+     * - Proportional cap: fee cannot exceed 25% of the order value (min KES 10)
+     *   This prevents small orders (e.g. KES 20) from being charged an outsized fee.
+     *
+     * @param float $distanceKm  Haversine distance from market to delivery point
+     * @param float $orderSubtotal  Cart total excluding fees — used for proportional capping
      */
-    public function calculateDeliveryFee(float $distanceKm): float
+    public function calculateDeliveryFee(float $distanceKm, float $orderSubtotal = 0.0): float
     {
-        if ($distanceKm <= 3.0) {
-            return 100.00;
+        // Raw distance-based fee
+        $rawFee = $distanceKm <= 3.0
+            ? 100.00
+            : round(100.00 + ($distanceKm - 3.0) * 30.00, 2);
+
+        // Proportional cap: never exceed 25% of order value (minimum KES 10)
+        if ($orderSubtotal > 0) {
+            $proportionalCap = max(10.0, round($orderSubtotal * 0.25, 2));
+            return round(min($rawFee, $proportionalCap), 2);
         }
 
-        $extraKm = $distanceKm - 3.0;
-        $extraFee = $extraKm * 30.00;
-
-        return round(100.00 + $extraFee, 2);
+        return round($rawFee, 2);
     }
 
     /**
-     * Processes the payout: splits delivery fee 50/50 between rider and platform
+     * Calculates the payout split
+     * 
+     * @return array{riderShare: float, platformCommission: float}
+     */
+    public function calculatePayouts(float $deliveryFee): array
+    {
+        $payoutPercentage = (float) \App\Models\SystemSetting::get('rider_payout_percentage', 100.0);
+        $riderShare = round(($deliveryFee * $payoutPercentage) / 100.0, 2);
+        $platformCommission = round($deliveryFee - $riderShare, 2);
+
+        return [
+            'riderShare' => $riderShare,
+            'platformCommission' => $platformCommission,
+        ];
+    }
+
+    /**
+     * Processes the payout: splits delivery fee using recorded fees or current settings
      */
     public function executeDeliveryPayout(Reservation $reservation): void
     {
-        if ($reservation->delivery_status !== 'in_transit' && $reservation->delivery_status !== 'assigned') {
-            throw new Exception("Delivery must be in transit or assigned to be completed.");
+        if ($reservation->delivery_status !== 'in_transit' && $reservation->delivery_status !== 'assigned' && $reservation->delivery_status !== 'picked_up') {
+            throw new Exception("Delivery must be in transit, picked up, or assigned to be completed.");
         }
 
         if (!$reservation->delivery_rider_id) {
@@ -65,11 +91,15 @@ class DeliveryService
         }
 
         DB::transaction(function () use ($reservation, $riderProfile) {
-            $deliveryFee = $reservation->delivery_fee;
-            
-            // 100% Payout to Rider (No 50/50 split shown or applied for county pilot riders)
-            $riderShare = round($deliveryFee, 2);
-            $platformCommission = 0.0;
+            // Use recorded fees if available, otherwise fallback to recalculation
+            if ($reservation->rider_fee > 0 || $reservation->system_delivery_fee > 0) {
+                $riderShare = (float) $reservation->rider_fee;
+                $platformCommission = (float) $reservation->system_delivery_fee;
+            } else {
+                $payouts = $this->calculatePayouts((float) $reservation->delivery_fee);
+                $riderShare = $payouts['riderShare'];
+                $platformCommission = $payouts['platformCommission'];
+            }
 
             // 1. Log Delivery Transaction
             DeliveryTransaction::create([

@@ -139,6 +139,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [\App\Http\Controllers\Resident\ProfileController::class, 'show']);
         Route::patch('/', [\App\Http\Controllers\Resident\ProfileController::class, 'update']);
         Route::post('/avatar', [\App\Http\Controllers\Resident\ProfileController::class, 'uploadAvatar']);
+        Route::post('/default-delivery', [\App\Http\Controllers\Resident\ProfileController::class, 'updateDefaultDeliveryInfo']);
         Route::post('/password', [\App\Http\Controllers\Resident\ProfileController::class, 'changePassword']);
         Route::delete('/', [\App\Http\Controllers\Resident\ProfileController::class, 'destroy']);
 
@@ -256,6 +257,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // ── Delivery Rider Routes ───────────────────────────────────────────────
         Route::middleware(['role:delivery'])->prefix('delivery')->group(function () {
             Route::get('/orders', [\App\Http\Controllers\Delivery\DeliveryController::class, 'ordersPool']);
+            Route::get('/pending-shipments', [\App\Http\Controllers\Delivery\DeliveryController::class, 'pendingShipments']);
             Route::post('/orders/{reservation}/accept', [\App\Http\Controllers\Delivery\DeliveryController::class, 'acceptOrder']);
             Route::post('/orders/{reservation}/pickup', [\App\Http\Controllers\Delivery\DeliveryController::class, 'pickupOrder']);
             Route::post('/orders/{reservation}/notify-arrival', [\App\Http\Controllers\Delivery\DeliveryController::class, 'notifyArrival']);

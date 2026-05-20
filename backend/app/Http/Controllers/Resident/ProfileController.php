@@ -109,6 +109,47 @@ class ProfileController extends Controller
     }
     
     /**
+     * Update default delivery info (address and image).
+     */
+    public function updateDefaultDeliveryInfo(Request $request, \App\Services\CloudinaryService $cloudinary): JsonResponse
+    {
+        Log::info('Resident Default Delivery Info Update Triggered', ['user_id' => Auth::id()]);
+        
+        $request->validate([
+            'default_delivery_address' => 'nullable|string|max:255',
+            'default_delivery_latitude' => 'nullable|numeric',
+            'default_delivery_longitude' => 'nullable|numeric',
+            'delivery_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $updateData = $request->only([
+            'default_delivery_address',
+            'default_delivery_latitude',
+            'default_delivery_longitude'
+        ]);
+
+        if ($request->hasFile('delivery_image')) {
+            Log::info('Processing Resident Delivery Image File');
+            $url = $cloudinary->uploadImage($request->file('delivery_image'), 'delivery_defaults');
+            
+            if ($url) {
+                // Delete old image if it exists
+                if ($user->default_delivery_image_url) {
+                    $cloudinary->deleteImage($user->default_delivery_image_url);
+                }
+                $updateData['default_delivery_image_url'] = $url;
+            }
+        }
+
+        $user->update($updateData);
+
+        return $this->success($user, 'Default delivery info updated successfully. (Taarifa za utoaji zimesasishwa.)');
+    }
+
+    /**
      * Delete (deactivate) the authenticated user's account.
      */
     public function destroy(Request $request): JsonResponse

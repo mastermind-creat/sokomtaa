@@ -31,6 +31,9 @@ class Reservation extends Model
         'delivery_address',
         'delivery_latitude',
         'delivery_longitude',
+        'delivery_image_url',
+        'rider_fee',
+        'system_delivery_fee',
     ];
 
     protected $casts = [

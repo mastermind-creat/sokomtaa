@@ -32,6 +32,7 @@ import api from '@/lib/api';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useOffline } from '@/hooks/useOffline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -52,6 +53,7 @@ interface RiderStats {
     profile: RiderProfile;
     completed_deliveries: number;
     active_deliveries: number;
+    today_earnings: number;
     recent_transactions: any[];
     active_orders?: any[];
 }
@@ -90,31 +92,27 @@ export default function RiderDashboard() {
     const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
         queryKey: ['rider-stats'],
         queryFn: () => api.get<never, { data: RiderStats }>('/delivery/stats').then(res => res.data),
-        refetchInterval: 10000 // Auto-refresh wallet/stats every 10s
+        refetchInterval: 10000,
     });
     const stats = statsData;
     const profile = stats?.profile;
 
-    // Fetch orders pool within 50 km (with real-time automatic polling)
+    // Fetch ALL pending shipments (no geo filter) — visible even when offline
+    const { data: pendingData, isLoading: pendingLoading, refetch: refetchPending } = useQuery({
+        queryKey: ['rider-pending-shipments'],
+        queryFn: () => api.get<never, { data: any[] }>('/delivery/pending-shipments').then(res => res.data),
+        refetchInterval: 8000,
+    });
+    const pendingShipments = pendingData || [];
+
+    // Fetch geo-filtered nearby pool (only when online)
     const { data: poolData, isLoading: poolLoading, refetch: refetchPool } = useQuery({
         queryKey: ['rider-orders-pool', coords],
         queryFn: () => api.get<never, { data: any[] }>(`/delivery/orders?lat=${coords.lat}&lng=${coords.lng}`).then(res => res.data),
-        enabled: !!profile?.is_available, // Only fetch nearby pool if online!
-        refetchInterval: 5000 // Poll every 5 seconds to sync dynamically!
+        enabled: !!profile?.is_available,
+        refetchInterval: 5000,
     });
     const ordersPool = poolData || [];
-
-    // Fetch currently assigned active/in-transit deliveries
-    const { data: activeData, isLoading: activeLoading, refetch: refetchActive } = useQuery({
-        queryKey: ['rider-active-orders'],
-        queryFn: async () => {
-            try {
-                // We reuse stats data or retrieve active orders
-                const res = await api.get<never, { data: RiderStats }>('/delivery/stats');
-                return res.data.recent_transactions || [];
-            } catch { return []; }
-        }
-    });
 
     // Mutations
     const toggleMutation = useMutation({
@@ -214,7 +212,16 @@ export default function RiderDashboard() {
     };
 
     const kycStatus = profile?.verification_status; // not_submitted | pending | verified | rejected
-    const isOffline = !profile?.is_available;
+    const isNetworkOffline = useOffline();
+    const isOffline = !profile?.is_available || isNetworkOffline;
+
+    useEffect(() => {
+        if (!isNetworkOffline) {
+            refetchStats();
+            refetchPending();
+            refetchPool();
+        }
+    }, [isNetworkOffline]);
 
     return (
         <div className="pb-40 -mx-4 md:-mx-0 font-sans">
@@ -277,77 +284,113 @@ export default function RiderDashboard() {
                 </div>
             )}
 
-            {/* 4. Verified — brief success badge */}
-            {kycStatus === 'verified' && (
-                <div className="px-4 mb-6">
-                    <div className="bg-green-50 border border-green-100 rounded-[2rem] p-4 flex items-center gap-3">
-                        <ShieldCheck size={20} className="text-green-600 shrink-0" />
-                        <p className="text-xs font-black text-green-800 uppercase tracking-widest">KYC Verified — Full access unlocked</p>
-                    </div>
-                </div>
-            )}
-
             {/* Quick Status and Wallet Card */}
             <div className="px-4 mb-8">
                 <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm flex flex-col gap-6">
+                    {/* Rider Profile Summary */}
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-brand-50 text-brand-700 rounded-2xl flex items-center justify-center font-black shadow-inner relative overflow-hidden shrink-0 border border-brand-100">
+                            {user?.avatar_url ? (
+                                <img src={user.avatar_url} alt={user.name || ''} className="w-full h-full object-cover" />
+                            ) : (
+                                <User size={20} className="text-brand-600" />
+                            )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h2 className="text-base font-black text-green-950 uppercase tracking-tight truncate leading-none">{user?.name || 'Rider Terminal'}</h2>
+                                {kycStatus === 'verified' && (
+                                    <span className="inline-flex items-center gap-1 bg-brand-50 text-brand-700 border border-brand-100 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0">
+                                        <ShieldCheck size={10} className="text-brand-600" /> Verified
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-[10px] text-text-muted font-bold mt-1 uppercase tracking-widest">
+                                {profile?.vehicle_type || 'Bicycle'} • {profile?.vehicle_registration || 'No Plates'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="h-[1px] bg-gray-100" />
+
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className={cn(
                                 "w-3 h-3 rounded-full animate-pulse",
-                                profile?.is_available ? "bg-green-500" : "bg-gray-400"
+                                isNetworkOffline
+                                    ? "bg-amber-500"
+                                    : profile?.is_available
+                                        ? "bg-green-500"
+                                        : "bg-gray-400"
                             )} />
                             <span className="text-xs font-black uppercase tracking-widest text-green-950">
-                                {profile?.is_available ? "Online & Ready" : "Offline"}
+                                {isNetworkOffline
+                                    ? "No Connection"
+                                    : profile?.is_available
+                                        ? "Online & Ready"
+                                        : "Offline"}
                             </span>
                         </div>
                         <button
-                            onClick={() => toggleMutation.mutate()}
-                            disabled={toggleMutation.isPending}
+                            onClick={() => !isNetworkOffline && toggleMutation.mutate()}
+                            disabled={toggleMutation.isPending || isNetworkOffline}
                             className={cn(
                                 "h-14 px-6 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2.5",
-                                profile?.is_available 
-                                    ? "bg-rose-50 text-rose-600 border border-rose-100" 
-                                    : "bg-brand-600 text-white shadow-xl shadow-brand-600/20"
+                                isNetworkOffline
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                                    : profile?.is_available 
+                                        ? "bg-rose-50 text-rose-600 border border-rose-100" 
+                                        : "bg-brand-600 text-white shadow-xl shadow-brand-600/20"
                             )}
                         >
                             <Power size={16} />
-                            {profile?.is_available ? "Go Offline" : "Go Online"}
+                            {isNetworkOffline 
+                                ? "Offline" 
+                                : profile?.is_available 
+                                    ? "Go Offline" 
+                                    : "Go Online"}
                         </button>
                     </div>
 
                     <div className="h-[1px] bg-gray-100" />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                         <div>
-                            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest block mb-1">Rider Balance</span>
-                            <span className="text-2xl font-black text-green-950">KES {Number(profile?.earnings_balance || 0).toLocaleString()}</span>
-                            <span className="text-[9px] font-bold text-brand-600 block mt-1 tracking-widest uppercase">Instant Wallet Release</span>
+                            <span className="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-1">Balance</span>
+                            <span className="text-lg font-black text-green-950">KES {Number(profile?.earnings_balance || 0).toLocaleString()}</span>
+                            <span className="text-[8px] font-bold text-brand-600 block mt-0.5 tracking-widest uppercase">Wallet</span>
                         </div>
-                        <div className="text-right border-l border-gray-100 pl-4">
-                            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest block mb-1">Deliveries Completed</span>
-                            <span className="text-2xl font-black text-green-950">{stats?.completed_deliveries || 0}</span>
-                            <span className="text-[9px] font-bold text-gray-400 block mt-1 tracking-widest uppercase">Target Achieved</span>
+                        <div className="border-l border-gray-100 pl-3">
+                            <span className="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-1">Today</span>
+                            <span className="text-lg font-black text-green-950">KES {Number(stats?.today_earnings || 0).toLocaleString()}</span>
+                            <span className="text-[8px] font-bold text-amber-500 block mt-0.5 tracking-widest uppercase">Earned</span>
+                        </div>
+                        <div className="text-right border-l border-gray-100 pl-3">
+                            <span className="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-1">Completed</span>
+                            <span className="text-lg font-black text-green-950">{stats?.completed_deliveries || 0}</span>
+                            <span className="text-[8px] font-bold text-gray-400 block mt-0.5 tracking-widest uppercase">Jobs Done</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-              {/* Active / In Transit Deliveries */}
-            {profile?.is_available && (
-                <div className="px-4 mb-8">
-                    <div className="flex items-center justify-between mb-4 px-2">
+            {/* ── 3-Column Dashboard Layout (Desktop: Side-by-Side, Mobile: Stacked) ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4">
+                
+                {/* Column 1: Active Shipments */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between px-2">
                         <h3 className="text-xs font-black text-green-950 uppercase tracking-[0.15em]">Active Shipments</h3>
                         <span className="text-[9px] font-black px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-100 uppercase tracking-widest animate-pulse">
                             Active ({stats?.active_deliveries || 0})
                         </span>
                     </div>
 
-                    {/* Active Cards */}
                     {!stats?.active_orders || stats.active_orders.length === 0 ? (
                         <div className="py-12 text-center bg-gray-50/50 rounded-[2.5rem] border border-dashed border-gray-100 p-6">
                             <Package className="mx-auto text-gray-300 mb-3" size={40} />
                             <p className="text-xs font-black text-text-muted uppercase tracking-widest leading-relaxed">
-                                No active deliveries.<br />Go to the Pool below to accept jobs!
+                                No active deliveries.<br />Go to the Pool to accept jobs!
                             </p>
                         </div>
                     ) : (
@@ -356,11 +399,10 @@ export default function RiderDashboard() {
                                 if (!res) return null;
                                 const isAssigned = res.delivery_status === 'assigned';
                                 const isPickedUp = res.delivery_status === 'picked_up';
-                                const isArrived = res.delivery_status === 'in_transit'; // Or custom arrived state
+                                const isArrived = res.delivery_status === 'in_transit';
 
                                 return (
                                     <div key={res.id} className="bg-white rounded-[2.5rem] border border-gray-100 shadow-brand-md overflow-hidden p-6 space-y-6">
-                                        
                                         {/* Status Header */}
                                         <div className="flex items-start justify-between">
                                             <div>
@@ -376,14 +418,26 @@ export default function RiderDashboard() {
                                                 <h4 className="text-base font-black text-green-950 uppercase tracking-tight mt-2">{res.product?.name || 'Produce'}</h4>
                                                 <div className="flex items-center gap-1 text-[10px] text-text-secondary font-medium mt-0.5">
                                                     <MapPin size={12} className="text-brand-500 shrink-0" />
-                                                    <span className="truncate max-w-[200px]">{res.delivery_address}</span>
+                                                    <span className="truncate max-w-[150px]">{res.delivery_address}</span>
                                                 </div>
                                             </div>
                                             <div className="text-right shrink-0">
                                                 <span className="text-[9px] font-black text-brand-600 block uppercase tracking-widest">Payout</span>
-                                                <span className="text-base font-black text-green-950">KES {Number(res.delivery_fee).toLocaleString()}</span>
+                                                <span className="text-base font-black text-green-950">KES {Number(res.rider_fee || res.delivery_fee).toLocaleString()}</span>
                                             </div>
                                         </div>
+
+                                        {/* Delivery Image (if available) */}
+                                        {res.delivery_image_url && (
+                                            <div className="w-full h-32 rounded-2xl overflow-hidden border border-gray-100 relative">
+                                                <img src={res.delivery_image_url} alt="Delivery Location" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none flex items-end p-3">
+                                                    <span className="text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                                                        <MapPin size={12} /> Resident's Gate/Door
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {/* Dynamic Progress Stepper */}
                                         <div className="bg-gray-50/50 p-4 rounded-3xl border border-gray-100/50 space-y-3">
@@ -395,7 +449,6 @@ export default function RiderDashboard() {
                                             </div>
 
                                             <div className="grid grid-cols-3 gap-2 relative pt-2">
-                                                {/* Stepper Steps */}
                                                 <div className="text-center space-y-1.5">
                                                     <div className={cn(
                                                         "h-2 rounded-full transition-all duration-300",
@@ -431,7 +484,7 @@ export default function RiderDashboard() {
                                             </div>
                                         </div>
 
-                                        {/* Stepper Interactive Actions */}
+                                        {/* Stepper Actions */}
                                         <div className="flex flex-col gap-3">
                                             {isAssigned ? (
                                                 <button
@@ -463,22 +516,22 @@ export default function RiderDashboard() {
                                                     <div className="flex gap-2">
                                                         <input
                                                             type="text"
-                                                            placeholder="ENTER CUSTOMER CODE"
+                                                            placeholder="CODE"
                                                             value={otpInputs[res.id] || ''}
                                                             onChange={(e) => setOtpInputs({ ...otpInputs, [res.id]: e.target.value })}
-                                                            className="flex-1 h-14 px-4 bg-gray-50 border border-gray-100 rounded-2xl text-center text-xs font-black uppercase tracking-widest text-green-950 placeholder:text-neutral-300"
+                                                            className="flex-1 h-14 min-w-0 px-2 bg-gray-50 border border-gray-100 rounded-2xl text-center text-xs font-black uppercase tracking-widest text-green-950 placeholder:text-neutral-300"
                                                         />
                                                         <button
                                                             onClick={() => handleComplete(res.id)}
                                                             disabled={completingId === res.id}
-                                                            className="h-14 px-6 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md"
+                                                            className="h-14 px-4 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md shrink-0"
                                                         >
                                                             {completingId === res.id ? (
                                                                 <Loader2 size={16} className="animate-spin" />
                                                             ) : (
                                                                 <CheckCircle size={16} />
                                                             )}
-                                                            Complete Job
+                                                            Complete
                                                         </button>
                                                     </div>
                                                 </div>
@@ -505,89 +558,121 @@ export default function RiderDashboard() {
                         </div>
                     )}
                 </div>
-            )}
 
-            {/* Geographical Radius Order Discovery Pool */}
-            <div className="px-4 mb-12">
-                <div className="flex items-center justify-between mb-4 px-2">
-                    <div>
-                        <h3 className="text-xs font-black text-green-950 uppercase tracking-[0.15em]">Shipping Near You</h3>
-                        <p className="text-[10px] text-text-muted font-bold mt-0.5">Real-time matching pool</p>
+                {/* Column 2: Shipments Available */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between px-2">
+                        <div>
+                            <h3 className="text-xs font-black text-green-950 uppercase tracking-[0.15em]">
+                                Shipments Available
+                                {pendingShipments.length > 0 && (
+                                    <span className="ml-2 text-[8px] font-black px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-100">
+                                        {pendingShipments.length}
+                                    </span>
+                                )}
+                            </h3>
+                            <p className="text-[10px] text-text-muted font-bold mt-0.5">
+                                {isOffline ? 'Go Online to accept jobs' : 'Live matching pool — tap to accept'}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => { refetchPending(); refetchPool(); }}
+                            className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-text-muted active:text-green-950 active:scale-95 transition-all shadow-sm"
+                        >
+                            <RefreshCw size={14} />
+                        </button>
                     </div>
-                    <button
-                        onClick={() => refetchPool()}
-                        className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-text-muted active:text-green-950 active:scale-95 transition-all shadow-sm"
-                    >
-                        <RefreshCw size={14} />
-                    </button>
-                </div>
 
-                {isOffline ? (
-                    <div className="py-20 text-center bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-100 p-6">
-                        <MapPin className="mx-auto text-gray-300 mb-4 animate-bounce" size={48} />
-                        <p className="text-xs font-black text-text-muted uppercase tracking-widest leading-relaxed">
-                            Offline Mode Active.<br />Go Online to start looking for deliveries.
-                        </p>
-                    </div>
-                ) : poolLoading ? (
-                    [1, 2].map(i => <div key={i} className="h-44 bg-gray-50 rounded-[2.5rem] animate-pulse mb-4" />)
-                ) : ordersPool.length === 0 ? (
-                    <div className="py-20 text-center bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-100 p-6">
-                        <Search className="mx-auto text-gray-300 mb-4" size={48} />
-                        <p className="text-xs font-black text-text-muted uppercase tracking-widest leading-relaxed">
-                            No shipments found within 50 km.<br />Keep online to receive live matching alerts!
-                        </p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {ordersPool.map((order) => (
-                            <div key={order.id} className="bg-white rounded-[2.5rem] border border-gray-50 shadow-brand-sm p-6 space-y-4 hover:border-brand-200 transition-all duration-300 group">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-brand-600 group-hover:scale-105 transition-all duration-300">
-                                            <Navigation size={22} />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-100 uppercase tracking-widest">
-                                                    {order.distance_to_pickup_km} km away
-                                                </span>
-                                                <span className="text-[8px] font-black text-text-muted uppercase tracking-widest">#{order.reservation_code}</span>
+                    {pendingLoading ? (
+                        [1, 2, 3].map(i => <div key={i} className="h-36 bg-gray-50 rounded-[2.5rem] animate-pulse mb-4" />)
+                    ) : pendingShipments.length === 0 ? (
+                        <div className="py-20 text-center bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-100 p-6">
+                            <Search className="mx-auto text-gray-300 mb-4" size={48} />
+                            <p className="text-xs font-black text-text-muted uppercase tracking-widest leading-relaxed">
+                                No shipments awaiting delivery.<br />Check back shortly!
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {pendingShipments.map((order: any) => (
+                                <div key={order.id} className={cn(
+                                    "bg-white rounded-[2.5rem] border shadow-brand-sm p-6 space-y-4 transition-all duration-300",
+                                    !profile?.is_available ? "border-gray-100 opacity-80" : "border-gray-50 hover:border-brand-200"
+                                )}>
+                                    <div className="flex items-start gap-4">
+                                        {order.product?.image_url ? (
+                                            <img
+                                                src={order.product.image_url}
+                                                alt={order.product.name}
+                                                className="w-16 h-16 rounded-2xl object-cover shrink-0 bg-gray-100"
+                                            />
+                                        ) : (
+                                            <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center shrink-0">
+                                                <Package size={24} className="text-brand-500" />
                                             </div>
-                                            <h4 className="text-sm font-black text-green-950 uppercase tracking-tight truncate max-w-[150px]">
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100 uppercase tracking-widest">
+                                                    #{order.reservation_code}
+                                                </span>
+                                                {order.quantity && (
+                                                    <span className="text-[8px] font-black text-text-muted uppercase tracking-widest">
+                                                        Qty: {order.quantity} {order.product?.unit}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <h4 className="text-sm font-black text-green-950 uppercase tracking-tight truncate">
                                                 {order.product?.name || 'Produce'}
                                             </h4>
-                                            <p className="text-[10px] font-bold text-text-secondary truncate max-w-[170px] mt-0.5">{order.delivery_address}</p>
+                                            <div className="flex items-center gap-1 mt-0.5">
+                                                <Store size={10} className="text-brand-500 shrink-0" />
+                                                <p className="text-[10px] font-bold text-text-secondary truncate">
+                                                    {order.trader?.business_name || 'Trader'}
+                                                    {order.trader?.market?.name ? ` · ${order.trader.market.name}` : ''}
+                                                </p>
+                                            </div>
+                                            {order.delivery_address && (
+                                                <div className="flex items-center gap-1 mt-0.5">
+                                                    <MapPin size={10} className="text-rose-400 shrink-0" />
+                                                    <p className="text-[10px] font-bold text-text-muted truncate">{order.delivery_address}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <span className="text-[8px] font-black text-brand-600 block uppercase tracking-widest mb-0.5">Payout</span>
+                                            <span className="text-base font-black text-green-950">KES {Number(order.rider_fee || order.delivery_fee || 0).toLocaleString()}</span>
                                         </div>
                                     </div>
-                                    <div className="text-right shrink-0">
-                                        <span className="text-[8px] font-black text-brand-600 block uppercase tracking-widest mb-0.5">Payout</span>
-                                        <span className="text-base font-black text-green-950">KES {Number(order.delivery_fee).toLocaleString()}</span>
-                                    </div>
+
+                                    <button
+                                        onClick={() => profile?.is_available && handleAccept(order.id)}
+                                        disabled={processingId === order.id || !profile?.is_available}
+                                        className={cn(
+                                            "w-full h-14 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all",
+                                            !profile?.is_available
+                                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                : "bg-gray-950 text-white active:scale-95 shadow-md shadow-gray-950/20"
+                                        )}
+                                    >
+                                        {processingId === order.id ? (
+                                            <Loader2 size={16} className="animate-spin text-brand-400" />
+                                        ) : !profile?.is_available ? (
+                                            <Power size={16} />
+                                        ) : (
+                                            <CheckCircle2 size={16} className="text-brand-400" />
+                                        )}
+                                        {!profile?.is_available ? 'Go Online to Accept' : 'Accept Delivery'}
+                                    </button>
                                 </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
-                                <button
-                                    onClick={() => handleAccept(order.id)}
-                                    disabled={processingId === order.id}
-                                    className="w-full h-14 bg-gray-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md shadow-gray-950/20"
-                                >
-                                    {processingId === order.id ? (
-                                        <Loader2 size={16} className="animate-spin text-brand-400" />
-                                    ) : (
-                                        <CheckCircle2 size={16} className="text-brand-400" />
-                                    )}
-                                    Accept Delivery
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Recent Delivery History Section */}
-            {profile?.is_available && (
-                <div className="px-4">
-                    <div className="flex items-center justify-between mb-4 px-2">
+                {/* Column 3: Delivery History */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between px-2">
                         <div>
                             <h3 className="text-xs font-black text-green-950 uppercase tracking-[0.15em]">Delivery History</h3>
                             <p className="text-[10px] text-text-muted font-bold mt-0.5">Recently completed jobs</p>
@@ -628,7 +713,8 @@ export default function RiderDashboard() {
                         </div>
                     )}
                 </div>
-            )}
+
+            </div>
         </div>
     );
 }

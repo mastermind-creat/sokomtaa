@@ -237,7 +237,7 @@ class DeliveryController extends Controller
             ->count();
 
         $activeCount = Reservation::where('delivery_rider_id', $user->id)
-            ->whereIn('delivery_status', ['assigned', 'picked_up'])
+            ->whereIn('delivery_status', ['assigned', 'picked_up', 'in_transit'])
             ->count();
 
         $transactions = DeliveryTransaction::where('user_id', $user->id)
@@ -247,16 +247,22 @@ class DeliveryController extends Controller
             ->get();
 
         $activeOrders = Reservation::where('delivery_rider_id', $user->id)
-            ->whereIn('delivery_status', ['assigned', 'picked_up'])
+            ->whereIn('delivery_status', ['assigned', 'picked_up', 'in_transit'])
             ->with(['trader.market', 'product', 'resident'])
+            ->latest()
             ->get();
 
+        $todayEarnings = DeliveryTransaction::where('user_id', $user->id)
+            ->whereDate('created_at', today())
+            ->sum('amount');
+
         return $this->success([
-            'profile' => $profile,
+            'profile'              => $profile,
             'completed_deliveries' => $completedCount,
-            'active_deliveries' => $activeCount,
-            'recent_transactions' => $transactions,
-            'active_orders' => $activeOrders,
+            'active_deliveries'    => $activeCount,
+            'recent_transactions'  => $transactions,
+            'active_orders'        => $activeOrders,
+            'today_earnings'       => (float) $todayEarnings,
         ], 'Rider stats retrieved successfully.');
     }
 
@@ -281,7 +287,7 @@ class DeliveryController extends Controller
     public function updateLocation(Request $request): JsonResponse
     {
         $request->validate([
-            'latitude' => 'required|numeric|between:-90,90',
+            'latitude'  => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
         ]);
 
@@ -289,11 +295,55 @@ class DeliveryController extends Controller
         $profile = DeliveryProfile::where('user_id', $user->id)->firstOrFail();
 
         $profile->update([
-            'latitude' => $request->latitude,
+            'latitude'  => $request->latitude,
             'longitude' => $request->longitude,
         ]);
 
         return $this->success($profile, 'Location updated successfully.');
+    }
+
+    /**
+     * Browse ALL pending-assignment deliveries (no geo filter).
+     * Allows riders to see what's available even when offline.
+     */
+    public function pendingShipments(): JsonResponse
+    {
+        $orders = Reservation::where('delivery_option', true)
+            ->where('delivery_status', 'pending_assignment')
+            ->whereIn('status', ['paid', 'ready'])
+            ->with(['trader.market', 'product', 'resident'])
+            ->latest()
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'id'                   => $r->id,
+                    'reservation_code'     => $r->reservation_code,
+                    'delivery_address'     => $r->delivery_address,
+                    'delivery_fee'         => $r->delivery_fee,
+                    'status'               => $r->status,
+                    'delivery_status'      => $r->delivery_status,
+                    'quantity'             => $r->quantity,
+                    'total_amount'         => $r->total_amount,
+                    'created_at'           => $r->created_at,
+                    'product'              => $r->product ? [
+                        'id'        => $r->product->id,
+                        'name'      => $r->product->name,
+                        'image_url' => $r->product->image_url,
+                        'unit'      => $r->product->unit,
+                    ] : null,
+                    'trader'               => $r->trader ? [
+                        'id'            => $r->trader->id,
+                        'business_name' => $r->trader->business_name,
+                        'stall_id'      => $r->trader->stall_id,
+                        'market'        => $r->trader->market ? [
+                            'name'     => $r->trader->market->name,
+                            'location' => $r->trader->market->location,
+                        ] : null,
+                    ] : null,
+                ];
+            });
+
+        return $this->success($orders, 'Pending shipments retrieved.');
     }
 
     /**

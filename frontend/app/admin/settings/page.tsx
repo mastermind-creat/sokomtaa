@@ -209,7 +209,9 @@ export default function AdminSettingsPage() {
                                                 <label className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
                                                     {setting.label}
                                                 </label>
-                                                <span className="text-[8px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">KES</span>
+                                                <span className="text-[8px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">
+                                                    {setting.key.includes('percentage') ? '%' : 'KES'}
+                                                </span>
                                             </div>
                                             <input 
                                                 type="number"

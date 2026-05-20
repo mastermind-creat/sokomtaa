@@ -2,20 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    ShoppingBag, 
-    Plus, 
-    Minus, 
-    Phone, 
-    AlertCircle, 
-    Loader2, 
-    CheckCircle2, 
-    ChevronRight, 
+import {
+    ShoppingBag,
+    Plus,
+    Minus,
+    Phone,
+    AlertCircle,
+    Loader2,
+    CheckCircle2,
+    ChevronRight,
     Smartphone,
     Trash2,
     Lock,
     Clock,
-    CreditCard
+    CreditCard,
+    Truck,
+    MapPin
 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { useMpesa } from '@/hooks/useMpesa';
@@ -28,6 +30,22 @@ import { useQuery } from '@tanstack/react-query';
 import { SystemSetting } from '@/types';
 import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
 
+
+interface EstatePreset {
+    name: string;
+    latitude: number;
+    longitude: number;
+}
+
+const ESTATES: EstatePreset[] = [
+    { name: 'Nairobi CBD', latitude: -1.2833, longitude: 36.8219 },
+    { name: 'Eastleigh', latitude: -1.2750, longitude: 36.8480 },
+    { name: 'Pumwani', latitude: -1.2789, longitude: 36.8422 },
+    { name: 'South C', latitude: -1.3200, longitude: 36.8300 },
+    { name: 'Westlands', latitude: -1.2682, longitude: 36.8081 },
+    { name: 'Kilimani', latitude: -1.2900, longitude: 36.7900 },
+    { name: 'Kahawa West', latitude: -1.1900, longitude: 36.8900 }
+];
 
 interface CartFlowProps {
     onClose: () => void;
@@ -43,7 +61,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
     const [localError, setLocalError] = useState<string | null>(null);
     const [checkoutId, setCheckoutId] = useState<string | null>(null);
     const [reservations, setReservations] = useState<Reservation[]>([]);
-    
+
     const { items, updateQuantity, removeItem, getTotalAmount, clearCart } = useCartStore();
     const { user } = useAuthStore();
     const router = useRouter();
@@ -54,6 +72,85 @@ export default function CartFlow({ onClose }: CartFlowProps) {
             setPhoneNumber(user.phone);
         }
     }, [user]);
+
+    const [deliveryOption, setDeliveryOption] = useState(false);
+    const [selectedEstate, setSelectedEstate] = useState('');
+    const [deliveryAddress, setDeliveryAddress] = useState('');
+    const [deliveryLat, setDeliveryLat] = useState<number | null>(null);
+    const [deliveryLng, setDeliveryLng] = useState<number | null>(null);
+    const [calculatedDeliveryFee, setCalculatedDeliveryFee] = useState(0);
+
+    // Pre-populate with default delivery info if available
+    useEffect(() => {
+        if (user && deliveryOption) {
+            if (user.default_delivery_address && !deliveryAddress) {
+                setDeliveryAddress(user.default_delivery_address);
+            }
+            if (user.default_delivery_latitude && user.default_delivery_longitude && !deliveryLat && !deliveryLng) {
+                setDeliveryLat(Number(user.default_delivery_latitude));
+                setDeliveryLng(Number(user.default_delivery_longitude));
+            }
+        }
+    }, [user, deliveryOption]);
+
+    const firstItem = items[0];
+    const pickupLat = firstItem?.trader?.market?.latitude
+        ? parseFloat(firstItem.trader.market.latitude)
+        : firstItem?.trader?.latitude
+            ? Number(firstItem.trader.latitude)
+            : -1.2864; // Gikomba Market fallback
+
+    const pickupLng = firstItem?.trader?.market?.longitude
+        ? parseFloat(firstItem.trader.market.longitude)
+        : firstItem?.trader?.longitude
+            ? Number(firstItem.trader.longitude)
+            : 36.8378; // Gikomba Market fallback
+
+    const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+        const R = 6371; // Earth radius in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return parseFloat((R * c).toFixed(2));
+    };
+
+    const calculateDeliveryFee = (distanceKm: number, orderSubtotal: number = 0) => {
+        let rawFee = 100.00;
+        if (distanceKm > 3.0) {
+            rawFee = 100.00 + (distanceKm - 3.0) * 30.00;
+        }
+        
+        if (orderSubtotal > 0) {
+            const proportionalCap = Math.max(10.0, orderSubtotal * 0.25);
+            return parseFloat((Math.min(rawFee, proportionalCap)).toFixed(2));
+        }
+        
+        return parseFloat(rawFee.toFixed(2));
+    };
+
+    useEffect(() => {
+        if (deliveryOption && selectedEstate) {
+            const estate = ESTATES.find(e => e.name === selectedEstate);
+            if (estate) {
+                setDeliveryLat(estate.latitude);
+                setDeliveryLng(estate.longitude);
+            }
+        }
+    }, [deliveryOption, selectedEstate]);
+
+    useEffect(() => {
+        if (deliveryOption && deliveryLat && deliveryLng) {
+            const dist = calculateDistance(pickupLat, pickupLng, deliveryLat, deliveryLng);
+            const sub = getTotalAmount();
+            const fee = calculateDeliveryFee(dist, sub);
+            setCalculatedDeliveryFee(fee);
+        } else {
+            setCalculatedDeliveryFee(0);
+        }
+    }, [deliveryOption, deliveryLat, deliveryLng, pickupLat, pickupLng, items, getTotalAmount]);
 
     // Fetch Settings for Fee Logic (public endpoint — no auth needed)
     const { data: settings } = useQuery<Record<string, SystemSetting[]>>({
@@ -67,10 +164,10 @@ export default function CartFlow({ onClose }: CartFlowProps) {
 
     const feeAmount = parseFloat(settings?.fees?.find(s => s.key === 'resident_service_fee')?.value || '10');
     const threshold = parseFloat(settings?.fees?.find(s => s.key === 'service_fee_threshold')?.value || '200');
-    
+
     const subtotal = getTotalAmount();
     const activeFee = subtotal > threshold ? feeAmount : 0;
-    const totalWithFee = subtotal + activeFee;
+    const totalWithFee = subtotal + activeFee + (deliveryOption ? calculatedDeliveryFee : 0);
 
     // Timer for processing step
     useEffect(() => {
@@ -81,7 +178,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
         return () => clearInterval(timer);
     }, [step, secondsLeft]);
 
-    // Track status from useMpesa
+    // Track status fromh useMpesa
     useEffect(() => {
         if (status === 'completed') {
             setStep('success');
@@ -104,14 +201,14 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                     quantity: item.cartQuantity
                 }))
             });
-            
+
             // The axios interceptor returns response.data, so response IS {success, data, message}
             const createdReservations = (response as any).data as Reservation[];
             if (!Array.isArray(createdReservations) || createdReservations.length === 0) {
                 throw new Error('No reservations were created. Please try again.');
             }
             setReservations(createdReservations);
-            
+
             // 2. Initiate STK for the total amount
             const id = await initiateStk(normalizedPhone, 'reservation', createdReservations.map(r => r.id));
             setCheckoutId(id);
@@ -128,15 +225,15 @@ export default function CartFlow({ onClose }: CartFlowProps) {
 
     return (
         <div className="fixed inset-0 z-[100] flex flex-col justify-end">
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={onClose}
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
-            
-            <motion.div 
+
+            <motion.div
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
@@ -150,7 +247,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                 <AnimatePresence mode="wait">
                     {/* STEP 1: CART REVIEW */}
                     {step === 'cart' && (
-                        <motion.div 
+                        <motion.div
                             key="cart"
                             initial={{ x: 20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
@@ -180,21 +277,21 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
                                             <div className="flex items-center gap-2 bg-white rounded-xl border border-neutral-100 p-1">
-                                                <button 
+                                                <button
                                                     onClick={() => updateQuantity(item.id, item.cartQuantity - 1)}
                                                     className="p-1 hover:bg-neutral-50 rounded-lg"
                                                 >
                                                     <Minus size={14} />
                                                 </button>
                                                 <span className="text-xs font-black w-4 text-center">{item.cartQuantity}</span>
-                                                <button 
+                                                <button
                                                     onClick={() => updateQuantity(item.id, item.cartQuantity + 1)}
                                                     className="p-1 hover:bg-neutral-50 rounded-lg"
                                                 >
                                                     <Plus size={14} />
                                                 </button>
                                             </div>
-                                            <button 
+                                            <button
                                                 onClick={() => removeItem(item.id)}
                                                 className="text-red-400 hover:text-red-600 p-1"
                                             >
@@ -203,6 +300,105 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+
+                            {/* Dynamic Shipping / Delivery Preference Selection */}
+                            <div className="bg-neutral-50 p-5 rounded-[2rem] border border-neutral-100/80 space-y-4 my-4">
+                                <h4 className="text-xs font-black uppercase tracking-wider text-green-950 flex items-center gap-2 pl-1">
+                                    <Truck size={14} className="text-brand-600" />
+                                    How to Receive Your Order (Njia ya Kupokea)
+                                </h4>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeliveryOption(false)}
+                                        className={`p-4 rounded-2xl border-2 text-left transition-all active:scale-95 flex flex-col justify-between h-20 ${
+                                            !deliveryOption 
+                                                ? 'border-brand-500 bg-white shadow-brand-sm' 
+                                                : 'border-transparent bg-neutral-100 hover:bg-neutral-200/50'
+                                        }`}
+                                    >
+                                        <span className="text-[10px] font-black text-text-muted uppercase tracking-wider">Self Pickup</span>
+                                        <span className="text-xs font-black text-green-950">Chukua Mwenyewe</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeliveryOption(true)}
+                                        className={`p-4 rounded-2xl border-2 text-left transition-all active:scale-95 flex flex-col justify-between h-20 ${
+                                            deliveryOption 
+                                                ? 'border-brand-500 bg-white shadow-brand-sm' 
+                                                : 'border-transparent bg-neutral-100 hover:bg-neutral-200/50'
+                                        }`}
+                                    >
+                                        <span className="text-[10px] font-black text-text-muted uppercase tracking-wider">Rider Delivery</span>
+                                        <span className="text-xs font-black text-green-950">Niletee na Rider</span>
+                                    </button>
+                                </div>
+
+                                <AnimatePresence>
+                                    {deliveryOption && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="space-y-3 overflow-hidden pt-2"
+                                        >
+                                            {user?.default_delivery_latitude && user?.default_delivery_longitude ? (
+                                                <div className="p-3 bg-brand-50 rounded-xl border border-brand-100 flex items-start gap-3">
+                                                    <MapPin className="text-brand-600 mt-0.5 shrink-0" size={16} />
+                                                    <div>
+                                                        <p className="text-xs font-bold text-brand-900">Using Default Delivery Location</p>
+                                                        <p className="text-[10px] text-brand-700/80 mt-0.5 leading-relaxed">
+                                                            Your delivery will be routed to your saved location. If you want to deliver to a different estate, please select it below.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ) : null}
+
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-text-muted pl-1">
+                                                    Select Neighborhood / Estate (Chagua Mtaa) {user?.default_delivery_latitude ? '(Optional)' : ''}
+                                                </label>
+                                                <div className="relative">
+                                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                                                    <select
+                                                        value={selectedEstate}
+                                                        onChange={(e) => setSelectedEstate(e.target.value)}
+                                                        className="w-full h-12 pl-10 pr-4 bg-white rounded-xl border border-neutral-200 outline-none text-xs font-black text-green-950 cursor-pointer"
+                                                    >
+                                                        <option value="">-- Choose Neighborhood --</option>
+                                                        {ESTATES.map(estate => (
+                                                            <option key={estate.name} value={estate.name}>
+                                                                {estate.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-text-muted pl-1">
+                                                    Detailed Delivery Address (Maelezo ya Anwani)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={deliveryAddress}
+                                                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                                                    placeholder="House No, Apartment/Street (e.g. Rm 12B, Apex Court)"
+                                                    className="w-full h-12 px-4 bg-white rounded-xl border border-neutral-200 outline-none text-xs font-bold text-green-950 placeholder-neutral-400"
+                                                />
+                                            </div>
+
+                                            {(selectedEstate || (deliveryLat && deliveryLng)) && (
+                                                <div className="p-3 bg-brand-50/50 rounded-xl border border-brand-100/50 text-[10px] text-brand-900 font-bold uppercase tracking-wider flex justify-between items-center">
+                                                    <span>Calculated Shipping Fee:</span>
+                                                    <span className="font-mono text-brand-600 font-black">KES {calculatedDeliveryFee.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
 
                             <div className="space-y-3 pt-4 border-t border-neutral-100">
@@ -219,12 +415,23 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                                         {activeFee > 0 ? `KES ${activeFee.toFixed(2)}` : 'FREE'}
                                     </span>
                                 </div>
+                                {deliveryOption && (
+                                    <div className="flex justify-between items-center text-xs text-text-muted uppercase font-black tracking-widest px-2">
+                                        <div className="flex items-center gap-1">
+                                            <span>Shipping Fee</span>
+                                            <Truck size={10} />
+                                        </div>
+                                        <span className="font-mono">
+                                            KES {calculatedDeliveryFee.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center px-2 pt-2">
                                     <span className="text-lg font-black text-green-950 uppercase tracking-widest">Total</span>
                                     <span className="text-2xl font-black text-brand-600 font-mono">KES {totalWithFee.toFixed(2)}</span>
                                 </div>
-                                
-                                <button 
+
+                                <button
                                     onClick={() => setStep('payment')}
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-between px-8 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 group mt-4"
                                 >
@@ -237,7 +444,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
 
                     {/* STEP 2: PAYMENT */}
                     {step === 'payment' && (
-                        <motion.div 
+                        <motion.div
                             key="payment"
                             initial={{ x: 20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
@@ -255,7 +462,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                             <div className="space-y-4">
                                 <div className="relative">
                                     <Smartphone className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
-                                    <input 
+                                    <input
                                         type="tel"
                                         value={phoneNumber}
                                         onChange={(e) => setPhoneNumber(e.target.value)}
@@ -279,7 +486,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                             </div>
 
                             <div className="flex flex-col gap-3 pt-4">
-                                <button 
+                                <button
                                     onClick={handleConfirmPayment}
                                     disabled={!phoneNumber || isPolling}
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100"
@@ -287,7 +494,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                                     {isPolling ? <Loader2 className="animate-spin" /> : <Smartphone size={20} />}
                                     Pay KES {totalWithFee.toFixed(2)}
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => setStep('cart')}
                                     className="w-full py-4 text-[10px] font-black text-text-muted uppercase tracking-widest"
                                 >
@@ -299,7 +506,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
 
                     {/* STEP 3: PROCESSING */}
                     {step === 'processing' && (
-                        <motion.div 
+                        <motion.div
                             key="processing"
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -325,7 +532,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
 
                     {/* STEP 4: SUCCESS */}
                     {step === 'success' && (
-                        <motion.div 
+                        <motion.div
                             key="success"
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -338,7 +545,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                                 <h3 className="text-3xl font-black text-green-950">Success!</h3>
                                 <p className="text-sm text-text-secondary font-medium">Your marketplace items have been reserved.</p>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 gap-2 max-h-[20vh] overflow-y-auto no-scrollbar">
                                 {reservations.map(res => (
                                     <div key={res.id} className="bg-neutral-50 p-4 rounded-2xl flex justify-between items-center border border-neutral-100">
@@ -354,7 +561,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                             </div>
 
                             <div className="flex flex-col gap-3 pt-4">
-                                <button 
+                                <button
                                     onClick={() => {
                                         onClose();
                                         router.push('/reservations');
@@ -363,7 +570,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                                 >
                                     View My Reservations
                                 </button>
-                                <button 
+                                <button
                                     onClick={onClose}
                                     className="w-full py-4 text-[10px] font-black text-text-muted uppercase tracking-widest"
                                 >

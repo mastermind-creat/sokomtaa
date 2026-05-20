@@ -8,6 +8,10 @@ export interface User {
     phone_verified: boolean;
     avatar_url?: string;
     national_id?: string;
+    default_delivery_address?: string;
+    default_delivery_image_url?: string;
+    default_delivery_latitude?: number | string;
+    default_delivery_longitude?: number | string;
     trader?: Trader;
 }
 

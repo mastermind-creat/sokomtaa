@@ -26,6 +26,10 @@ class User extends Authenticatable
         'phone_verified_at',
         'avatar_url',
         'is_active',
+        'default_delivery_address',
+        'default_delivery_image_url',
+        'default_delivery_latitude',
+        'default_delivery_longitude',
     ];
 
     protected $hidden = [

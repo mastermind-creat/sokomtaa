@@ -31,6 +31,7 @@ import { User, ApiResponse } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import Image from 'next/image';
 import { useTranslation } from '@/hooks/useTranslation';
+import DeliveryDefaultsCard from '@/components/resident/DeliveryDefaultsCard';
 
 export default function ResidentProfilePage() {
     const router = useRouter();
@@ -151,7 +152,13 @@ export default function ResidentProfilePage() {
                             <div className="text-center lg:text-left space-y-3">
                                 <div className="flex flex-wrap justify-center lg:justify-start gap-2">
                                     <span className="px-3 py-1 bg-brand-500/20 backdrop-blur-md border border-brand-500/30 rounded-full text-[10px] font-black uppercase tracking-widest text-brand-300">
-                                        {user?.role === 'trader' ? 'Soko Mtaa Trader' : 'Resident Member'}
+                                        {user?.role === 'trader' 
+                                            ? 'Soko Mtaa Trader' 
+                                            : user?.role === 'delivery' 
+                                                ? 'Delivery Personnel' 
+                                                : user?.role === 'admin' 
+                                                    ? 'County Administrator' 
+                                                    : 'Resident Member'}
                                     </span>
                                     {user?.phone_verified ? (
                                         <span className="px-3 py-1 bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-300 flex items-center gap-1.5">
@@ -276,6 +283,8 @@ export default function ResidentProfilePage() {
                                 )}
                             </AnimatePresence>
                         </div>
+
+                        <DeliveryDefaultsCard user={user} />
 
                         {/* Order History Preview Card */}
                         <div className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-gray-100 shadow-brand-sm flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden group">

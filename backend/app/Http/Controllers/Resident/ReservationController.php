@@ -145,13 +145,22 @@ class ReservationController extends Controller
                             (float) $request->delivery_latitude,
                             (float) $request->delivery_longitude
                         );
-                        $deliveryFee = $this->deliveryService->calculateDeliveryFee($distance);
+                        $deliveryFee = $this->deliveryService->calculateDeliveryFee($distance, $subtotal);
                     } else {
-                        $deliveryFee = 100.00; // Base default fee
+                        // Base default fee if no coordinates, capped by subtotal
+                        $deliveryFee = $this->deliveryService->calculateDeliveryFee(3.0, $subtotal);
                     }
                 }
                 
                 $totalAmount = $subtotal + $currentServiceFee + $deliveryFee;
+
+                $riderFee = 0;
+                $systemDeliveryFee = 0;
+                if ($deliveryFee > 0) {
+                    $payouts = $this->deliveryService->calculatePayouts($deliveryFee);
+                    $riderFee = $payouts['riderShare'];
+                    $systemDeliveryFee = $payouts['platformCommission'];
+                }
 
                 $reservation = Reservation::create([
                     'reservation_code' => $code,
@@ -164,9 +173,12 @@ class ReservationController extends Controller
                     'delivery_option' => (bool) $request->delivery_option,
                     'delivery_status' => $request->delivery_option ? 'pending_assignment' : null,
                     'delivery_fee' => $deliveryFee,
+                    'rider_fee' => $riderFee,
+                    'system_delivery_fee' => $systemDeliveryFee,
                     'delivery_address' => $request->delivery_option ? $request->delivery_address : null,
                     'delivery_latitude' => $request->delivery_option ? $request->delivery_latitude : null,
                     'delivery_longitude' => $request->delivery_option ? $request->delivery_longitude : null,
+                    'delivery_image_url' => $request->delivery_option ? $user->default_delivery_image_url : null,
                     'total_amount' => $totalAmount,
                     'status' => 'pending',
                     'pickup_deadline' => now()->addHours(24),
@@ -267,6 +279,14 @@ class ReservationController extends Controller
             
             $totalAmount = $subtotal + $serviceFee + $deliveryFee;
 
+            $riderFee = 0;
+            $systemDeliveryFee = 0;
+            if ($deliveryFee > 0) {
+                $payouts = $this->deliveryService->calculatePayouts($deliveryFee);
+                $riderFee = $payouts['riderShare'];
+                $systemDeliveryFee = $payouts['platformCommission'];
+            }
+
             // 3. Create Reservation
             $reservation = Reservation::create([
                 'reservation_code' => $code,
@@ -279,9 +299,12 @@ class ReservationController extends Controller
                 'delivery_option' => (bool) $request->delivery_option,
                 'delivery_status' => $request->delivery_option ? 'pending_assignment' : null,
                 'delivery_fee' => $deliveryFee,
+                'rider_fee' => $riderFee,
+                'system_delivery_fee' => $systemDeliveryFee,
                 'delivery_address' => $request->delivery_option ? $request->delivery_address : null,
                 'delivery_latitude' => $request->delivery_option ? $request->delivery_latitude : null,
                 'delivery_longitude' => $request->delivery_option ? $request->delivery_longitude : null,
+                'delivery_image_url' => $request->delivery_option ? $user->default_delivery_image_url : null,
                 'total_amount' => $totalAmount,
                 'status' => 'pending',
                 'notes' => $request->notes,
