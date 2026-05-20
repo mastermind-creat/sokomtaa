@@ -147,8 +147,15 @@ export default function NearbyMarketsMap() {
             },
             (err) => {
                 setLocating(false);
-                setError('Location access denied. Enable location to find nearby markets.');
+                setError('Location access denied. Defaulting to city center.');
                 console.error(err);
+                
+                // Fallback to Nairobi city center so they can still see the market list
+                const nairobiCoords: [number, number] = [-1.2921, 36.8219];
+                setUserLocation(nairobiCoords);
+                setFlyTarget(nairobiCoords);
+                setFlyZoom(12);
+                setIsFallback(true);
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
         );
