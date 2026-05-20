@@ -195,12 +195,24 @@ export default function CartFlow({ onClose }: CartFlowProps) {
             }
 
             // 1. Create bulk reservations (Derives trader_id from each product on backend)
-            const response = await api.post<ApiResponse<Reservation[]>>('/reservations/bulk', {
+            const payload: any = {
                 items: items.map(item => ({
                     product_id: item.id,
                     quantity: item.cartQuantity
-                }))
-            });
+                })),
+            };
+
+            if (deliveryOption) {
+                if (!deliveryLat || !deliveryLng) {
+                    throw new Error('Please select an estate/location for delivery to calculate shipping fee.');
+                }
+                payload.delivery_option = true;
+                payload.delivery_address = deliveryAddress || (selectedEstate ? `${selectedEstate} Estate` : 'Address provided');
+                payload.delivery_latitude = deliveryLat;
+                payload.delivery_longitude = deliveryLng;
+            }
+
+            const response = await api.post<ApiResponse<Reservation[]>>('/reservations/bulk', payload);
 
             // The axios interceptor returns response.data, so response IS {success, data, message}
             const createdReservations = (response as any).data as Reservation[];
