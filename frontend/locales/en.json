@@ -84,7 +84,7 @@
     "leave_review": "Leave a Review"
   },
   "admin": {
-    "dashboard_title": "County Overview",
+    "dashboard_title": "Dashboard",
     "live_analytics": "Live System Analytics",
     "subtitle": "Real-time performance across all managed markets.",
     "export_report": "Export Report",

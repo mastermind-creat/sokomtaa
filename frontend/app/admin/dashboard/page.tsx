@@ -51,6 +51,9 @@ interface DashboardStats {
         pending: number;
         new_this_month: number;
     };
+    delivery?: {
+        pending: number;
+    };
     stalls: {
         total: number;
         occupied: number;
@@ -90,6 +93,11 @@ export default function AdminDashboard() {
             return res.data;
         }
     });
+
+    const pendingTradersCount = stats?.traders?.pending || 0;
+    const pendingRidersCount = stats?.delivery?.pending || 0;
+    const totalPendingKyc = pendingTradersCount + pendingRidersCount;
+    const kycHref = pendingTradersCount === 0 && pendingRidersCount > 0 ? '/admin/users' : '/admin/traders';
 
     // Fetch trends
     const { data: trends, isLoading: trendsLoading } = useQuery({
@@ -168,15 +176,15 @@ export default function AdminDashboard() {
                         description={`${stats?.stalls.occupied} / ${stats?.stalls.total} units filled`}
                     />
                     <div className="hidden xl:block">
-                        <Link href="/admin/traders">
+                        <Link href={kycHref}>
                             <StatCard
                                 title="Pending KYC"
-                                value={stats?.traders.pending?.toString() || '0'}
+                                value={totalPendingKyc.toString()}
                                 icon={ShieldCheck}
                                 color="bg-rose-600"
                                 variant="compact"
-                                trend={{ value: stats?.traders.pending || 0, isPositive: true, label: 'Awaiting Review' }}
-                                description="Merchant Verifications"
+                                trend={{ value: totalPendingKyc, isPositive: true, label: 'Awaiting Review' }}
+                                description={`${pendingTradersCount} Traders • ${pendingRidersCount} Riders`}
                             />
                         </Link>
                     </div>

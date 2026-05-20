@@ -10,6 +10,7 @@ use App\Models\Complaint;
 use App\Models\StallApplication;
 use App\Models\Reservation;
 use App\Models\Payment;
+use App\Models\DeliveryProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -45,6 +46,9 @@ class AdminDashboardController extends Controller
         
         $newTradersThisMonth = Trader::where('created_at', '>=', Carbon::now()->startOfMonth())->count();
         
+        // Delivery
+        $pendingRiders = DeliveryProfile::where('verification_status', 'pending')->count();
+        
         // Stalls
         $totalStalls = Stall::count();
         $occupiedStalls = Stall::where('status', 'occupied')->count();
@@ -70,6 +74,9 @@ class AdminDashboardController extends Controller
                     'pending' => $pendingTraders,
                     'new_this_month' => $newTradersThisMonth
                 ],
+                'delivery' => [
+                    'pending' => $pendingRiders
+                ],
                 'stalls' => [
                     'total' => $totalStalls,
                     'occupied' => $occupiedStalls,
@@ -94,6 +101,7 @@ class AdminDashboardController extends Controller
                 'applications' => StallApplication::where('status', 'pending')->count(),
                 'complaints' => Complaint::where('status', 'open')->count(),
                 'traders_pending' => Trader::where('verification_status', 'pending')->count(),
+                'riders_pending' => DeliveryProfile::where('verification_status', 'pending')->count(),
                 'fees_overdue' => MarketFee::where('status', 'unpaid')
                     ->where('due_date', '<', Carbon::now())
                     ->count()

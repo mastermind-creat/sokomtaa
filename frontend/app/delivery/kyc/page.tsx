@@ -12,6 +12,9 @@ import { cn } from '@/lib/utils';
 type UploadStep = 'id_document' | 'license_image' | 'vehicle_details' | 'review';
 
 interface KycForm {
+    id_front_url: string;
+    id_back_url: string;
+    face_verification_url: string;
     id_document_url: string;
     license_image_url: string;
     vehicle_type: string;
@@ -26,6 +29,9 @@ export default function RiderKycPage() {
     const queryClient = useQueryClient();
     const [step, setStep] = useState<UploadStep>('id_document');
     const [form, setForm] = useState<KycForm>({
+        id_front_url: '',
+        id_back_url: '',
+        face_verification_url: '',
         id_document_url: '',
         license_image_url: '',
         vehicle_type: 'motorcycle',
@@ -58,6 +64,9 @@ export default function RiderKycPage() {
                 vehicle_type: profile.vehicle_type || 'motorcycle',
                 license_plate: profile.license_plate || '',
                 license_number: profile.license_number || '',
+                id_front_url: profile.id_front_url || '',
+                id_back_url: profile.id_back_url || '',
+                face_verification_url: profile.face_verification_url || '',
                 id_document_url: profile.id_document_url || '',
                 license_image_url: profile.license_image_url || '',
                 custom_vehicle_type: isStandard ? '' : (profile.vehicle_type || ''),
@@ -113,7 +122,7 @@ export default function RiderKycPage() {
         }
     };
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'id_document_url' | 'license_image_url') => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'id_front_url' | 'id_back_url' | 'face_verification_url' | 'id_document_url' | 'license_image_url') => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.size > 5 * 1024 * 1024) {
@@ -142,17 +151,17 @@ export default function RiderKycPage() {
         },
     });
 
-    const canSubmit = !!form.id_document_url;
+    const canSubmit = !!form.id_front_url && !!form.id_back_url && !!form.face_verification_url;
 
     const steps = [
-        { key: 'id_document', label: 'National ID', icon: FileText },
+        { key: 'id_document', label: 'National ID & Selfie', icon: FileText },
         { key: 'license_image', label: 'Licence', icon: Car },
         { key: 'vehicle_details', label: 'Vehicle', icon: Car },
         { key: 'review', label: 'Submit', icon: ShieldCheck },
     ];
     const stepIndex = steps.findIndex(s => s.key === step);
 
-    const UploadBox = ({ field, label, hint }: { field: 'id_document_url' | 'license_image_url'; label: string; hint: string }) => {
+    const UploadBox = ({ field, label, hint }: { field: 'id_front_url' | 'id_back_url' | 'face_verification_url' | 'id_document_url' | 'license_image_url'; label: string; hint: string }) => {
         const inputRef = useRef<HTMLInputElement>(null);
         const hasFile = !!form[field];
         const isUploading = uploadingField === field;
@@ -231,8 +240,8 @@ export default function RiderKycPage() {
                                 <div className={cn(
                                     'w-9 h-9 rounded-xl flex items-center justify-center',
                                     i < stepIndex ? 'bg-green-600 text-white' :
-                                    i === stepIndex ? 'bg-gray-950 text-white' :
-                                    'bg-gray-100 text-gray-400'
+                                        i === stepIndex ? 'bg-gray-950 text-white' :
+                                            'bg-gray-100 text-gray-400'
                                 )}>
                                     {i < stepIndex ? <CheckCircle2 size={16} /> : <s.icon size={16} />}
                                 </div>
@@ -251,7 +260,7 @@ export default function RiderKycPage() {
                 <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
                     <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
                     <p className="text-[10px] font-bold text-blue-700 leading-relaxed">
-                        All documents are securely stored and only used for identity verification by county administrators. Your data is protected.
+                        All documents are securely stored and only used for identity verification by system administrators. Your data is protected.
                     </p>
                 </div>
             </div>
@@ -262,17 +271,31 @@ export default function RiderKycPage() {
                 {step === 'id_document' && (
                     <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8 space-y-6">
                         <div>
-                            <h2 className="text-lg font-black text-green-950 uppercase tracking-tight mb-1">National ID</h2>
-                            <p className="text-xs font-bold text-text-muted">Upload a clear photo of your Kenyan National ID (both sides)</p>
+                            <h2 className="text-lg font-black text-green-950 uppercase tracking-tight mb-1">National ID & Selfie</h2>
+                            <p className="text-xs font-bold text-text-muted">Upload clear photos of both sides of your National ID and a face selfie.</p>
                         </div>
-                        <UploadBox
-                            field="id_document_url"
-                            label="Tap to upload National ID"
-                            hint="Clear photo of front & back. JPG, PNG up to 5MB."
-                        />
+                        <div className="space-y-6">
+                            <UploadBox
+                                field="id_front_url"
+                                label="Upload ID Front Side"
+                                hint="Clear photo of the front of your National ID. JPG, PNG up to 5MB."
+                            />
+
+                            <UploadBox
+                                field="id_back_url"
+                                label="Upload ID Back Side"
+                                hint="Clear photo of the back of your National ID. JPG, PNG up to 5MB."
+                            />
+
+                            <UploadBox
+                                field="face_verification_url"
+                                label="Upload Face Selfie"
+                                hint="A clear close-up photo of your face for identity verification. JPG, PNG up to 5MB."
+                            />
+                        </div>
                         <button
                             onClick={() => setStep('license_image')}
-                            disabled={!form.id_document_url}
+                            disabled={!form.id_front_url || !form.id_back_url || !form.face_verification_url}
                             className="w-full h-14 bg-gray-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest disabled:opacity-30 active:scale-95 transition-all"
                         >
                             Continue →
@@ -396,8 +419,22 @@ export default function RiderKycPage() {
 
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                                    <span className="text-xs font-black text-text-muted uppercase tracking-widest">National ID</span>
-                                    {form.id_document_url
+                                    <span className="text-xs font-black text-text-muted uppercase tracking-widest">ID Front Side</span>
+                                    {form.id_front_url
+                                        ? <CheckCircle2 size={16} className="text-green-600" />
+                                        : <span className="text-[9px] text-red-500 font-black uppercase">Missing</span>
+                                    }
+                                </div>
+                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                                    <span className="text-xs font-black text-text-muted uppercase tracking-widest">ID Back Side</span>
+                                    {form.id_back_url
+                                        ? <CheckCircle2 size={16} className="text-green-600" />
+                                        : <span className="text-[9px] text-red-500 font-black uppercase">Missing</span>
+                                    }
+                                </div>
+                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                                    <span className="text-xs font-black text-text-muted uppercase tracking-widest">Face Selfie</span>
+                                    {form.face_verification_url
                                         ? <CheckCircle2 size={16} className="text-green-600" />
                                         : <span className="text-[9px] text-red-500 font-black uppercase">Missing</span>
                                     }

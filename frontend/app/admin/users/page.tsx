@@ -31,6 +31,7 @@ export default function AdminUsersPage() {
     const [rejectRider, setRejectRider] = useState<any>(null);
     const [rejectReason, setRejectReason] = useState('');
     const [riderStatusFilter, setRiderStatusFilter] = useState('all');
+    const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
     const queryClient = useQueryClient();
 
     React.useEffect(() => { setPageTitle('Community Registry'); }, [setPageTitle]);
@@ -287,24 +288,73 @@ export default function AdminUsersPage() {
                                             </div>
 
                                             {/* Document Previews */}
-                                            {(r.id_document_url || r.license_image_url) && (
-                                                <div className="grid grid-cols-2 gap-3 mb-5">
-                                                    {r.id_document_url && (
-                                                        <a href={r.id_document_url} target="_blank" rel="noreferrer"
-                                                            className="h-24 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex items-center justify-center group">
-                                                            <img src={r.id_document_url} alt="National ID" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                                        </a>
-                                                    )}
-                                                    {r.license_image_url && (
-                                                        <a href={r.license_image_url} target="_blank" rel="noreferrer"
-                                                            className="h-24 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex items-center justify-center group">
-                                                            <img src={r.license_image_url} alt="Licence" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                                        </a>
-                                                    )}
+                                            {(r.id_front_url || r.id_back_url || r.face_verification_url || r.id_document_url || r.license_image_url) ? (
+                                                <div className="space-y-2 mb-5">
+                                                    <span className="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-1">Uploaded KYC Documents (Click to Preview)</span>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                        {r.id_front_url && (
+                                                            <div className="flex flex-col gap-1">
+                                                                <button type="button" onClick={() => setPreviewImage({ url: r.id_front_url, title: `${r.name} - ID Front` })}
+                                                                    className="h-28 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex items-center justify-center group relative shadow-sm hover:border-brand-300 transition-colors">
+                                                                    <img src={r.id_front_url} alt="ID Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-black uppercase tracking-widest gap-1">
+                                                                        <Eye size={12} /> Preview
+                                                                    </div>
+                                                                </button>
+                                                                <span className="text-[8px] font-black text-text-muted text-center uppercase tracking-wider">ID Front</span>
+                                                            </div>
+                                                        )}
+                                                        {r.id_back_url && (
+                                                            <div className="flex flex-col gap-1">
+                                                                <button type="button" onClick={() => setPreviewImage({ url: r.id_back_url, title: `${r.name} - ID Back` })}
+                                                                    className="h-28 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex items-center justify-center group relative shadow-sm hover:border-brand-300 transition-colors">
+                                                                    <img src={r.id_back_url} alt="ID Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-black uppercase tracking-widest gap-1">
+                                                                        <Eye size={12} /> Preview
+                                                                    </div>
+                                                                </button>
+                                                                <span className="text-[8px] font-black text-text-muted text-center uppercase tracking-wider">ID Back</span>
+                                                            </div>
+                                                        )}
+                                                        {r.face_verification_url && (
+                                                            <div className="flex flex-col gap-1">
+                                                                <button type="button" onClick={() => setPreviewImage({ url: r.face_verification_url, title: `${r.name} - Face Verification` })}
+                                                                    className="h-28 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex items-center justify-center group relative shadow-sm hover:border-brand-300 transition-colors">
+                                                                    <img src={r.face_verification_url} alt="Face Verification" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-black uppercase tracking-widest gap-1">
+                                                                        <Eye size={12} /> Preview
+                                                                    </div>
+                                                                </button>
+                                                                <span className="text-[8px] font-black text-text-muted text-center uppercase tracking-wider">Selfie</span>
+                                                            </div>
+                                                        )}
+                                                        {!r.id_front_url && r.id_document_url && (
+                                                            <div className="flex flex-col gap-1">
+                                                                <button type="button" onClick={() => setPreviewImage({ url: r.id_document_url, title: `${r.name} - National ID` })}
+                                                                    className="h-28 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex items-center justify-center group relative shadow-sm hover:border-brand-300 transition-colors">
+                                                                    <img src={r.id_document_url} alt="National ID" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-black uppercase tracking-widest gap-1">
+                                                                        <Eye size={12} /> Preview
+                                                                    </div>
+                                                                </button>
+                                                                <span className="text-[8px] font-black text-text-muted text-center uppercase tracking-wider">National ID</span>
+                                                            </div>
+                                                        )}
+                                                        {r.license_image_url && (
+                                                            <div className="flex flex-col gap-1">
+                                                                <button type="button" onClick={() => setPreviewImage({ url: r.license_image_url, title: `${r.name} - Driving Licence` })}
+                                                                    className="h-28 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex items-center justify-center group relative shadow-sm hover:border-brand-300 transition-colors">
+                                                                    <img src={r.license_image_url} alt="Licence" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-black uppercase tracking-widest gap-1">
+                                                                        <Eye size={12} /> Preview
+                                                                    </div>
+                                                                </button>
+                                                                <span className="text-[8px] font-black text-text-muted text-center uppercase tracking-wider">Licence</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            )}
-
-                                            {!r.id_document_url && !r.license_image_url && (
+                                            ) : (
                                                 <div className="mb-5 p-4 bg-gray-50 rounded-2xl flex items-center gap-3 border border-dashed border-gray-200">
                                                     <FileText size={16} className="text-text-muted shrink-0" />
                                                     <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">No documents uploaded yet</p>
@@ -406,6 +456,25 @@ export default function AdminUsersPage() {
                                 className="h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white gap-2">
                                 {rejectMutation.isPending ? 'Rejecting…' : 'Confirm Reject'}
                             </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── Document Lightbox Modal ── */}
+            <Dialog open={!!previewImage} onOpenChange={o => !o && setPreviewImage(null)}>
+                <DialogContent className="sm:max-w-3xl bg-white p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
+                    <DialogHeader className="p-8 pb-4">
+                        <DialogTitle className="text-xl font-black text-green-950 uppercase tracking-tight">
+                            {previewImage?.title}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="p-8 pt-0 flex flex-col items-center">
+                        <div className="w-full max-h-[60vh] rounded-[2rem] overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center">
+                            <img src={previewImage?.url} alt={previewImage?.title} className="w-full max-h-[60vh] object-contain" />
+                        </div>
+                        <div className="mt-6 flex justify-end w-full">
+                            <Button onClick={() => setPreviewImage(null)} className="h-12 rounded-2xl bg-green-950 text-white font-black text-xs uppercase tracking-widest px-8">Close Preview</Button>
                         </div>
                     </div>
                 </DialogContent>

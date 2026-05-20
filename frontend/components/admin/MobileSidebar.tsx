@@ -62,6 +62,7 @@ interface MenuCounts {
     complaints: number;
     traders_pending: number;
     fees_overdue: number;
+    riders_pending: number;
 }
 
 interface MenuItem {
@@ -128,7 +129,7 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             items: [
                 { icon: FileText, label: 'Applications', path: '/admin/applications', badge: counts?.applications },
                 { icon: Users, label: 'Traders', path: '/admin/traders', badge: counts?.traders_pending },
-                { icon: UsersRound, label: 'User Management', path: '/admin/users' },
+                { icon: UsersRound, label: 'User Management', path: '/admin/users', badge: counts?.riders_pending },
             ]
         },
         {

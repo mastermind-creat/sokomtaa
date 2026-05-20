@@ -303,11 +303,14 @@ class DeliveryController extends Controller
     public function submitKyc(Request $request): JsonResponse
     {
         $request->validate([
-            'id_document_url'    => 'required|string|url',
-            'license_image_url'  => 'sometimes|nullable|string|url',
-            'vehicle_type'       => 'sometimes|string|max:50',
-            'license_plate'      => 'sometimes|nullable|string|max:20',
-            'license_number'     => 'sometimes|nullable|string|max:50',
+            'id_front_url'           => 'required|string|url',
+            'id_back_url'            => 'required|string|url',
+            'face_verification_url'  => 'required|string|url',
+            'id_document_url'        => 'sometimes|nullable|string|url',
+            'license_image_url'      => 'sometimes|nullable|string|url',
+            'vehicle_type'           => 'sometimes|string|max:50',
+            'license_plate'          => 'sometimes|nullable|string|max:20',
+            'license_number'         => 'sometimes|nullable|string|max:50',
         ]);
 
         $user = Auth::user();
@@ -318,7 +321,10 @@ class DeliveryController extends Controller
         }
 
         $profile->update([
-            'id_document_url'    => $request->id_document_url,
+            'id_document_url'    => $request->id_document_url ?? $request->id_front_url,
+            'id_front_url'       => $request->id_front_url,
+            'id_back_url'        => $request->id_back_url,
+            'face_verification_url' => $request->face_verification_url,
             'license_image_url'  => $request->license_image_url,
             'vehicle_type'       => $request->vehicle_type ?? $profile->vehicle_type,
             'license_plate'      => $request->license_plate ?? $profile->license_plate,

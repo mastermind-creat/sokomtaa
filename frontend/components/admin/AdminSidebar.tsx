@@ -62,6 +62,7 @@ interface MenuCounts {
     complaints: number;
     traders_pending: number;
     fees_overdue: number;
+    riders_pending: number;
 }
 
 interface MenuItem {
@@ -145,7 +146,7 @@ export default function AdminSidebar() {
             items: [
                 { icon: FileText, label: 'Applications', path: '/admin/applications', badge: counts?.applications || 0 },
                 { icon: Users, label: t('Traders'), path: '/admin/traders', badge: counts?.traders_pending || 0 },
-                { icon: UsersRound, label: 'User Management', path: '/admin/users' },
+                { icon: UsersRound, label: 'User Management', path: '/admin/users', badge: counts?.riders_pending || 0 },
             ]
         },
         {
