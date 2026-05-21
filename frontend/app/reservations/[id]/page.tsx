@@ -209,9 +209,9 @@ export default function ReservationPickupPage() {
                         </div>
 
                         {/* Progress Stepper */}
-                        <div className="relative pl-8 space-y-8 py-2">
+                        <div className="relative space-y-8 py-2">
                             {/* Vertical Line */}
-                            <div className="absolute left-[15px] top-4 bottom-4 w-0.5 bg-neutral-100">
+                            <div className="absolute left-[15px] top-4 bottom-4 w-0.5 bg-neutral-100 z-0">
                                 <div 
                                     className="w-full bg-brand-600 transition-all duration-500" 
                                     style={{ 
@@ -224,8 +224,8 @@ export default function ReservationPickupPage() {
                             </div>
 
                             {/* Step 1: Paid & Booked */}
-                            <div className="relative flex gap-4">
-                                <div className="absolute -left-[25px] w-8 h-8 rounded-full border-2 border-brand-500 bg-white flex items-center justify-center text-brand-600 shadow-sm z-10">
+                            <div className="relative flex gap-4 z-10">
+                                <div className="w-8 h-8 shrink-0 rounded-full border-2 border-brand-500 bg-white flex items-center justify-center text-brand-600 shadow-sm">
                                     <Check size={14} className="stroke-[3]" />
                                 </div>
                                 <div>
@@ -235,8 +235,8 @@ export default function ReservationPickupPage() {
                             </div>
 
                             {/* Step 2: Rider Assigned */}
-                            <div className="relative flex gap-4">
-                                <div className={`absolute -left-[25px] w-8 h-8 rounded-full border-2 bg-white flex items-center justify-center shadow-sm z-10 ${
+                            <div className="relative flex gap-4 z-10">
+                                <div className={`w-8 h-8 shrink-0 rounded-full border-2 bg-white flex items-center justify-center shadow-sm ${
                                     reservation.delivery_status && reservation.delivery_status !== 'pending_assignment'
                                         ? 'border-brand-500 text-brand-600'
                                         : 'border-neutral-200 text-neutral-300'
@@ -260,8 +260,8 @@ export default function ReservationPickupPage() {
                             </div>
 
                             {/* Step 3: Out for Delivery */}
-                            <div className="relative flex gap-4">
-                                <div className={`absolute -left-[25px] w-8 h-8 rounded-full border-2 bg-white flex items-center justify-center shadow-sm z-10 ${
+                            <div className="relative flex gap-4 z-10">
+                                <div className={`w-8 h-8 shrink-0 rounded-full border-2 bg-white flex items-center justify-center shadow-sm ${
                                     ['picked_up', 'in_transit', 'delivered'].includes(reservation.delivery_status || '')
                                         ? 'border-brand-500 text-brand-600'
                                         : 'border-neutral-200 text-neutral-300'
@@ -285,8 +285,8 @@ export default function ReservationPickupPage() {
                             </div>
 
                             {/* Step 4: Completed / Delivered */}
-                            <div className="relative flex gap-4">
-                                <div className={`absolute -left-[25px] w-8 h-8 rounded-full border-2 bg-white flex items-center justify-center shadow-sm z-10 ${
+                            <div className="relative flex gap-4 z-10">
+                                <div className={`w-8 h-8 shrink-0 rounded-full border-2 bg-white flex items-center justify-center shadow-sm ${
                                     reservation.delivery_status === 'delivered'
                                         ? 'border-brand-500 text-brand-600 bg-brand-50'
                                         : 'border-neutral-200 text-neutral-300'

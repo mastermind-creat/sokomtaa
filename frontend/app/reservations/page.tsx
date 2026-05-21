@@ -26,6 +26,7 @@ import DashboardLayout from '@/components/shared/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ApiResponse, Reservation } from '@/types';
 import Image from 'next/image';
+import ReceiptModal from '@/components/resident/ReceiptModal';
 
 type StatusFilter = 'all' | 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled';
 
@@ -39,32 +40,40 @@ export default function ResidentReservationsPage() {
         queryFn: () => api.get('/reservations', { params: { status: activeTab !== 'all' ? activeTab : undefined } }).then(res => res.data),
     });
 
-    const handleDownloadReceipt = async (id: number) => {
-        try {
-            const res = await api.post(`/reports/receipt/${id}`);
-            const { download_url } = res.data;
+    const [selectedReceipt, setSelectedReceipt] = useState<Reservation | null>(null);
 
-            // Force download using Blob
-            const fileRes = await fetch(download_url);
-            const blob = await fileRes.blob();
-            const url = window.URL.createObjectURL(blob);
-
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `Receipt_${id}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        } catch (error) {
-            console.error('Failed to download receipt:', error);
-            alert('Failed to generate receipt. Please try again.');
-        }
+    const handleViewReceipt = (res: Reservation) => {
+        setSelectedReceipt(res);
     };
 
     const reservations = reservationsData?.data || [];
 
     const filteredReservations = useMemo(() => {
-        let filtered = reservations;
+        let filtered = [...reservations];
+
+        // Sort by professional order: urgent status first, then by date (newest first)
+        const statusPriority: Record<string, number> = {
+            'ready': 1,
+            'paid': 2,
+            'pending': 3,
+            'completed': 4,
+            'cancelled': 5,
+            'expired': 6
+        };
+
+        filtered.sort((a, b) => {
+            const priorityA = statusPriority[a.status] || 99;
+            const priorityB = statusPriority[b.status] || 99;
+            
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+            
+            const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return timeB - timeA;
+        });
+
         if (searchQuery) {
             filtered = filtered.filter(r =>
                 r.reservation_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -225,12 +234,12 @@ export default function ResidentReservationsPage() {
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            handleDownloadReceipt(res.id);
+                                                            handleViewReceipt(res);
                                                         }}
                                                         className="w-5 h-5 bg-brand-50 text-brand-600 rounded-md flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all shadow-sm"
-                                                        title="Download Receipt"
+                                                        title="View Receipt"
                                                     >
-                                                        <Download size={10} />
+                                                        <QrCode size={10} />
                                                     </button>
                                                 )}
                                                 <p className="text-[8px] font-black text-green-950">KES {Math.round(typeof res.total_amount === 'number' ? res.total_amount : parseFloat(res.total_amount || '0'))}</p>
@@ -266,6 +275,15 @@ export default function ResidentReservationsPage() {
                     )}
                 </div>
             </div>
+            
+            <AnimatePresence>
+                {selectedReceipt && (
+                    <ReceiptModal 
+                        reservation={selectedReceipt} 
+                        onClose={() => setSelectedReceipt(null)} 
+                    />
+                )}
+            </AnimatePresence>
         </DashboardLayout>
     );
 }

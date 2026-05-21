@@ -73,7 +73,7 @@ export default function WatchlistPage() {
     };
 
     return (
-        <DashboardLayout title="Bidhaa Ninazofuata (Watchlist)">
+        <DashboardLayout title="My Watchlist">
             <div className="space-y-6 pb-20">
                 
                 {/* 1. Stats Counter */}
@@ -95,7 +95,7 @@ export default function WatchlistPage() {
                     {isLoading ? (
                         <div className="py-20 flex flex-col items-center gap-3">
                             <Loader2 className="animate-spin text-brand-600" size={32} />
-                            <p className="text-[10px] font-black text-brand-700 uppercase tracking-widest animate-pulse">Safisha Watchlist...</p>
+                            <p className="text-[10px] font-black text-brand-700 uppercase tracking-widest animate-pulse">Loading Watchlist...</p>
                         </div>
                     ) : watchlist.length > 0 ? (
                         watchlist.map((item) => (
@@ -169,16 +169,16 @@ export default function WatchlistPage() {
                                 <div className="absolute top-2 right-2 w-4 h-4 bg-brand-500 rounded-full animate-ping" />
                             </div>
                             <div className="space-y-2">
-                                <h3 className="text-xl font-black text-green-950">Huna bidhaa unazo fuata</h3>
+                                <h3 className="text-xl font-black text-green-950">Your Watchlist is Empty</h3>
                                 <p className="text-xs text-text-secondary font-medium px-16 leading-relaxed">
-                                    Bonyeza alama ya moyo kwenye bidhaa ili kupata taarifa zikiongezwa dukani au zikiwa punguzo.
+                                    Tap the heart icon on products to get notified when they restock or drop in price.
                                 </p>
                             </div>
                             <button 
                                 onClick={() => router.push('/resident')}
                                 className="px-10 py-5 bg-brand-600 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-brand-100 flex items-center gap-3 mx-auto"
                             >
-                                <ShoppingBag size={18} /> Gudua Bidhaa (Discover)
+                                <ShoppingBag size={18} /> Discover Products
                             </button>
                         </div>
                     )}
@@ -191,8 +191,8 @@ export default function WatchlistPage() {
                             <TrendingDown size={20} />
                             <span className="text-[10px] font-black uppercase tracking-widest">Price Peak Alert</span>
                         </div>
-                        <h4 className="text-lg font-black text-amber-900 leading-tight">Zucchini bei imeshuka Leo!</h4>
-                        <p className="text-[10px] font-bold text-amber-700/70 uppercase">Fika market ya Kolenyo sasa</p>
+                        <h4 className="text-lg font-black text-amber-900 leading-tight">Zucchini prices dropped today!</h4>
+                        <p className="text-[10px] font-bold text-amber-700/70 uppercase">Visit Kolenyo Market now</p>
                     </div>
                     <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center text-amber-500 border border-amber-100 animate-bounce">
                         <MapPin size={24} />

@@ -97,6 +97,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/bulk', [\App\Http\Controllers\Resident\ReservationController::class, 'bulkStore']);
         Route::get('/{reservation}', [\App\Http\Controllers\Resident\ReservationController::class, 'show']);
         Route::patch('/{id}/status', [\App\Http\Controllers\Resident\ReservationController::class, 'updateStatus']);
+        Route::post('/{reservation}/pay', [\App\Http\Controllers\Resident\ReservationController::class, 'pay']);
+        Route::get('/{reservation}/receipt', [\App\Http\Controllers\ReceiptController::class, 'download']);
+        Route::post('/{reservation}/review', [\App\Http\Controllers\Resident\ReviewController::class, 'store']);
         Route::get('/{reservation}/pickup-code', [\App\Http\Controllers\Resident\ReservationController::class, 'pickupCode']);
         Route::post('/{reservation}/cancel', [\App\Http\Controllers\Resident\ReservationController::class, 'cancel']);
     });
@@ -187,6 +190,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Trader\TraderReservationController::class, 'index']);
             Route::get('/stats', [\App\Http\Controllers\Trader\TraderReservationController::class, 'stats']);
             Route::get('/recent', [\App\Http\Controllers\Trader\TraderReservationController::class, 'recent']);
+            Route::get('/{reservation}/receipt', [\App\Http\Controllers\ReceiptController::class, 'download']);
+            Route::post('/{reservation}/ready', [\App\Http\Controllers\Trader\TraderReservationController::class, 'markAsReady']);
         });
 
         // Trader Reviews Received

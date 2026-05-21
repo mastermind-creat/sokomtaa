@@ -35,7 +35,8 @@
     "trader": "Trader",
     "market": "Market",
     "reserve": "Reserve",
-    "add_to_cart": "Add to Cart"
+    "add_to_cart": "Add to Cart",
+    "watchlist": "Watchlist"
   },
   "home": {
     "greeting": "Hello",

@@ -5,13 +5,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Package, Clock, CheckCircle2, ShoppingBag,
-    Phone, ChevronRight, AlertCircle, RefreshCw, Download
+    Phone, ChevronRight, AlertCircle, RefreshCw, Download, ScanFace
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useUIStore } from '@/store/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import Link from 'next/link';
+import ReceiptModal from '@/components/resident/ReceiptModal';
+import QRScannerModal from '@/components/trader/QRScannerModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -106,9 +108,12 @@ function OrderCard({ order, onMarkReady, onMarkComplete, isUpdating, onDownloadR
                     <span className="font-mono text-xs font-bold text-text-secondary tracking-widest">{order.reservation_code}</span>
                     {['paid', 'completed', 'ready'].includes(order.status) && (
                         <button
-                            onClick={() => onDownloadReceipt(order.id)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDownloadReceipt(order.id); // This will trigger View Receipt modal now
+                            }}
                             className="w-6 h-6 bg-brand-50 text-brand-600 rounded-lg flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all shadow-sm"
-                            title="Download Receipt"
+                            title="View Receipt"
                         >
                             <Download size={12} />
                         </button>
@@ -225,6 +230,9 @@ export default function TraderOrdersPage() {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<ReservationStatus | 'all'>('paid');
 
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [selectedReceipt, setSelectedReceipt] = useState<ReservationItem | null>(null);
+
     // Fetch orders
     const { data: ordersData, isLoading } = useQuery({
         queryKey: ['trader-orders', activeTab],
@@ -259,25 +267,19 @@ export default function TraderOrdersPage() {
 
     const orders: ReservationItem[] = Array.isArray(ordersData) ? ordersData : ((ordersData as { data?: ReservationItem[] })?.data ?? []);
 
-    const handleDownloadReceipt = async (id: number) => {
-        try {
-            const res = await api.post(`/reports/receipt/${id}`);
-            const { download_url } = res.data;
-            
-            // Force download using Blob
-            const fileRes = await fetch(download_url);
-            const blob = await fileRes.blob();
-            const url = window.URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `Receipt_${id}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        } catch (error) {
-            console.error('Failed to download receipt:', error);
-            alert('Failed to generate receipt. Please try again.');
+    const handleDownloadReceipt = (id: number) => {
+        const order = orders.find(o => o.id === id);
+        if (order) setSelectedReceipt(order);
+    };
+
+    const handleScanSuccess = (code: string) => {
+        setIsScannerOpen(false);
+        // Find order locally or fetch from server. For now, try locally:
+        const matched = orders.find(o => o.reservation_code === code);
+        if (matched) {
+            setSelectedReceipt(matched);
+        } else {
+            alert('Receipt scanned: ' + code + ' but reservation not found in current view. Please search it manually.');
         }
     };
 
@@ -286,7 +288,14 @@ export default function TraderOrdersPage() {
             {/* Page Header */}
             <div className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-10 -mx-4 md:-mx-8 -mt-6 mb-6 px-4 md:px-8 py-4">
                 <div className="max-w-3xl mx-auto">
-                    <div className="flex items-center justify-end mb-2">
+                    <div className="flex items-center justify-between mb-2">
+                        <button
+                            onClick={() => setIsScannerOpen(true)}
+                            className="px-4 py-2 rounded-xl bg-green-950 text-white hover:bg-green-900 transition-colors shadow-sm flex items-center gap-2 text-xs font-black uppercase tracking-widest"
+                        >
+                            <ScanFace className="w-4 h-4" />
+                            Scan Receipt
+                        </button>
                         <button
                             onClick={() => queryClient.invalidateQueries({ queryKey: ['trader-orders'] })}
                             className="p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200 shadow-sm"
@@ -373,7 +382,22 @@ export default function TraderOrdersPage() {
                         </div>
                     </AnimatePresence>
                 )}
-            </div>
+        </div>
+            
+            <AnimatePresence>
+                {selectedReceipt && (
+                    <ReceiptModal 
+                        reservation={selectedReceipt} 
+                        onClose={() => setSelectedReceipt(null)} 
+                    />
+                )}
+                {isScannerOpen && (
+                    <QRScannerModal 
+                        onClose={() => setIsScannerOpen(false)}
+                        onSuccess={handleScanSuccess}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 
