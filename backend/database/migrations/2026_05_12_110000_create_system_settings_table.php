@@ -44,6 +44,16 @@ return new class extends Migration
                 'description' => 'The minimum order amount required to apply the service fee.',
                 'created_at' => now(),
                 'updated_at' => now(),
+            ],
+            [
+                'key' => 'delivery_rider_fee_percentage',
+                'value' => '15.00',
+                'group' => 'fees',
+                'type' => 'decimal',
+                'label' => 'Delivery Rider Fee Percentage',
+                'description' => 'The percentage of the delivery fee that the platform takes as commission.',
+                'created_at' => now(),
+                'updated_at' => now(),
             ]
         ]);
     }

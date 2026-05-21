@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Trader;
 use App\Models\Complaint;
 use App\Models\MarketFee;
+use App\Models\DeliveryProfile;
+use App\Models\Reservation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
 
@@ -78,6 +80,57 @@ class AdminActivityController extends Controller
                 'time' => $fee->updated_at->diffForHumans(),
                 'raw_time' => $fee->updated_at,
                 'status' => 'completed',
+                'icon' => 'CheckCircle'
+            ]);
+        });
+
+        // 5. Recent Delivery Rider Registrations
+        DeliveryProfile::with('user')->whereNull('id_front_url')->latest()->take(5)->get()->each(function ($rider) use ($activities) {
+            $activities->push([
+                'id' => 'rider_reg_' . $rider->id,
+                'type' => 'rider_signup',
+                'title' => 'New Rider Registered',
+                'description' => "A new delivery rider ({$rider->vehicle_type}) has registered.",
+                'user' => $rider->user->name ?? 'Unknown',
+                'time' => $rider->created_at->diffForHumans(),
+                'raw_time' => $rider->created_at,
+                'status' => $rider->verification_status,
+                'icon' => 'UserPlus'
+            ]);
+        });
+
+        // 6. Recent Delivery Rider KYC Submissions
+        DeliveryProfile::with('user')
+            ->where('verification_status', 'pending')
+            ->whereNotNull('id_front_url')
+            ->latest('updated_at')
+            ->take(5)->get()->each(function ($rider) use ($activities) {
+            $activities->push([
+                'id' => 'rider_kyc_' . $rider->id,
+                'type' => 'rider_kyc_submitted',
+                'title' => 'Rider KYC Submitted',
+                'description' => "A delivery rider has submitted KYC documents for review.",
+                'user' => $rider->user->name ?? 'Unknown',
+                'time' => $rider->updated_at->diffForHumans(),
+                'raw_time' => $rider->updated_at,
+                'status' => 'pending_review',
+                'icon' => 'User'
+            ]);
+        });
+
+        // 7. Recent Marketplace Orders (Reservations)
+        Reservation::with(['resident', 'trader', 'product'])->latest()->take(5)->get()->each(function ($res) use ($activities) {
+            $productName = $res->product->name ?? 'an item';
+            $traderName = $res->trader->business_name ?? 'a trader';
+            $activities->push([
+                'id' => 'order_' . $res->id,
+                'type' => 'new_order',
+                'title' => 'New Marketplace Order',
+                'description' => "Ordered {$res->quantity}x {$productName} from {$traderName}.",
+                'user' => $res->resident->name ?? 'Resident',
+                'time' => $res->created_at->diffForHumans(),
+                'raw_time' => $res->created_at,
+                'status' => $res->status,
                 'icon' => 'CheckCircle'
             ]);
         });
