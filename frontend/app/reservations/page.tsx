@@ -64,11 +64,11 @@ export default function ResidentReservationsPage() {
         filtered.sort((a, b) => {
             const priorityA = statusPriority[a.status] || 99;
             const priorityB = statusPriority[b.status] || 99;
-            
+
             if (priorityA !== priorityB) {
                 return priorityA - priorityB;
             }
-            
+
             const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
             const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
             return timeB - timeA;
@@ -293,18 +293,18 @@ export default function ResidentReservationsPage() {
                                 onClick={() => router.push('/resident')}
                                 className="px-10 py-5 bg-brand-600 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-brand-100 flex items-center gap-3 mx-auto"
                             >
-                                <ShoppingBag size={18} /> Gundua Bidhaa (Discover)
+                                <ShoppingBag size={18} /> Discover Products
                             </button>
                         </div>
                     )}
                 </div>
             </div>
-            
+
             <AnimatePresence>
                 {selectedReceipt && (
-                    <ReceiptModal 
-                        reservation={selectedReceipt} 
-                        onClose={() => setSelectedReceipt(null)} 
+                    <ReceiptModal
+                        reservation={selectedReceipt}
+                        onClose={() => setSelectedReceipt(null)}
                     />
                 )}
             </AnimatePresence>

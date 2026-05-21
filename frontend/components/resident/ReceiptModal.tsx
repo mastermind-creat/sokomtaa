@@ -6,10 +6,16 @@ import api from '@/lib/api';
 interface ReceiptModalProps {
     reservation: any;
     onClose: () => void;
+    userRole?: 'resident' | 'trader' | 'admin';
 }
 
-export default function ReceiptModal({ reservation, onClose }: ReceiptModalProps) {
+export default function ReceiptModal({ reservation, onClose, userRole = 'resident' }: ReceiptModalProps) {
     const [isDownloading, setIsDownloading] = useState(false);
+    
+    const isTrader = userRole === 'trader';
+    const displayTotal = isTrader 
+        ? (reservation.trader_amount ?? (reservation.unit_price * reservation.quantity))
+        : reservation.total_amount;
 
     const handleDownload = async () => {
         try {
@@ -62,7 +68,7 @@ export default function ReceiptModal({ reservation, onClose }: ReceiptModalProps
                         <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
                             <CheckCircle2 className="w-6 h-6" />
                         </div>
-                        <h2 className="text-2xl font-black text-gray-900 mb-1">KES {Number(reservation.total_amount).toLocaleString()}</h2>
+                        <h2 className="text-2xl font-black text-gray-900 mb-1">KES {Number(displayTotal).toLocaleString()}</h2>
                         <p className="text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wider">{reservation.status}</p>
 
                         <div className="mt-8 p-4 bg-white border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center">
@@ -97,7 +103,7 @@ export default function ReceiptModal({ reservation, onClose }: ReceiptModalProps
                             </div>
                         </div>
                         
-                        {reservation.delivery_option ? (
+                        {!isTrader && reservation.delivery_option ? (
                             <div className="flex justify-between items-end border-b border-gray-100 pb-3">
                                 <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">Delivery Fee</div>
                                 <div className="text-sm font-bold text-gray-900 text-right">KES {Number(reservation.delivery_fee || 0).toLocaleString()}</div>

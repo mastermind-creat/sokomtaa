@@ -389,6 +389,7 @@ export default function TraderOrdersPage() {
                     <ReceiptModal 
                         reservation={selectedReceipt} 
                         onClose={() => setSelectedReceipt(null)} 
+                        userRole="trader"
                     />
                 )}
                 {isScannerOpen && (

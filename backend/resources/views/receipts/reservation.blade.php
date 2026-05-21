@@ -218,24 +218,31 @@
         <!-- Summary -->
         <div class="clearfix">
             <div class="summary-box">
-                <div class="summary-row clearfix">
-                    <div class="col-left" style="color: #6b7280;">Subtotal</div>
-                    <div class="col-right">KES {{ number_format($reservation->unit_price * $reservation->quantity, 2) }}</div>
-                </div>
-                <div class="summary-row clearfix">
-                    <div class="col-left" style="color: #6b7280;">Service Fee</div>
-                    <div class="col-right">KES {{ number_format($reservation->service_fee, 2) }}</div>
-                </div>
-                @if($reservation->delivery_option)
-                <div class="summary-row clearfix">
-                    <div class="col-left" style="color: #6b7280;">Delivery Fee</div>
-                    <div class="col-right">KES {{ number_format($reservation->delivery_fee, 2) }}</div>
-                </div>
+                @if($user->role !== 'trader')
+                    <div class="summary-row clearfix">
+                        <div class="col-left" style="color: #6b7280;">Subtotal</div>
+                        <div class="col-right">KES {{ number_format($reservation->unit_price * $reservation->quantity, 2) }}</div>
+                    </div>
+                    <div class="summary-row clearfix">
+                        <div class="col-left" style="color: #6b7280;">Service Fee</div>
+                        <div class="col-right">KES {{ number_format($reservation->service_fee, 2) }}</div>
+                    </div>
+                    @if($reservation->delivery_option)
+                    <div class="summary-row clearfix">
+                        <div class="col-left" style="color: #6b7280;">Delivery Fee</div>
+                        <div class="col-right">KES {{ number_format($reservation->delivery_fee, 2) }}</div>
+                    </div>
+                    @endif
+                    <div class="summary-row summary-total clearfix">
+                        <div class="col-left">Total Paid</div>
+                        <div class="col-right text-green">KES {{ number_format($reservation->total_amount, 2) }}</div>
+                    </div>
+                @else
+                    <div class="summary-row summary-total clearfix">
+                        <div class="col-left">Trader Earning</div>
+                        <div class="col-right text-green">KES {{ number_format($reservation->unit_price * $reservation->quantity, 2) }}</div>
+                    </div>
                 @endif
-                <div class="summary-row summary-total clearfix">
-                    <div class="col-left">Total Paid</div>
-                    <div class="col-right text-green">KES {{ number_format($reservation->total_amount, 2) }}</div>
-                </div>
             </div>
         </div>
 
