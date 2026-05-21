@@ -116,6 +116,20 @@ export default function ResidentReservationsPage() {
         }
     };
 
+    const groupedReservations = useMemo(() => {
+        const groups: { date: string, items: typeof filteredReservations }[] = [];
+        filteredReservations.forEach(res => {
+            const dateStr = new Date(res.created_at || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            const existingGroup = groups.find(g => g.date === dateStr);
+            if (existingGroup) {
+                existingGroup.items.push(res);
+            } else {
+                groups.push({ date: dateStr, items: [res] });
+            }
+        });
+        return groups;
+    }, [filteredReservations]);
+
     return (
         <DashboardLayout title="My Reservations">
             <div className="max-w-5xl mx-auto space-y-10 pb-32">
@@ -200,55 +214,65 @@ export default function ResidentReservationsPage() {
                             </div>
                             <p className="text-[10px] font-black text-brand-700 uppercase tracking-[0.4em] animate-pulse">Syncing with Market...</p>
                         </div>
-                    ) : filteredReservations.length > 0 ? (
-                        <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 md:gap-6">
-                            {filteredReservations.map((res, index) => (
-                                <motion.div
-                                    key={res.id}
-                                    initial={{ y: 20, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    className="bg-white p-2.5 rounded-2xl border border-gray-100 shadow-brand-sm group hover:shadow-lg transition-all cursor-pointer relative overflow-hidden flex flex-col gap-2"
-                                    onClick={() => router.push(`/reservations/${res.id}`)}
-                                >
-                                    <div className="relative">
-                                        <div className="w-full aspect-square bg-neutral-50 rounded-xl overflow-hidden border border-gray-50 relative shadow-inner">
-                                            {res.product?.image_url ? (
-                                                <Image src={res.product.image_url} alt={res.product?.name ?? 'Product'} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-neutral-200"><ShoppingBag size={20} /></div>
-                                            )}
-                                        </div>
-                                        <div className="absolute top-1.5 left-1.5">
-                                            <span className={`px-2 py-0.5 rounded-md text-[6px] font-black uppercase tracking-wider border shadow-sm ${getStatusStyles(res.status)}`}>
-                                                {getStatusLabel(res.status)}
-                                            </span>
-                                        </div>
+                    ) : groupedReservations.length > 0 ? (
+                        <div className="space-y-10">
+                            {groupedReservations.map(({ date, items }, groupIndex) => (
+                                <div key={date} className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="text-xs font-black text-text-muted uppercase tracking-widest">{date}</h3>
+                                        <div className="h-px bg-gray-100 flex-1" />
                                     </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                                        {items.map((res, index) => (
+                                            <motion.div
+                                                key={res.id}
+                                                initial={{ y: 20, opacity: 0 }}
+                                                animate={{ y: 0, opacity: 1 }}
+                                                transition={{ delay: index * 0.05 }}
+                                                className="bg-white p-2.5 rounded-2xl border border-gray-100 shadow-brand-sm group hover:shadow-lg transition-all cursor-pointer relative overflow-hidden flex flex-col gap-2"
+                                                onClick={() => router.push(`/reservations/${res.id}`)}
+                                            >
+                                                <div className="relative">
+                                                    <div className="w-full aspect-square bg-neutral-50 rounded-xl overflow-hidden border border-gray-50 relative shadow-inner">
+                                                        {res.product?.image_url ? (
+                                                            <Image src={res.product.image_url} alt={res.product?.name ?? 'Product'} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-neutral-200"><ShoppingBag size={20} /></div>
+                                                        )}
+                                                    </div>
+                                                    <div className="absolute top-1.5 left-1.5">
+                                                        <span className={`px-2 py-0.5 rounded-md text-[6px] font-black uppercase tracking-wider border shadow-sm ${getStatusStyles(res.status)}`}>
+                                                            {getStatusLabel(res.status)}
+                                                        </span>
+                                                    </div>
+                                                </div>
 
-                                    <div className="flex-1 min-w-0 space-y-0.5 px-0.5">
-                                        <div className="flex items-center justify-between gap-1">
-                                            <p className="text-[6px] font-mono font-black text-text-muted">#{res.reservation_code}</p>
-                                            <div className="flex items-center gap-1">
-                                                {['paid', 'completed', 'ready'].includes(res.status) && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleViewReceipt(res);
-                                                        }}
-                                                        className="w-5 h-5 bg-brand-50 text-brand-600 rounded-md flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all shadow-sm"
-                                                        title="View Receipt"
-                                                    >
-                                                        <QrCode size={10} />
-                                                    </button>
-                                                )}
-                                                <p className="text-[8px] font-black text-green-950">KES {Math.round(typeof res.total_amount === 'number' ? res.total_amount : parseFloat(res.total_amount || '0'))}</p>
-                                            </div>
-                                        </div>
-                                        <h4 className="font-black text-green-950 text-[9px] truncate group-hover:text-brand-700 transition-colors uppercase leading-tight">{res.product?.name}</h4>
-                                        <p className="text-[7px] font-bold text-text-secondary truncate">{res.trader?.business_name}</p>
+                                                <div className="flex-1 min-w-0 space-y-0.5 px-0.5">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <p className="text-[6px] font-mono font-black text-text-muted">#{res.reservation_code}</p>
+                                                        <div className="flex items-center gap-1">
+                                                            {['paid', 'completed', 'ready'].includes(res.status) && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleViewReceipt(res);
+                                                                    }}
+                                                                    className="w-5 h-5 bg-brand-50 text-brand-600 rounded-md flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all shadow-sm"
+                                                                    title="View Receipt"
+                                                                >
+                                                                    <QrCode size={10} />
+                                                                </button>
+                                                            )}
+                                                            <p className="text-[8px] font-black text-green-950">KES {Math.round(typeof res.total_amount === 'number' ? res.total_amount : parseFloat(res.total_amount || '0'))}</p>
+                                                        </div>
+                                                    </div>
+                                                    <h4 className="font-black text-green-950 text-[9px] truncate group-hover:text-brand-700 transition-colors uppercase leading-tight">{res.product?.name}</h4>
+                                                    <p className="text-[7px] font-bold text-text-secondary truncate">{res.trader?.business_name}</p>
+                                                </div>
+                                            </motion.div>
+                                        ))}
                                     </div>
-                                </motion.div>
+                                </div>
                             ))}
                         </div>
                     ) : (
