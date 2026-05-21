@@ -268,6 +268,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
             // KYC document submission
             Route::post('/kyc', [\App\Http\Controllers\Delivery\DeliveryController::class, 'submitKyc']);
             Route::get('/profile', [\App\Http\Controllers\Delivery\DeliveryController::class, 'profile']);
+            
+            // Wallet routes
+            Route::post('/wallet/withdraw', [\App\Http\Controllers\Delivery\WithdrawalController::class, 'requestWithdrawal']);
+            Route::get('/wallet/withdrawals', [\App\Http\Controllers\Delivery\WithdrawalController::class, 'history']);
         });
     });
 

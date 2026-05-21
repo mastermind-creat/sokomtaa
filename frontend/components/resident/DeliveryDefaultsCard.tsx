@@ -137,7 +137,7 @@ export default function DeliveryDefaultsCard({ user }: { user?: User }) {
                     
                     {imagePreview ? (
                         <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200">
-                            <Image src={imagePreview} alt="Delivery Location" fill className="object-cover" />
+                            <Image src={imagePreview} alt="Delivery Location" fill className="object-cover" unoptimized />
                             {isUpdating && (
                                 <button 
                                     onClick={() => {

@@ -10,7 +10,9 @@ import {
     Loader2,
     ShoppingBag,
     ClipboardList,
-    Shield
+    Shield,
+    ShieldCheck,
+    Wallet
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -78,6 +80,7 @@ export default function DeliveryMobileSidebar({ isOpen, onClose }: DeliveryMobil
 
     const menuItems: MenuItem[] = [
         { icon: Navigation, label: 'Delivery Deck', path: '/delivery/dashboard', badge: stats?.active_deliveries || null },
+        { icon: Wallet, label: 'Earnings Wallet', path: '/delivery/wallet', badge: null },
         { icon: ShoppingBag, label: 'Marketplace', path: '/resident', badge: null },
         { icon: ClipboardList, label: 'My Orders', path: '/reservations', badge: null },
         ...((kycStatus === 'not_submitted' || kycStatus === 'rejected')
@@ -138,7 +141,12 @@ export default function DeliveryMobileSidebar({ isOpen, onClose }: DeliveryMobil
                                     {user?.name ? user.name[0] : 'R'}
                                 </div>
                                 <div className="min-w-0">
-                                    <h4 className="text-sm font-black text-green-950 truncate uppercase leading-tight">{user?.name}</h4>
+                                    <div className="flex items-center gap-1.5">
+                                        <h4 className="text-sm font-black text-green-950 truncate uppercase leading-tight">{user?.name}</h4>
+                                        {kycStatus === 'verified' && (
+                                            <ShieldCheck size={14} className="text-brand-600 shrink-0" />
+                                        )}
+                                    </div>
                                     <span className="inline-block text-[9px] font-black uppercase tracking-widest text-brand-600 mt-0.5">{riderTitle}</span>
                                 </div>
                             </div>

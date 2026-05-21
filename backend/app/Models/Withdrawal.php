@@ -9,6 +9,7 @@ class Withdrawal extends Model
 {
     protected $fillable = [
         'trader_id',
+        'user_id',
         'amount',
         'fee',
         'net_amount',
@@ -30,5 +31,10 @@ class Withdrawal extends Model
     public function trader(): BelongsTo
     {
         return $this->belongsTo(Trader::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

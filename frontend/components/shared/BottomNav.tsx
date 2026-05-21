@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, MapPin, User, LayoutDashboard, Ticket } from 'lucide-react';
+import { Search, MapPin, User, LayoutDashboard, Ticket, Wallet } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -46,6 +46,7 @@ export default function BottomNav() {
             label: "Deck", 
             path: '/delivery/dashboard'
         },
+        { icon: Wallet, label: 'Wallet', path: '/delivery/wallet' },
         { icon: User, label: t('common.profile'), path: '/profile' },
     ];
 

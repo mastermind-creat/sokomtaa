@@ -156,17 +156,31 @@ class WithdrawalController extends Controller
                 'completed_at'         => now(),
             ]);
 
-            // Notify trader
-            $trader = $withdrawal->trader;
-            if ($trader?->user) {
-                $this->notifications->send(
-                    $trader->user,
-                    'Withdrawal Successful 🎉',
-                    'KES ' . number_format($withdrawal->net_amount, 2) . ' has been sent to ' . $withdrawal->mpesa_number . '.',
-                    'withdrawal',
-                    ['withdrawal_id' => $withdrawal->id],
-                    true // also send SMS
-                );
+            // Notify user/trader
+            if ($withdrawal->trader_id) {
+                $trader = $withdrawal->trader;
+                if ($trader?->user) {
+                    $this->notifications->send(
+                        $trader->user,
+                        'Withdrawal Successful 🎉',
+                        'KES ' . number_format($withdrawal->net_amount, 2) . ' has been sent to ' . $withdrawal->mpesa_number . '.',
+                        'withdrawal',
+                        ['withdrawal_id' => $withdrawal->id],
+                        true // also send SMS
+                    );
+                }
+            } elseif ($withdrawal->user_id) {
+                $user = $withdrawal->user;
+                if ($user) {
+                    $this->notifications->send(
+                        $user,
+                        'Withdrawal Successful 🎉',
+                        'KES ' . number_format($withdrawal->net_amount, 2) . ' has been sent to ' . $withdrawal->mpesa_number . '.',
+                        'withdrawal',
+                        ['withdrawal_id' => $withdrawal->id],
+                        true
+                    );
+                }
             }
         } else {
             // Failed — refund wallet
@@ -175,20 +189,36 @@ class WithdrawalController extends Controller
                 'failure_reason' => $result['ResultDesc'] ?? 'M-Pesa transfer failed.',
             ]);
 
-            // Refund
-            $withdrawal->trader->wallet?->increment('balance', $withdrawal->amount);
-
-            // Notify trader
-            $trader = $withdrawal->trader;
-            if ($trader?->user) {
-                $this->notifications->send(
-                    $trader->user,
-                    'Withdrawal Failed',
-                    'Your withdrawal of KES ' . number_format($withdrawal->amount, 2) . ' failed. Your wallet has been refunded.',
-                    'withdrawal',
-                    ['withdrawal_id' => $withdrawal->id],
-                    false
-                );
+            if ($withdrawal->trader_id) {
+                // Refund trader
+                $withdrawal->trader->wallet?->increment('balance', $withdrawal->amount);
+                
+                $trader = $withdrawal->trader;
+                if ($trader?->user) {
+                    $this->notifications->send(
+                        $trader->user,
+                        'Withdrawal Failed',
+                        'Your withdrawal of KES ' . number_format($withdrawal->amount, 2) . ' failed. Your wallet has been refunded.',
+                        'withdrawal',
+                        ['withdrawal_id' => $withdrawal->id],
+                        false
+                    );
+                }
+            } elseif ($withdrawal->user_id) {
+                // Refund rider
+                $withdrawal->user->deliveryProfile?->increment('earnings_balance', $withdrawal->amount);
+                
+                $user = $withdrawal->user;
+                if ($user) {
+                    $this->notifications->send(
+                        $user,
+                        'Withdrawal Failed',
+                        'Your withdrawal of KES ' . number_format($withdrawal->amount, 2) . ' failed. Your wallet has been refunded.',
+                        'withdrawal',
+                        ['withdrawal_id' => $withdrawal->id],
+                        false
+                    );
+                }
             }
         }
 
