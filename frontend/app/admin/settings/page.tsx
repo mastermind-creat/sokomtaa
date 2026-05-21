@@ -49,8 +49,8 @@ export default function AdminSettingsPage() {
     const { data: settingsData, isLoading: settingsLoading } = useQuery<Record<string, SystemSetting[]>>({
         queryKey: ['admin-system-settings'],
         queryFn: async () => {
-            const res = await api.get('/admin/settings');
-            return res.data.data;
+            const res = await api.get<never, ApiResponse<Record<string, SystemSetting[]>>>('/admin/settings');
+            return res.data;
         }
     });
 
@@ -87,7 +87,14 @@ export default function AdminSettingsPage() {
     };
 
     const handleSettingChange = (key: string, value: string) => {
-        setLocalSettings(prev => ({ ...prev, [key]: value }));
+        setLocalSettings(prev => {
+            const next = { ...prev, [key]: value };
+            if (key === 'rider_payout_percentage') {
+                const payout = parseFloat(value) || 0;
+                next['delivery_rider_fee_percentage'] = Math.max(0, 100 - payout).toFixed(2);
+            }
+            return next;
+        });
     };
 
     const { data: statsData, isLoading: statsLoading } = useQuery<{ markets_count: number; traders_count: number; latency_ms: number; storage_usage: string }>({
@@ -203,7 +210,7 @@ export default function AdminSettingsPage() {
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    {settingsData?.fees?.map((setting) => (
+                                    {settingsData?.fees?.filter(s => s.key !== 'delivery_rider_fee_percentage').map((setting) => (
                                         <div key={setting.key} className="space-y-2 px-2">
                                             <div className="flex justify-between items-center">
                                                 <label className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
@@ -356,7 +363,7 @@ export default function AdminSettingsPage() {
             </div>
 
             {/* Global Operational Command Strip */}
-            <div className="fixed bottom-24 left-4 right-4 lg:hidden z-40">
+            <div className="fixed bottom-24 left-4 right-4 lg:bottom-8 lg:left-auto lg:right-8 lg:w-80 z-40">
                 <button 
                     onClick={handleSave}
                     disabled={updateMutation.isPending || savedState}
