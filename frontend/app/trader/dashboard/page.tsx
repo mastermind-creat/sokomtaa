@@ -34,6 +34,7 @@ import { Reservation, ApiResponse } from '@/types';
 
 interface DashboardStats {
     total_revenue: number;
+    active_reservations: number;
     pending_reservations: number;
     completed_reservations: number;
     low_stock_items: number;
@@ -230,33 +231,33 @@ export default function TraderDashboard() {
 
             <div className="grid grid-cols-2 gap-4 px-4 mb-8">
                 <StatCard 
-                    title={t('trader.total_revenue')} 
+                    title="Total Revenue" 
                     value={`KES ${(stats?.total_revenue || 0).toLocaleString()}`} 
                     icon={TrendingUp} 
                     color="bg-brand-600" 
                     trend={{ value: stats?.growth || '+0%', isPositive: !stats?.growth?.startsWith('-') }}
-                    description="Net Earnings"
+                    description="Product earnings (excl. delivery)"
                 />
                 <StatCard 
-                    title={t('trader.active_reservations')} 
-                    value={stats?.pending_reservations || '0'} 
+                    title="Active Orders" 
+                    value={(stats?.active_reservations ?? stats?.pending_reservations) || '0'} 
                     icon={Ticket} 
                     color="bg-amber-500" 
-                    description="Awaiting Pickup"
+                    description="Pending, Paid & Ready"
                 />
                 <StatCard 
                     title="Stock Alerts" 
-                    value={stats?.low_stock_items || '0'} 
+                    value={(stats?.low_stock_items || 0) + (stats?.out_of_stock_items || 0)} 
                     icon={Package} 
                     color="bg-rose-500" 
-                    description="Low Stock Items"
+                    description={`${stats?.out_of_stock_items || 0} out · ${stats?.low_stock_items || 0} low`}
                 />
                 <StatCard 
                     title="Profile Views" 
                     value={stats?.profile_views || '0'} 
                     icon={Store} 
                     color="bg-blue-500" 
-                    description="Discovery Rate"
+                    description="Total visitor impressions"
                 />
             </div>
 
@@ -297,7 +298,8 @@ export default function TraderDashboard() {
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm font-black text-green-950 leading-none mb-1">x{res.quantity}</p>
-                                            <p className="text-[10px] font-black text-brand-600 uppercase">KES {Number(res.total_amount).toLocaleString()}</p>
+                                            <p className="text-[10px] font-black text-brand-600 uppercase">KES {Number((res as any).trader_amount ?? res.unit_price * res.quantity).toLocaleString()}</p>
+                                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{(res as any).status || 'pending'}</p>
                                         </div>
                                     </div>
 
