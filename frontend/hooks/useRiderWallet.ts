@@ -29,8 +29,11 @@ export function useRiderWallet() {
     const { data: profileData, isLoading: profileLoading } = useQuery({
         queryKey: ['deliveryProfile'],
         queryFn: async () => {
+            // NOTE: The Axios interceptor in lib/api.ts returns `response.data` (the raw JSON),
+            // so `res` here is already { status, data: <profile> }.
+            // We unwrap once with res.data — NOT res.data?.data (double-unwrap = undefined).
             const res = await api.get('/delivery/profile');
-            return res.data?.data || null;
+            return res.data || null;
         },
         enabled: !!user && user.role === 'delivery',
         refetchInterval: 15000,
@@ -39,8 +42,11 @@ export function useRiderWallet() {
     const { data: withdrawalsData, isLoading: withdrawalsLoading } = useQuery({
         queryKey: ['riderWithdrawals'],
         queryFn: async () => {
+            // Paginated response: { status, data: { data: [...], current_page, ... } }
+            // Axios interceptor returns response.data, so res = raw JSON.
+            // res.data = paginated object; res.data.data = withdrawals array.
             const res = await api.get('/delivery/wallet/withdrawals');
-            return res.data?.data?.data || [];
+            return res.data?.data || [];
         },
         enabled: !!user && user.role === 'delivery',
     });
