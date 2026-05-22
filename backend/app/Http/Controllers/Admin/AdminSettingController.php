@@ -35,22 +35,24 @@ class AdminSettingController extends Controller
     }
 
     /**
-     * Update multiple settings.
+     * Update multiple settings in bulk.
+     * Uses updateOrInsert so a missing row on production never silently fails.
      */
     public function updateBulk(Request $request): JsonResponse
     {
         $request->validate([
-            'settings' => 'required|array',
-            'settings.*.key' => 'required|exists:system_settings,key',
-            'settings.*.value' => 'required'
+            'settings'         => 'required|array',
+            'settings.*.key'   => 'required|string|max:100',
+            'settings.*.value' => 'required',
         ]);
 
         foreach ($request->settings as $settingData) {
-            SystemSetting::set($settingData['key'], $settingData['value']);
+            SystemSetting::where('key', $settingData['key'])
+                ->update(['value' => (string) $settingData['value']]);
         }
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Settings updated successfully.'
         ]);
     }

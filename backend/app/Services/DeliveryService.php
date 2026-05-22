@@ -56,18 +56,31 @@ class DeliveryService
     }
 
     /**
-     * Calculates the payout split
-     * 
+     * Calculates the payout split between the rider and the platform.
+     *
+     * Reads 'rider_payout_percentage' — the value the admin explicitly sets
+     * in the Fiscal Policies tab (e.g. 80 → rider keeps 80 % of the delivery
+     * fee; the platform retains the remaining 20 %).
+     *
+     * NOTE: 'delivery_rider_fee_percentage' is the *platform's* commission,
+     * auto-computed by the admin UI as (100 - rider_payout_percentage). It is
+     * stored for accounting purposes but must NOT be used here as the rider share.
+     *
      * @return array{riderShare: float, platformCommission: float}
      */
     public function calculatePayouts(float $deliveryFee): array
     {
-        $payoutPercentage = (float) \App\Models\SystemSetting::get('rider_payout_percentage', 100.0);
-        $riderShare = round(($deliveryFee * $payoutPercentage) / 100.0, 2);
+        // Read the rider's share percentage (e.g. 80 → rider gets 80 %)
+        $riderPercentage = (float) \App\Models\SystemSetting::get('rider_payout_percentage', 80.0);
+
+        // Clamp to [0, 100] to guard against accidental bad data
+        $riderPercentage = max(0.0, min(100.0, $riderPercentage));
+
+        $riderShare         = round(($deliveryFee * $riderPercentage) / 100.0, 2);
         $platformCommission = round($deliveryFee - $riderShare, 2);
 
         return [
-            'riderShare' => $riderShare,
+            'riderShare'         => $riderShare,
             'platformCommission' => $platformCommission,
         ];
     }

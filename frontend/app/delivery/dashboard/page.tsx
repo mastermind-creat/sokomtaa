@@ -81,9 +81,9 @@ export default function RiderDashboard() {
                     api.post('/delivery/update-location', {
                         latitude: newCoords.lat,
                         longitude: newCoords.lng
-                    }).catch(() => {});
+                    }).catch(() => { });
                 },
-                () => {}
+                () => { }
             );
         }
     }, [setPageTitle, refreshUser]);
@@ -147,11 +147,15 @@ export default function RiderDashboard() {
     });
 
     const completeMutation = useMutation({
-        mutationFn: ({ id, code }: { id: number; code: string }) => 
+        mutationFn: ({ id, code }: { id: number; code: string }) =>
             api.post(`/delivery/orders/${id}/complete`, { pickup_code: code }),
         onSuccess: () => {
+            // Bust all caches that show earnings so every view reflects the
+            // new balance immediately — without waiting for polling intervals.
             queryClient.invalidateQueries({ queryKey: ['rider-stats'] });
             queryClient.invalidateQueries({ queryKey: ['rider-orders-pool'] });
+            queryClient.invalidateQueries({ queryKey: ['deliveryProfile'] }); // wallet page balance
+            queryClient.invalidateQueries({ queryKey: ['riderWithdrawals'] }); // wallet tx history
             setOtpInputs({});
         }
     });
@@ -338,16 +342,16 @@ export default function RiderDashboard() {
                                 "h-14 px-6 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2.5",
                                 isNetworkOffline
                                     ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
-                                    : profile?.is_available 
-                                        ? "bg-rose-50 text-rose-600 border border-rose-100" 
+                                    : profile?.is_available
+                                        ? "bg-rose-50 text-rose-600 border border-rose-100"
                                         : "bg-brand-600 text-white shadow-xl shadow-brand-600/20"
                             )}
                         >
                             <Power size={16} />
-                            {isNetworkOffline 
-                                ? "Offline" 
-                                : profile?.is_available 
-                                    ? "Go Offline" 
+                            {isNetworkOffline
+                                ? "Offline"
+                                : profile?.is_available
+                                    ? "Go Offline"
                                     : "Go Online"}
                         </button>
                     </div>
@@ -376,7 +380,7 @@ export default function RiderDashboard() {
 
             {/* ── 3-Column Dashboard Layout (Desktop: Side-by-Side, Mobile: Stacked) ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4">
-                
+
                 {/* Column 1: Active Shipments */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between px-2">
@@ -409,11 +413,11 @@ export default function RiderDashboard() {
                                                 <span className={cn(
                                                     "text-[8px] font-black px-2 py-0.5 rounded-full border uppercase tracking-widest",
                                                     isAssigned ? "bg-amber-50 text-amber-700 border-amber-100" :
-                                                    isPickedUp ? "bg-blue-50 text-blue-700 border-blue-100" :
-                                                    "bg-brand-50 text-brand-700 border-brand-100"
+                                                        isPickedUp ? "bg-blue-50 text-blue-700 border-blue-100" :
+                                                            "bg-brand-50 text-brand-700 border-brand-100"
                                                 )}>
-                                                    {isAssigned ? 'Stall Pickup Required' : 
-                                                     isPickedUp ? 'In Transit to Resident' : 'Arrived / Verification'}
+                                                    {isAssigned ? 'Stall Pickup Required' :
+                                                        isPickedUp ? 'In Transit to Resident' : 'Arrived / Verification'}
                                                 </span>
                                                 <h4 className="text-base font-black text-green-950 uppercase tracking-tight mt-2">{res.product?.name || 'Produce'}</h4>
                                                 <div className="flex items-center gap-1 text-[10px] text-text-secondary font-medium mt-0.5">
@@ -433,7 +437,7 @@ export default function RiderDashboard() {
                                                 <img src={res.delivery_image_url} alt="Delivery Location" className="w-full h-full object-cover" />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none flex items-end p-3">
                                                     <span className="text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                                                        <MapPin size={12} /> Resident's Gate/Door
+                                                        <MapPin size={12} /> Resident&apos;s Gate/Door
                                                     </span>
                                                 </div>
                                             </div>
