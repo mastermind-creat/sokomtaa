@@ -76,13 +76,17 @@ export default function TraderDashboard() {
 
     const { data: statsData } = useQuery<ApiResponse<DashboardStats>>({
         queryKey: ['trader-dashboard-stats'],
-        queryFn: () => api.get('/trader/analytics/stats').then(res => res.data),
+        // api.get() resolves to response.data (raw JSON) via the Axios interceptor.
+        // Do NOT add .then(res => res.data) — that strips the ApiResponse wrapper
+        // and makes statsData?.data resolve to undefined.
+        queryFn: () => api.get('/trader/analytics/stats'),
     });
     const stats = statsData?.data;
 
     const { data: recentReservationsRaw, isLoading: resLoading } = useQuery<ApiResponse<Reservation[]>>({
         queryKey: ['recent-reservations'],
-        queryFn: () => api.get('/trader/reservations/recent').then(res => res.data),
+        // Same rule: no extra .then() unwrap — preserve the ApiResponse wrapper.
+        queryFn: () => api.get('/trader/reservations/recent'),
     });
     const reservations = recentReservationsRaw?.data || [];
 
