@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import {
     ArrowLeft, Phone, Package, Clock,
-    Copy, User, MessageSquare, Truck, Info
+    Copy, User, MessageSquare, Truck, Info, AlertCircle
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
@@ -67,9 +67,10 @@ export default function OrderDetailPage() {
     const { setPageTitle } = useUIStore();
     const [copied, setCopied] = React.useState(false);
 
-    const { data: orderRes, isLoading } = useQuery<ApiResponse<ReservationDetail>>({
+    const { data: orderRes, isLoading, isError, error } = useQuery<ApiResponse<ReservationDetail>>({
         queryKey: ['trader-order', params.id],
         queryFn: () => api.get(`/reservations/${params.id}`),
+        retry: 1,
     });
 
     const order = orderRes?.data;
@@ -86,11 +87,11 @@ export default function OrderDetailPage() {
 
     React.useEffect(() => {
         if (order) {
-            setPageTitle(`${t('common.order')} #${order.reservation_code}`);
+            setPageTitle(`Order #${order.reservation_code}`);
         } else {
-            setPageTitle(t('common.order_detail') || 'Order Detail');
+            setPageTitle('Order Detail');
         }
-    }, [order, setPageTitle, t]);
+    }, [order, setPageTitle]);
 
     const copyCode = () => {
         if (!order?.reservation_code) return;
@@ -99,12 +100,36 @@ export default function OrderDetailPage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    if (isLoading || !order) {
+    if (isLoading) {
         return (
             <div className="max-w-2xl mx-auto px-4 py-8 animate-pulse space-y-4">
                 <div className="h-8 w-40 bg-gray-200 rounded-xl" />
                 <div className="h-48 bg-gray-100 rounded-2xl" />
                 <div className="h-32 bg-gray-100 rounded-2xl" />
+            </div>
+        );
+    }
+
+    if (isError || !order) {
+        const errMsg = (error as any)?.message || (error as any)?.error || 'Could not load order details.';
+        return (
+            <div className="max-w-2xl mx-auto px-4 py-8">
+                <button onClick={() => router.back()} className="flex items-center gap-2 text-text-secondary mb-6 hover:text-text-primary transition-colors">
+                    <ArrowLeft className="w-4 h-4" /> Back
+                </button>
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex items-start gap-4">
+                    <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-black text-red-800 mb-1">Failed to load order</p>
+                        <p className="text-xs text-red-600">{errMsg}</p>
+                        <button
+                            onClick={() => router.back()}
+                            className="mt-3 text-xs font-bold text-brand-600 underline underline-offset-2"
+                        >
+                            Go back to orders list
+                        </button>
+                    </div>
+                </div>
             </div>
         );
     }
