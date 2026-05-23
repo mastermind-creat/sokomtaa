@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import {
     ArrowLeft, Phone, Package, Clock,
-    Copy, User, MessageSquare
+    Copy, User, MessageSquare, Truck, Info
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
@@ -17,6 +17,8 @@ interface ReservationDetail {
     id: number;
     reservation_code: string;
     status: 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled' | 'expired';
+    delivery_option: boolean;
+    delivery_status: string | null; // 'pending_assignment' | 'assigned' | 'picked_up' | 'in_transit' | 'delivered' | null
     quantity: number;
     unit_price: string;
     total_amount: string;
@@ -161,35 +163,84 @@ export default function OrderDetailPage() {
             </div>
 
             {/* Actions */}
-            <div className="grid grid-cols-1 gap-3">
-                {order.status === 'paid' && (
-                    <button
-                        onClick={() => updateStatus('ready')}
-                        disabled={isPending}
-                        className="w-full py-4 bg-brand-600 text-white rounded-2xl font-black text-base shadow-lg shadow-brand-900/10 hover:bg-brand-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        {isPending ? 'Updating...' : 'Mark as Ready for Pickup'}
-                    </button>
-                )}
-                {order.status === 'ready' && (
-                    <button
-                        onClick={() => updateStatus('completed')}
-                        disabled={isPending}
-                        className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-base shadow-lg shadow-green-900/10 hover:bg-green-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        {isPending ? 'Updating...' : 'Confirm Handover / Completed'}
-                    </button>
-                )}
-                {['pending', 'paid', 'ready'].includes(order.status) && (
-                    <button
-                        onClick={() => updateStatus('cancelled')}
-                        disabled={isPending}
-                        className="w-full py-4 border border-red-200 text-red-600 rounded-2xl font-bold text-sm hover:bg-red-50 transition-colors"
-                    >
-                        Cancel Order
-                    </button>
-                )}
-            </div>
+            {(() => {
+                // A delivery order that a rider has actively accepted — trader hands off control
+                const riderHasControl = order.delivery_option &&
+                    order.delivery_status &&
+                    ['assigned', 'picked_up', 'in_transit'].includes(order.delivery_status);
+
+                const riderDelivered = order.delivery_option &&
+                    order.delivery_status === 'delivered';
+
+                if (riderHasControl) {
+                    return (
+                        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
+                            <Truck className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-sm font-black text-blue-800">Rider In Control</p>
+                                <p className="text-xs text-blue-600 mt-0.5 leading-relaxed">
+                                    A delivery rider has accepted and is handling this order. You will be notified automatically once the delivery is completed.
+                                </p>
+                            </div>
+                        </div>
+                    );
+                }
+
+                if (riderDelivered) {
+                    return (
+                        <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start gap-3">
+                            <Info className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-sm font-black text-green-800">Delivered by Rider</p>
+                                <p className="text-xs text-green-600 mt-0.5">This order was successfully delivered by a rider.</p>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="grid grid-cols-1 gap-3">
+                        {order.status === 'paid' && (
+                            <button
+                                onClick={() => updateStatus('ready')}
+                                disabled={isPending}
+                                className="w-full py-4 bg-brand-600 text-white rounded-2xl font-black text-base shadow-lg shadow-brand-900/10 hover:bg-brand-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                {isPending ? 'Updating...' : 'Mark as Ready for Pickup'}
+                            </button>
+                        )}
+                        {order.status === 'ready' && !order.delivery_option && (
+                            <button
+                                onClick={() => updateStatus('completed')}
+                                disabled={isPending}
+                                className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-base shadow-lg shadow-green-900/10 hover:bg-green-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                {isPending ? 'Updating...' : 'Confirm Handover / Completed'}
+                            </button>
+                        )}
+                        {order.status === 'ready' && order.delivery_option && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                                <Truck className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="text-sm font-black text-amber-800">Awaiting Rider</p>
+                                    <p className="text-xs text-amber-600 mt-0.5 leading-relaxed">
+                                        This order is in the delivery pool. A rider will accept it shortly.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                        {['pending', 'paid', 'ready'].includes(order.status) && (
+                            <button
+                                onClick={() => updateStatus('cancelled')}
+                                disabled={isPending}
+                                className="w-full py-4 border border-red-200 text-red-600 rounded-2xl font-bold text-sm hover:bg-red-50 transition-colors"
+                            >
+                                Cancel Order
+                            </button>
+                        )}
+                    </div>
+                );
+            })()}
         </div>
     );
 }

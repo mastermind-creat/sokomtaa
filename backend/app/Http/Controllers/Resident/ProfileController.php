@@ -99,7 +99,7 @@ class ProfileController extends Controller
                 
                 Log::info('Resident Avatar Uploaded:', ['user_id' => $user->id, 'url' => $url]);
                 $user->update(['avatar_url' => $url]);
-                return $this->success(['avatar_url' => $url], 'Profile picture updated successfully. (Picha ya wasifu imesasishwa.)');
+                return $this->success(['avatar_url' => $url], 'Profile picture updated successfully.');
             }
             Log::error('Resident Avatar Upload Failed in Service');
             return $this->error('Failed to upload image.', 'UPLOAD_ERROR', 500);

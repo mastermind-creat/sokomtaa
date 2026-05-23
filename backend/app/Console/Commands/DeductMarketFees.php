@@ -183,8 +183,8 @@ class DeductMarketFees extends Command
         // Notify Trader
         $this->notificationService->send(
             $trader->user,
-            'Salio la Wallet Halitoshi (Insufficient Wallet Balance)',
-            "Hatujaweza kukata ada yako ya soko ya KES {$amount}. Tafadhali lipa kupitia M-Pesa ili kuzuia faini.",
+            'Insufficient Wallet Balance',
+            "We were unable to deduct your market fee of KES {$amount}. Please top up your wallet via M-Pesa to avoid a penalty.",
             'payment',
             ['amount' => $amount],
             true // SMS Notification

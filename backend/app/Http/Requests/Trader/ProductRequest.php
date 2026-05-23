@@ -32,8 +32,8 @@ class ProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'image.required' => 'Picha ya bidhaa inahitajika. (A product image is required.)',
-            'price.numeric' => 'Bei lazima iwe namba. (Price must be a number.)',
+            'image.required' => 'A product image is required.',
+            'price.numeric' => 'Price must be a valid number.',
         ];
     }
 }
