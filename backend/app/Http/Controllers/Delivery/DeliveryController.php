@@ -52,7 +52,7 @@ class DeliveryController extends Controller
 
         $orders = Reservation::where('reservations.delivery_option', true)
             ->where('reservations.delivery_status', 'pending_assignment')
-            ->whereIn('reservations.status', ['paid', 'ready'])
+            ->where('reservations.status', 'ready')
             ->with(['trader.market', 'product', 'resident'])
             ->get()
             ->map(function ($reservation) use ($lat, $lng) {

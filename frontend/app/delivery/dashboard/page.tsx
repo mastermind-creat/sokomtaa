@@ -427,7 +427,7 @@ export default function RiderDashboard() {
                                             </div>
                                             <div className="text-right shrink-0">
                                                 <span className="text-[9px] font-black text-brand-600 block uppercase tracking-widest">Payout</span>
-                                                <span className="text-base font-black text-green-950">KES {Number(res.rider_fee || res.delivery_fee).toLocaleString()}</span>
+                                                <span className="text-base font-black text-green-950">KES {Number(res.rider_fee > 0 ? res.rider_fee : (res.delivery_fee * 0.8) || 0).toLocaleString()}</span>
                                             </div>
                                         </div>
 
@@ -645,7 +645,7 @@ export default function RiderDashboard() {
                                         </div>
                                         <div className="text-right shrink-0">
                                             <span className="text-[8px] font-black text-brand-600 block uppercase tracking-widest mb-0.5">Payout</span>
-                                            <span className="text-base font-black text-green-950">KES {Number(order.rider_fee || order.delivery_fee || 0).toLocaleString()}</span>
+                                            <span className="text-base font-black text-green-950">KES {Number(order.rider_fee > 0 ? order.rider_fee : (order.delivery_fee * 0.8) || 0).toLocaleString()}</span>
                                         </div>
                                     </div>
 
