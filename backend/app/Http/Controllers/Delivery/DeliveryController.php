@@ -310,7 +310,7 @@ class DeliveryController extends Controller
     {
         $orders = Reservation::where('delivery_option', true)
             ->where('delivery_status', 'pending_assignment')
-            ->whereIn('status', ['paid', 'ready'])
+            ->where('status', 'ready')
             ->with(['trader.market', 'product', 'resident'])
             ->latest()
             ->get()
@@ -320,6 +320,7 @@ class DeliveryController extends Controller
                     'reservation_code'     => $r->reservation_code,
                     'delivery_address'     => $r->delivery_address,
                     'delivery_fee'         => $r->delivery_fee,
+                    'rider_fee'            => $r->rider_fee,
                     'status'               => $r->status,
                     'delivery_status'      => $r->delivery_status,
                     'quantity'             => $r->quantity,
