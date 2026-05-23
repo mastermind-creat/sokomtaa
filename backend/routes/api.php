@@ -305,6 +305,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/stalls/bulk', [\App\Http\Controllers\Admin\StallController::class, 'bulkGenerate']);
         Route::post('/stalls/bulk-update-fees', [\App\Http\Controllers\Admin\StallController::class, 'bulkUpdateFees']);
         Route::get('/map-data', [\App\Http\Controllers\Admin\StallMapController::class, 'getMapData']);
+        Route::get('/allocations', [\App\Http\Controllers\Admin\StallAllocationController::class, 'index']);
         Route::post('/allocations', [\App\Http\Controllers\Admin\StallAllocationController::class, 'store']);
 
         // Locations (Regions, Counties & Centers)
