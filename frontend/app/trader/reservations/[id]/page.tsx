@@ -65,13 +65,12 @@ export default function OrderDetailPage() {
     const { setPageTitle } = useUIStore();
     const [copied, setCopied] = React.useState(false);
 
-    const { data: order, isLoading } = useQuery({
+    const { data: orderRes, isLoading } = useQuery<ApiResponse<ReservationDetail>>({
         queryKey: ['trader-order', params.id],
-        queryFn: async () => {
-            const res = await api.get<never, ApiResponse<ReservationDetail>>(`/reservations/${params.id}`);
-            return res.data;
-        },
+        queryFn: () => api.get(`/reservations/${params.id}`),
     });
+
+    const order = orderRes?.data;
 
     const { mutate: updateStatus, isPending } = useMutation({
         mutationFn: async (status: string) => {
