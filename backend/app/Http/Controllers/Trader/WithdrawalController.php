@@ -206,7 +206,7 @@ class WithdrawalController extends Controller
                 }
             } elseif ($withdrawal->user_id) {
                 // Refund rider
-                $withdrawal->user->deliveryProfile?->increment('earnings_balance', $withdrawal->amount);
+                $withdrawal->user->riderProfile?->increment('earnings_balance', $withdrawal->amount);
                 
                 $user = $withdrawal->user;
                 if ($user) {

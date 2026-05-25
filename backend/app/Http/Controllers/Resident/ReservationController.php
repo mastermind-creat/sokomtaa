@@ -343,7 +343,7 @@ class ReservationController extends Controller
             return $this->error('Unauthorized access.', 'UNAUTHORIZED', 403);
         }
 
-        $reservation->load(['trader', 'product', 'resident', 'review', 'rider.deliveryProfile']);
+        $reservation->load(['trader', 'product', 'resident', 'review', 'rider.riderProfile']);
 
         return $this->success($reservation);
     }

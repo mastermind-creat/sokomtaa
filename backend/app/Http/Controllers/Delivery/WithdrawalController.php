@@ -31,7 +31,7 @@ class WithdrawalController extends Controller
     {
         /** @var \App\Models\User $user */
         $user   = Auth::user();
-        $profile = $user->deliveryProfile;
+        $profile = $user->riderProfile;
 
         if (!$profile) {
             return $this->error('Delivery profile not found.', 'NOT_DELIVERY', 403);
@@ -127,7 +127,7 @@ class WithdrawalController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->deliveryProfile) {
+        if (!$user->riderProfile) {
             return $this->error('Delivery profile not found.', 'NOT_DELIVERY', 403);
         }
 
