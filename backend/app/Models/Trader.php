@@ -59,7 +59,7 @@ class Trader extends Model
     public function getIsCurrentlyOpenAttribute(): bool
     {
         // If manually closed or unset, it's definitely closed
-        if (!$this->attributes['is_open']) {
+        if (!($this->attributes['is_open'] ?? false)) {
             return false;
         }
 
