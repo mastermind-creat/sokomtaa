@@ -102,7 +102,7 @@ export default function ReviewSheet({ reservation, trader, product, onClose }: R
                     <h2 className="text-3xl font-black text-green-950 tracking-tight">Rate your experience</h2>
                     <p className="text-sm text-text-muted font-medium">
                         {reservation ? (
-                            <>How was your order of <span className="text-green-950 font-bold">{reservation.product?.name}</span> from <span className="text-green-950 font-bold">{targetTrader?.business_name}</span>?</>
+                            <>How was your order of <span className="text-green-950 font-bold">{reservation.product?.name}</span> from <span className="text-green-950 font-bold">{targetTrader?.business_name}</span>{reservation.delivery_option ? ' and the shipping experience' : ''}?</>
                         ) : targetProduct ? (
                             <>How was your experience with <span className="text-green-950 font-bold">{targetProduct.name}</span> from <span className="text-green-950 font-bold">{targetTrader?.business_name}</span>?</>
                         ) : (

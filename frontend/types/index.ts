@@ -209,6 +209,12 @@ export interface Reservation {
     service_fee: string | number;
     total_amount: string | number;
     status: 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled' | 'expired';
+    delivery_option?: boolean;
+    delivery_status?: string | null;
+    delivery_address?: string | null;
+    delivery_fee?: string | number | null;
+    rider_fee?: string | number | null;
+    delivery_rider_id?: number | null;
     notes?: string | null;
     pickup_deadline?: string | null;
     picked_up_at?: string | null;

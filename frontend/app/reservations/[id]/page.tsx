@@ -393,6 +393,19 @@ export default function ReservationPickupPage() {
                                     </p>
                                 </div>
                             </div>
+                        ) : reservation.status === 'completed' ? (
+                            <div className="flex gap-4">
+                                <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600 shrink-0">
+                                    <CheckCircle2 size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">Delivery Status</p>
+                                    <h4 className="text-sm font-black text-green-950">
+                                        Delivered
+                                    </h4>
+                                    <p className="text-[10px] text-green-600 font-bold uppercase mt-1">Order completed successfully</p>
+                                </div>
+                            </div>
                         ) : (
                             /* Regular pickup deadline if self collection */
                             <div className="flex gap-4">
@@ -496,7 +509,7 @@ export default function ReservationPickupPage() {
                             className="w-full h-16 bg-amber-500 text-white rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-amber-200"
                         >
                             <Star size={18} fill="currentColor" />
-                            Leave a Review
+                            {reservation.delivery_option ? 'Leave a Review on Shipping' : 'Leave a Review'}
                         </button>
                     )}
 

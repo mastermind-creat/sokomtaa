@@ -152,7 +152,12 @@ function OrderCard({ order, onMarkReady, onMarkComplete, isUpdating, onDownloadR
                 </div>
 
                 {/* Deadline */}
-                {order.pickup_deadline && (
+                {order.status === 'completed' ? (
+                    <div className="flex items-center gap-2 text-xs font-medium text-green-600">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Delivered
+                    </div>
+                ) : order.pickup_deadline && (
                     <div className={`flex items-center gap-2 text-xs font-medium ${isUrgent ? 'text-red-600' : 'text-text-secondary'}`}>
                         <Clock className="w-3.5 h-3.5" />
                         Pickup deadline: {deadlineStr}

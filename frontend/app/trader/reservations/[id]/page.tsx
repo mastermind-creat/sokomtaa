@@ -4,7 +4,7 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import {
-    ArrowLeft, Phone, Package, Clock,
+    ArrowLeft, Phone, Package, Clock, CheckCircle2,
     Copy, User, MessageSquare, Truck, Info, AlertCircle
 } from 'lucide-react';
 import api from '@/lib/api';
@@ -172,7 +172,11 @@ export default function OrderDetailPage() {
                     <DetailRow icon={<User className="w-4 h-4" />} label="Resident" value={order.resident.name} />
                     <DetailRow icon={<Phone className="w-4 h-4" />} label="Phone" value={order.resident.phone} />
                     <DetailRow icon={<Package className="w-4 h-4" />} label="Product" value={`${order.quantity}x ${order.product.name}`} />
-                    <DetailRow icon={<Clock className="w-4 h-4" />} label="Pickup Deadline" value={deadline ? deadline.toLocaleString() : 'No deadline'} />
+                    {order.status === 'completed' ? (
+                        <DetailRow icon={<CheckCircle2 className="w-4 h-4 text-green-600" />} label="Delivery Status" value="Delivered" />
+                    ) : (
+                        <DetailRow icon={<Clock className="w-4 h-4" />} label="Pickup Deadline" value={deadline ? deadline.toLocaleString() : 'No deadline'} />
+                    )}
                     <DetailRow icon={<MessageSquare className="w-4 h-4" />} label="Notes" value={order.notes || 'No notes provided'} />
                     
                     <div className="pt-4 mt-4 border-t border-gray-50 flex items-center justify-between">
