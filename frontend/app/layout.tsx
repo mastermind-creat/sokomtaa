@@ -41,7 +41,20 @@ export const metadata: Metadata = {
     title: "Soko Mtaa | Kenya's Local Neighbourhood Marketplace",
     description: "Connect with local traders, reserve fresh products, and support your neighbourhood economy with Soko Mtaa.",
   },
-  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+      { url: "/favicon/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon/favicon.ico",
+    apple: [
+      { url: "/favicon/apple-touch-icon.png", sizes: "180x180" },
+    ],
+  },
+  appleWebApp: {
+    title: "SokoMtaa",
+  },
+  manifest: "/favicon/site.webmanifest",
 };
 
 export default function RootLayout({
