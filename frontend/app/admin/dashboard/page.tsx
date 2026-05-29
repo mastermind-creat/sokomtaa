@@ -38,6 +38,32 @@ const StallMapPreview = dynamic(() => import('../../../components/admin/StallMap
     loading: () => <div className="h-[400px] w-full bg-gray-50 animate-pulse rounded-3xl flex items-center justify-center font-black uppercase text-text-muted tracking-widest text-xs">Loading Market Map...</div>
 });
 
+const MetricChart = ({ data, dataKey, title, color }: { data: any, dataKey: string, title: string, color: string }) => (
+    <div className="flex flex-col h-[220px] bg-gray-50/50 rounded-2xl p-4 border border-gray-100/50">
+        <h4 className="text-sm font-black text-gray-700 mb-4 tracking-tight">{title}</h4>
+        <div className="flex-1 w-full overflow-hidden">
+            <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
+                    <defs>
+                        <linearGradient id={`color-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+                            <stop offset="95%" stopColor={color} stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FAFAFA" />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }} dy={10} />
+                    <Tooltip
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                        labelStyle={{ fontWeight: '900', color: '#1A1A1A', marginBottom: '4px' }}
+                        formatter={(value: any) => [`KES ${Number(value || 0).toLocaleString()}`, title]}
+                    />
+                    <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={3} fillOpacity={1} fill={`url(#color-${dataKey})`} animationDuration={1500} />
+                </AreaChart>
+            </ResponsiveContainer>
+        </div>
+    </div>
+);
+
 interface DashboardStats {
     revenue: {
         total: number;
@@ -69,6 +95,7 @@ interface RevenueTrend {
     month: string;
     market_fees: number;
     service_fees: number;
+    delivery_fees: number;
     total: number;
 }
 
@@ -194,10 +221,10 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                     {/* Trends Chart */}
                     <div className="xl:col-span-2 bg-white rounded-[2.5rem] p-6 lg:p-10 shadow-sm border border-gray-50">
-                        <div className="flex items-center justify-between mb-8">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                             <div>
                                 <h3 className="text-xl font-black text-green-950 tracking-tight">{t('admin.revenue_trends')}</h3>
-                                <p className="text-text-secondary text-sm font-medium">Monthly collection across all markets.</p>
+                                <p className="text-text-secondary text-sm font-medium">Distinct revenue streams across the platform.</p>
                             </div>
                             <select className="h-10 pl-4 pr-10 bg-gray-50 border-none rounded-xl text-xs font-bold text-text-secondary outline-none appearance-none cursor-pointer hover:bg-gray-100 transition-colors">
                                 <option>Last 6 Months</option>
@@ -205,67 +232,16 @@ export default function AdminDashboard() {
                             </select>
                         </div>
 
-                        <div className="h-[300px] lg:h-[400px] w-full overflow-hidden">
+                        <div className="w-full">
                             {isMounted ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={trends}>
-                                    <defs>
-                                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#1B6B3A" stopOpacity={0.1} />
-                                            <stop offset="95%" stopColor="#1B6B3A" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorFees" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#2563EB" stopOpacity={0.1} />
-                                            <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FAFAFA" />
-                                    <XAxis
-                                        dataKey="month"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }}
-                                        dy={15}
-                                    />
-                                    <YAxis
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }}
-                                        tickFormatter={(val) => `KES ${val / 1000}k`}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{
-                                            borderRadius: '24px',
-                                            border: 'none',
-                                            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
-                                            padding: '16px'
-                                        }}
-                                        labelStyle={{ fontWeight: '900', color: '#1B6B3A', marginBottom: '8px' }}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="market_fees"
-                                        name="Market Fees"
-                                        stroke="#1B6B3A"
-                                        strokeWidth={4}
-                                        fillOpacity={1}
-                                        fill="url(#colorRevenue)"
-                                        animationDuration={1500}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="service_fees"
-                                        name="Platform Revenue"
-                                        stroke="#2563EB"
-                                        strokeWidth={4}
-                                        fillOpacity={1}
-                                        fill="url(#colorFees)"
-                                        animationDuration={1500}
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                                    <MetricChart data={trends} dataKey="total" title="Gross Transaction Value (GTV)" color="#8B5CF6" />
+                                    <MetricChart data={trends} dataKey="market_fees" title="Market Fees (County)" color="#1B6B3A" />
+                                    <MetricChart data={trends} dataKey="service_fees" title="Platform Service Fees" color="#2563EB" />
+                                    <MetricChart data={trends} dataKey="delivery_fees" title="Delivery Revenue (Riders)" color="#F5A623" />
+                                </div>
                             ) : (
-                                <div className="w-full h-full bg-gray-50 rounded-3xl animate-pulse" />
+                                <div className="w-full h-[400px] bg-gray-50 rounded-3xl animate-pulse" />
                             )}
                         </div>
                     </div>

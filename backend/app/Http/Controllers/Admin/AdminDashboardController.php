@@ -127,7 +127,20 @@ class AdminDashboardController extends Controller
                 ->sum('amount');
 
             // Service Fees (Platform Revenue)
-            $serviceFees = Payment::where('type', 'reservation')
+            $serviceFees = Reservation::whereIn('status', ['paid', 'ready', 'completed'])
+                ->whereMonth('updated_at', $date->month)
+                ->whereYear('updated_at', $date->year)
+                ->sum('service_fee');
+
+            // Delivery Fees (Rider Revenue)
+            $deliveryFees = Reservation::whereIn('status', ['paid', 'ready', 'completed'])
+                ->where('delivery_option', true)
+                ->whereMonth('updated_at', $date->month)
+                ->whereYear('updated_at', $date->year)
+                ->sum('delivery_fee');
+
+            // Gross Transaction Value (GTV)
+            $gtv = Payment::where('type', 'reservation')
                 ->where('status', 'completed')
                 ->whereMonth('paid_at', $date->month)
                 ->whereYear('paid_at', $date->year)
@@ -137,7 +150,8 @@ class AdminDashboardController extends Controller
                 'month' => $date->format('M'),
                 'market_fees' => (float)$marketFees,
                 'service_fees' => (float)$serviceFees,
-                'total' => (float)($marketFees + $serviceFees)
+                'delivery_fees' => (float)$deliveryFees,
+                'total' => (float)$gtv
             ];
         })->values();
 
