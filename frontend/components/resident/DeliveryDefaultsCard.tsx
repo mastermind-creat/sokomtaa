@@ -173,7 +173,7 @@ export default function DeliveryDefaultsCard({ user }: { user?: User }) {
                                 className={`w-full h-14 px-4 bg-neutral-50 rounded-2xl border-2 transition-all font-bold text-sm outline-none ${
                                     isUpdating ? 'border-brand-100 bg-white focus:border-brand-500 shadow-inner' : 'border-transparent'
                                 }`}
-                                placeholder="-1.2921"
+                                placeholder="e.g. -1.2921"
                             />
                         </div>
                         <div className="space-y-2.5">
@@ -185,7 +185,7 @@ export default function DeliveryDefaultsCard({ user }: { user?: User }) {
                                 className={`w-full h-14 px-4 bg-neutral-50 rounded-2xl border-2 transition-all font-bold text-sm outline-none ${
                                     isUpdating ? 'border-brand-100 bg-white focus:border-brand-500 shadow-inner' : 'border-transparent'
                                 }`}
-                                placeholder="36.8219"
+                                placeholder="e.g. 36.8219"
                             />
                         </div>
                     </div>
@@ -231,7 +231,13 @@ export default function DeliveryDefaultsCard({ user }: { user?: User }) {
 
             {isUpdating && (
                 <button 
-                    onClick={() => updateDefaultsMutation.mutate()}
+                    onClick={() => {
+                        if (mtaa && (!latitude || !longitude)) {
+                            alert("Please click 'Ping My Location' to set your GPS coordinates. Riders need this to find you.");
+                            return;
+                        }
+                        updateDefaultsMutation.mutate();
+                    }}
                     disabled={updateDefaultsMutation.isPending}
                     className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-brand-200 active:scale-95 transition-all"
                 >
