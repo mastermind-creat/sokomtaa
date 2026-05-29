@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useUIStore } from '@/store/uiStore';
+import { useAuthStore } from '@/store/authStore';
 
 const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -59,7 +60,8 @@ api.interceptors.response.use(
         
         if (error.response?.status === 401) {
             if (typeof window !== 'undefined') {
-                localStorage.removeItem('sokomtaa_token');
+                // Clear the Zustand store which also clears persisted storage
+                useAuthStore.getState().logout();
                 window.location.href = '/login';
             }
         }
