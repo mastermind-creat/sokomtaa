@@ -114,12 +114,13 @@ class AdminDashboardController extends Controller
      */
     public function revenueTrends(): JsonResponse
     {
+        // Generate last 6 months in chronological order (oldest to newest)
         $months = collect(range(5, 0))->map(function($i) {
-            return Carbon::now()->subMonths($i)->format('Y-m');
-        })->reverse();
+            return Carbon::now()->startOfMonth()->subMonths($i)->format('Y-m');
+        });
 
         $data = $months->map(function($month) {
-            $date = Carbon::createFromFormat('Y-m', $month);
+            $date = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
             
             // Market Fees (Stall Revenue)
             $marketFees = MarketFee::where('status', 'paid')
