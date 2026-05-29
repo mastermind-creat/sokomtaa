@@ -9,14 +9,17 @@ import { useAuthStore } from '@/store/authStore';
 export default function DeliveryDefaultsCard({ user }: { user?: User }) {
     const queryClient = useQueryClient();
     const [isUpdating, setIsUpdating] = useState(false);
+    const [mtaa, setMtaa] = useState('');
     const [address, setAddress] = useState('');
     const [latitude, setLatitude] = useState('');
     const [longitude, setLongitude] = useState('');
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isPinging, setIsPinging] = useState(false);
 
     useEffect(() => {
         if (user && !isUpdating) {
+            setMtaa(user.default_delivery_mtaa || '');
             setAddress(user.default_delivery_address || '');
             setLatitude(user.default_delivery_latitude?.toString() || '');
             setLongitude(user.default_delivery_longitude?.toString() || '');
@@ -24,9 +27,32 @@ export default function DeliveryDefaultsCard({ user }: { user?: User }) {
         }
     }, [user, isUpdating]);
 
+    const handlePingLocation = () => {
+        setIsPinging(true);
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser.');
+            setIsPinging(false);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setLatitude(position.coords.latitude.toString());
+                setLongitude(position.coords.longitude.toString());
+                setIsPinging(false);
+            },
+            (error) => {
+                alert('Location permission denied or unavailable. You must allow location access to use Delivery.');
+                setIsPinging(false);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    };
+
     const updateDefaultsMutation = useMutation({
         mutationFn: async () => {
             const formData = new FormData();
+            formData.append('default_delivery_mtaa', mtaa);
             formData.append('default_delivery_address', address);
             if (latitude) formData.append('default_delivery_latitude', latitude);
             if (longitude) formData.append('default_delivery_longitude', longitude);
@@ -90,8 +116,24 @@ export default function DeliveryDefaultsCard({ user }: { user?: User }) {
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4 md:col-span-2">
-                    <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] pl-1">Full Delivery Address</label>
+                <div className="space-y-4">
+                    <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] pl-1">Mtaa / Neighborhood</label>
+                    <div className="relative group">
+                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-600 transition-colors" size={18} />
+                        <input 
+                            value={mtaa}
+                            disabled={!isUpdating}
+                            onChange={(e) => setMtaa(e.target.value)}
+                            className={`w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-2 transition-all font-bold text-sm outline-none ${
+                                isUpdating ? 'border-brand-100 bg-white focus:border-brand-500 shadow-inner' : 'border-transparent'
+                            }`}
+                            placeholder="e.g. Kibera, Langata, Ruaka"
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] pl-1">Detailed Address</label>
                     <div className="relative group">
                         <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-600 transition-colors" size={18} />
                         <input 
@@ -101,35 +143,52 @@ export default function DeliveryDefaultsCard({ user }: { user?: User }) {
                             className={`w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-2 transition-all font-bold text-sm outline-none ${
                                 isUpdating ? 'border-brand-100 bg-white focus:border-brand-500 shadow-inner' : 'border-transparent'
                             }`}
-                            placeholder="e.g. Block A, Apartment 12, Sunrise Estate"
+                            placeholder="e.g. Block A, Apt 12, Sunrise Est"
                         />
                     </div>
                 </div>
 
-                <div className="space-y-2.5">
-                    <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] pl-1">Latitude</label>
-                    <input 
-                        value={latitude}
-                        disabled={!isUpdating}
-                        onChange={(e) => setLatitude(e.target.value)}
-                        className={`w-full h-14 px-4 bg-neutral-50 rounded-2xl border-2 transition-all font-bold text-sm outline-none ${
-                            isUpdating ? 'border-brand-100 bg-white focus:border-brand-500 shadow-inner' : 'border-transparent'
-                        }`}
-                        placeholder="-1.2921"
-                    />
-                </div>
-
-                <div className="space-y-2.5">
-                    <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] pl-1">Longitude</label>
-                    <input 
-                        value={longitude}
-                        disabled={!isUpdating}
-                        onChange={(e) => setLongitude(e.target.value)}
-                        className={`w-full h-14 px-4 bg-neutral-50 rounded-2xl border-2 transition-all font-bold text-sm outline-none ${
-                            isUpdating ? 'border-brand-100 bg-white focus:border-brand-500 shadow-inner' : 'border-transparent'
-                        }`}
-                        placeholder="36.8219"
-                    />
+                <div className="space-y-4 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] pl-1">GPS Coordinates</label>
+                        {isUpdating && (
+                            <button
+                                type="button"
+                                onClick={handlePingLocation}
+                                disabled={isPinging}
+                                className="text-[10px] font-black bg-brand-50 text-brand-700 px-3 py-1.5 rounded-lg border border-brand-100 uppercase tracking-widest flex items-center gap-1 hover:bg-brand-100 transition-colors"
+                            >
+                                {isPinging ? <Loader2 size={12} className="animate-spin" /> : <MapPin size={12} />}
+                                Ping My Location
+                            </button>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2.5">
+                            <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest pl-1">Latitude</label>
+                            <input 
+                                value={latitude}
+                                disabled={!isUpdating}
+                                onChange={(e) => setLatitude(e.target.value)}
+                                className={`w-full h-14 px-4 bg-neutral-50 rounded-2xl border-2 transition-all font-bold text-sm outline-none ${
+                                    isUpdating ? 'border-brand-100 bg-white focus:border-brand-500 shadow-inner' : 'border-transparent'
+                                }`}
+                                placeholder="-1.2921"
+                            />
+                        </div>
+                        <div className="space-y-2.5">
+                            <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest pl-1">Longitude</label>
+                            <input 
+                                value={longitude}
+                                disabled={!isUpdating}
+                                onChange={(e) => setLongitude(e.target.value)}
+                                className={`w-full h-14 px-4 bg-neutral-50 rounded-2xl border-2 transition-all font-bold text-sm outline-none ${
+                                    isUpdating ? 'border-brand-100 bg-white focus:border-brand-500 shadow-inner' : 'border-transparent'
+                                }`}
+                                placeholder="36.8219"
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 <div className="space-y-4 md:col-span-2">

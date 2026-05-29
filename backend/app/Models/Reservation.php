@@ -29,6 +29,7 @@ class Reservation extends Model
         'delivery_status',
         'delivery_fee',
         'delivery_address',
+        'delivery_mtaa',
         'delivery_latitude',
         'delivery_longitude',
         'delivery_image_url',

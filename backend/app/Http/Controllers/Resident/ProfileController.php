@@ -116,10 +116,11 @@ class ProfileController extends Controller
         Log::info('Resident Default Delivery Info Update Triggered', ['user_id' => Auth::id()]);
         
         $request->validate([
-            'default_delivery_address' => 'nullable|string|max:255',
-            'default_delivery_latitude' => 'nullable|numeric',
+            'default_delivery_address'   => 'nullable|string|max:255',
+            'default_delivery_mtaa'      => 'nullable|string|max:100',
+            'default_delivery_latitude'  => 'nullable|numeric',
             'default_delivery_longitude' => 'nullable|numeric',
-            'delivery_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'delivery_image'             => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         /** @var \App\Models\User $user */
@@ -127,8 +128,9 @@ class ProfileController extends Controller
 
         $updateData = $request->only([
             'default_delivery_address',
+            'default_delivery_mtaa',
             'default_delivery_latitude',
-            'default_delivery_longitude'
+            'default_delivery_longitude',
         ]);
 
         if ($request->hasFile('delivery_image')) {

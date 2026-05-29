@@ -27,6 +27,7 @@ class User extends Authenticatable
         'avatar_url',
         'is_active',
         'default_delivery_address',
+        'default_delivery_mtaa',
         'default_delivery_image_url',
         'default_delivery_latitude',
         'default_delivery_longitude',

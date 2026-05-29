@@ -31,28 +31,30 @@ class DeliveryService
     }
 
     /**
-     * Calculate dynamic delivery fee:
-     * - Base fare: KES 100 (covers up to 3 km), +KES 30/km beyond that
-     * - Proportional cap: fee cannot exceed 25% of the order value (min KES 10)
-     *   This prevents small orders (e.g. KES 20) from being charged an outsized fee.
+     * Calculate dynamic delivery fee using admin-configured settings.
      *
-     * @param float $distanceKm  Haversine distance from market to delivery point
-     * @param float $orderSubtotal  Cart total excluding fees — used for proportional capping
+     * Two modes (controlled via 'delivery_fee_type' system setting):
+     *   base_plus_per_km  — KES <base_fee> + (<dist> * <per_km>)
+     *   per_km_only       — <dist> * <per_km>
+     *
+     * @param float $distanceKm     Haversine distance market → delivery point
+     * @param float $orderSubtotal  Cart total (unused for cap — removed per design)
      */
     public function calculateDeliveryFee(float $distanceKm, float $orderSubtotal = 0.0): float
     {
-        // Raw distance-based fee
-        $rawFee = $distanceKm <= 3.0
-            ? 100.00
-            : round(100.00 + ($distanceKm - 3.0) * 30.00, 2);
+        $feeType    = SystemSetting::get('delivery_fee_type', 'base_plus_per_km');
+        $baseFee    = (float) SystemSetting::get('delivery_base_fee', 50.0);
+        $perKmRate  = (float) SystemSetting::get('delivery_fee_per_km', 20.0);
 
-        // Proportional cap: never exceed 25% of order value (minimum KES 10)
-        if ($orderSubtotal > 0) {
-            $proportionalCap = max(10.0, round($orderSubtotal * 0.25, 2));
-            return round(min($rawFee, $proportionalCap), 2);
+        if ($feeType === 'per_km_only') {
+            $rawFee = round($distanceKm * $perKmRate, 2);
+        } else {
+            // base_plus_per_km (default)
+            $rawFee = round($baseFee + ($distanceKm * $perKmRate), 2);
         }
 
-        return round($rawFee, 2);
+        // Always enforce a minimum of KES 20 so very short distances are still viable
+        return max(20.0, $rawFee);
     }
 
     /**

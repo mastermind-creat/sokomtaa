@@ -420,9 +420,14 @@ export default function RiderDashboard() {
                                                         isPickedUp ? 'In Transit to Resident' : 'Arrived / Verification'}
                                                 </span>
                                                 <h4 className="text-base font-black text-green-950 uppercase tracking-tight mt-2">{res.product?.name || 'Produce'}</h4>
-                                                <div className="flex items-center gap-1 text-[10px] text-text-secondary font-medium mt-0.5">
-                                                    <MapPin size={12} className="text-brand-500 shrink-0" />
-                                                    <span className="truncate max-w-[150px]">{res.delivery_address}</span>
+                                                <div className="flex flex-col gap-1 mt-1.5">
+                                                    <div className="flex items-center gap-1 text-[10px] text-brand-700 font-bold uppercase tracking-wider">
+                                                        <MapPin size={12} className="text-brand-500 shrink-0" />
+                                                        <span>{res.delivery_mtaa || 'Local Area'}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 text-[10px] text-text-secondary">
+                                                        <span className="pl-4 truncate max-w-[180px]">{res.delivery_address}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="text-right shrink-0">
@@ -431,7 +436,6 @@ export default function RiderDashboard() {
                                             </div>
                                         </div>
 
-                                        {/* Delivery Image (if available) */}
                                         {res.delivery_image_url && (
                                             <div className="w-full h-32 rounded-2xl overflow-hidden border border-gray-100 relative">
                                                 <img src={res.delivery_image_url} alt="Delivery Location" className="w-full h-full object-cover" />
@@ -441,6 +445,18 @@ export default function RiderDashboard() {
                                                     </span>
                                                 </div>
                                             </div>
+                                        )}
+
+                                        {/* Navigation Button */}
+                                        {res.delivery_latitude && res.delivery_longitude && (
+                                            <a
+                                                href={`https://www.google.com/maps/dir/?api=1&destination=${res.delivery_latitude},${res.delivery_longitude}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center justify-center gap-2 h-12 w-full bg-blue-50 text-blue-600 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-blue-100 hover:bg-blue-100 transition-colors"
+                                            >
+                                                <Navigation size={14} /> Navigate to Drop-off
+                                            </a>
                                         )}
 
                                         {/* Dynamic Progress Stepper */}

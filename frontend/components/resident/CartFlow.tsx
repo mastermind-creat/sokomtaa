@@ -31,21 +31,7 @@ import { SystemSetting } from '@/types';
 import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
 
 
-interface EstatePreset {
-    name: string;
-    latitude: number;
-    longitude: number;
-}
 
-const ESTATES: EstatePreset[] = [
-    { name: 'Nairobi CBD', latitude: -1.2833, longitude: 36.8219 },
-    { name: 'Eastleigh', latitude: -1.2750, longitude: 36.8480 },
-    { name: 'Pumwani', latitude: -1.2789, longitude: 36.8422 },
-    { name: 'South C', latitude: -1.3200, longitude: 36.8300 },
-    { name: 'Westlands', latitude: -1.2682, longitude: 36.8081 },
-    { name: 'Kilimani', latitude: -1.2900, longitude: 36.7900 },
-    { name: 'Kahawa West', latitude: -1.1900, longitude: 36.8900 }
-];
 
 interface CartFlowProps {
     onClose: () => void;
@@ -74,7 +60,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
     }, [user]);
 
     const [deliveryOption, setDeliveryOption] = useState(false);
-    const [selectedEstate, setSelectedEstate] = useState('');
+    const [deliveryMtaa, setDeliveryMtaa] = useState('');
     const [deliveryAddress, setDeliveryAddress] = useState('');
     const [deliveryLat, setDeliveryLat] = useState<number | null>(null);
     const [deliveryLng, setDeliveryLng] = useState<number | null>(null);
@@ -83,6 +69,9 @@ export default function CartFlow({ onClose }: CartFlowProps) {
     // Pre-populate with default delivery info if available
     useEffect(() => {
         if (user && deliveryOption) {
+            if (user.default_delivery_mtaa && !deliveryMtaa) {
+                setDeliveryMtaa(user.default_delivery_mtaa);
+            }
             if (user.default_delivery_address && !deliveryAddress) {
                 setDeliveryAddress(user.default_delivery_address);
             }
@@ -131,15 +120,7 @@ export default function CartFlow({ onClose }: CartFlowProps) {
         return parseFloat(rawFee.toFixed(2));
     };
 
-    useEffect(() => {
-        if (deliveryOption && selectedEstate) {
-            const estate = ESTATES.find(e => e.name === selectedEstate);
-            if (estate) {
-                setDeliveryLat(estate.latitude);
-                setDeliveryLng(estate.longitude);
-            }
-        }
-    }, [deliveryOption, selectedEstate]);
+
 
     useEffect(() => {
         if (deliveryOption && deliveryLat && deliveryLng) {
@@ -203,11 +184,12 @@ export default function CartFlow({ onClose }: CartFlowProps) {
             };
 
             if (deliveryOption) {
-                if (!deliveryLat || !deliveryLng) {
-                    throw new Error('Please select an estate/location for delivery to calculate shipping fee.');
+                if (!deliveryLat || !deliveryLng || !deliveryMtaa) {
+                    throw new Error('Please set your delivery Mtaa and location coordinates in your profile to use shipping.');
                 }
                 payload.delivery_option = true;
-                payload.delivery_address = deliveryAddress || (selectedEstate ? `${selectedEstate} Estate` : 'Address provided');
+                payload.delivery_mtaa = deliveryMtaa;
+                payload.delivery_address = deliveryAddress || `${deliveryMtaa} Area`;
                 payload.delivery_latitude = deliveryLat;
                 payload.delivery_longitude = deliveryLng;
             }
@@ -357,52 +339,39 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                                             className="space-y-3 overflow-hidden pt-2"
                                         >
                                             {user?.default_delivery_latitude && user?.default_delivery_longitude ? (
-                                                <div className="p-3 bg-brand-50 rounded-xl border border-brand-100 flex items-start gap-3">
-                                                    <MapPin className="text-brand-600 mt-0.5 shrink-0" size={16} />
-                                                    <div>
-                                                        <p className="text-xs font-bold text-brand-900">Using Default Delivery Location</p>
-                                                        <p className="text-[10px] text-brand-700/80 mt-0.5 leading-relaxed">
-                                                            Your delivery will be routed to your saved location. If you want to deliver to a different estate, please select it below.
-                                                        </p>
+                                                <div className="space-y-4">
+                                                    <div className="p-3 bg-brand-50 rounded-xl border border-brand-100 flex items-start gap-3">
+                                                        <MapPin className="text-brand-600 mt-0.5 shrink-0" size={16} />
+                                                        <div>
+                                                            <p className="text-xs font-bold text-brand-900">Delivery to {deliveryMtaa}</p>
+                                                            <p className="text-[10px] text-brand-700/80 mt-0.5 leading-relaxed">
+                                                                {deliveryAddress}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-[10px] text-text-secondary">To change your delivery location, please update your profile settings.</p>
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 bg-rose-50 rounded-xl border border-rose-200">
+                                                    <div className="flex gap-3">
+                                                        <AlertCircle className="text-rose-600 shrink-0" size={20} />
+                                                        <div>
+                                                            <p className="text-xs font-bold text-rose-900">Delivery Profile Incomplete</p>
+                                                            <p className="text-[10px] text-rose-700 mt-1 leading-relaxed">
+                                                                You must set your Mtaa (Neighborhood) and exact location coordinates in your profile before you can request delivery.
+                                                            </p>
+                                                            <button 
+                                                                onClick={() => { onClose(); router.push('/profile'); }}
+                                                                className="mt-3 px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold shadow-sm"
+                                                            >
+                                                                Update Profile
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            ) : null}
+                                            )}
 
-                                            <div className="space-y-2">
-                                                <label className="text-[9px] font-black uppercase tracking-widest text-text-muted pl-1">
-                                                    Select Neighborhood / Estate (Chagua Mtaa) {user?.default_delivery_latitude ? '(Optional)' : ''}
-                                                </label>
-                                                <div className="relative">
-                                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-                                                    <select
-                                                        value={selectedEstate}
-                                                        onChange={(e) => setSelectedEstate(e.target.value)}
-                                                        className="w-full h-12 pl-10 pr-4 bg-white rounded-xl border border-neutral-200 outline-none text-xs font-black text-green-950 cursor-pointer"
-                                                    >
-                                                        <option value="">-- Choose Neighborhood --</option>
-                                                        {ESTATES.map(estate => (
-                                                            <option key={estate.name} value={estate.name}>
-                                                                {estate.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="text-[9px] font-black uppercase tracking-widest text-text-muted pl-1">
-                                                    Detailed Delivery Address (Maelezo ya Anwani)
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={deliveryAddress}
-                                                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                                                    placeholder="House No, Apartment/Street (e.g. Rm 12B, Apex Court)"
-                                                    className="w-full h-12 px-4 bg-white rounded-xl border border-neutral-200 outline-none text-xs font-bold text-green-950 placeholder-neutral-400"
-                                                />
-                                            </div>
-
-                                            {(selectedEstate || (deliveryLat && deliveryLng)) && (
+                                            {(deliveryLat && deliveryLng) && (
                                                 <div className="p-3 bg-brand-50/50 rounded-xl border border-brand-100/50 text-[10px] text-brand-900 font-bold uppercase tracking-wider flex justify-between items-center">
                                                     <span>Calculated Shipping Fee:</span>
                                                     <span className="font-mono text-brand-600 font-black">KES {calculatedDeliveryFee.toFixed(2)}</span>
@@ -445,7 +414,8 @@ export default function CartFlow({ onClose }: CartFlowProps) {
 
                                 <button
                                     onClick={() => setStep('payment')}
-                                    className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-between px-8 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 group mt-4"
+                                    disabled={deliveryOption && (!deliveryLat || !deliveryLng || !deliveryMtaa)}
+                                    className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-between px-8 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 group mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Proceed to Checkout
                                     <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />

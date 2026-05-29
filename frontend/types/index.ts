@@ -9,6 +9,7 @@ export interface User {
     avatar_url?: string;
     national_id?: string;
     default_delivery_address?: string;
+    default_delivery_mtaa?: string;
     default_delivery_image_url?: string;
     default_delivery_latitude?: number | string;
     default_delivery_longitude?: number | string;
@@ -211,7 +212,10 @@ export interface Reservation {
     status: 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled' | 'expired';
     delivery_option?: boolean;
     delivery_status?: string | null;
+    delivery_mtaa?: string | null;
     delivery_address?: string | null;
+    delivery_latitude?: number | string | null;
+    delivery_longitude?: number | string | null;
     delivery_fee?: string | number | null;
     rider_fee?: string | number | null;
     delivery_rider_id?: number | null;
