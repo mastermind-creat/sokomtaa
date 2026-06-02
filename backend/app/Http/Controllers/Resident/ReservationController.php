@@ -388,15 +388,40 @@ class ReservationController extends Controller
             return $this->error('Only pending or paid reservations can be cancelled.', 'CANNOT_CANCEL', 422);
         }
 
-        $reservation->update(['status' => 'cancelled']);
+        DB::transaction(function () use ($reservation, $user) {
+            if ($reservation->status === 'paid') {
+                /** @var \App\Models\User $user */
+                $wallet = $user->wallet()->firstOrCreate(
+                    ['user_id' => $user->id],
+                    ['balance' => 0, 'currency' => 'KES']
+                );
 
-        // Restore stock if quantity was tracked
-        if ($reservation->product && $reservation->product->stock_quantity !== null) {
-            $reservation->product->increment('stock_quantity', $reservation->quantity);
-            if ($reservation->product->stock_status === 'out_of_stock') {
-                $reservation->product->update(['stock_status' => 'low']);
+                $refundAmount = $reservation->total_amount;
+                $wallet->balance += $refundAmount;
+                $wallet->save();
+
+                \App\Models\WalletTransaction::create([
+                    'wallet_id' => $wallet->id,
+                    'amount' => $refundAmount,
+                    'type' => 'refund',
+                    'description' => "Refund for cancelled reservation {$reservation->reservation_code}",
+                    'reference_type' => 'reservation',
+                    'reference_id' => $reservation->id,
+                    'status' => 'completed',
+                    'balance_after' => $wallet->balance,
+                ]);
             }
-        }
+
+            $reservation->update(['status' => 'cancelled']);
+
+            // Restore stock if quantity was tracked
+            if ($reservation->product && $reservation->product->stock_quantity !== null) {
+                $reservation->product->increment('stock_quantity', $reservation->quantity);
+                if ($reservation->product->stock_status === 'out_of_stock') {
+                    $reservation->product->update(['stock_status' => 'low']);
+                }
+            }
+        });
 
         return $this->success($reservation, 'Reservation cancelled successfully.');
     }

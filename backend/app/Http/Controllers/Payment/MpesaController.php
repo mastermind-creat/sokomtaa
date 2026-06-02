@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class MpesaController extends Controller
 {
@@ -40,6 +41,7 @@ class MpesaController extends Controller
             'target_ids' => 'required_if:type,reservation|array',
             'target_ids.*' => 'integer',
             'amount' => 'required_if:type,wallet_topup|numeric|min:1',
+            'use_wallet' => 'nullable|boolean',
         ]);
 
         // Normalize Phone Number to 254XXXXXXXXX
@@ -48,6 +50,8 @@ class MpesaController extends Controller
         $user = Auth::user();
         $amount = 0;
         $ref = '';
+
+        $walletDeduction = 0;
 
         if ($request->type === 'reservation') {
             $reservationIds = $request->target_ids;
@@ -60,6 +64,16 @@ class MpesaController extends Controller
                 $amount += $reservation->total_amount;
             }
             
+            if ($request->boolean('use_wallet') && $user->wallet && $user->wallet->balance > 0) {
+                if ($user->wallet->balance >= $amount) {
+                    $walletDeduction = $amount;
+                    $amount = 0; // Fully covered
+                } else {
+                    $walletDeduction = $user->wallet->balance;
+                    $amount -= $walletDeduction;
+                }
+            }
+
             $ref = $reservations->first()->reservation_code . ($reservations->count() > 1 ? '+' : '');
         } elseif ($request->type === 'market_fee') {
             $fee = MarketFee::findOrFail($request->target_id);
@@ -76,6 +90,34 @@ class MpesaController extends Controller
             // Wallet Top-up
             $amount = $request->amount;
             $ref = 'TOPUP-' . $user->id;
+        }
+
+        // If fully covered by wallet, process immediately without STK
+        if ($amount == 0 && $walletDeduction > 0) {
+            $checkoutRequestId = 'WALLET-' . Str::random(10);
+            $payment = Payment::create([
+                'reservation_id' => $request->type === 'reservation' ? $request->target_ids[0] : null,
+                'user_id' => $user->id,
+                'mpesa_checkout_request_id' => $checkoutRequestId,
+                'amount' => 0,
+                'wallet_deduction' => $walletDeduction,
+                'phone_number' => $phone,
+                'type' => $request->type,
+                'status' => 'pending',
+            ]);
+
+            Reservation::whereIn('id', $request->target_ids)->update([
+                'mpesa_checkout_request_id' => $checkoutRequestId
+            ]);
+
+            // Simulate immediate callback success
+            $this->processSuccessfulPayment($payment, $checkoutRequestId, 'WALLET-TXN');
+
+            return $this->success([
+                'checkout_request_id' => $checkoutRequestId,
+                'customer_message' => 'Payment fully covered by wallet balance.',
+                'status' => 'completed',
+            ], 'Payment successful using wallet balance.');
         }
 
         $stkResponse = $this->mpesaService->stkPush(
@@ -96,6 +138,7 @@ class MpesaController extends Controller
             'user_id' => $user->id,
             'mpesa_checkout_request_id' => $stkResponse['CheckoutRequestID'],
             'amount' => $amount,
+            'wallet_deduction' => $walletDeduction,
             'phone_number' => $phone,
             'type' => $request->type,
             'status' => 'pending',
@@ -112,6 +155,107 @@ class MpesaController extends Controller
             'checkout_request_id' => $stkResponse['CheckoutRequestID'],
             'customer_message' => $stkResponse['CustomerMessage']
         ], 'Payment request sent to your phone. Please enter your M-Pesa PIN.');
+    }
+
+    /**
+     * Internal helper to process a successful payment.
+     */
+    protected function processSuccessfulPayment(Payment $payment, $checkoutRequestId, $transactionId, $responseData = [])
+    {
+        $payment->update([
+            'status' => 'completed',
+            'mpesa_transaction_id' => $transactionId,
+            'mpesa_response' => empty($responseData) ? null : collect($responseData)->toJson(),
+            'paid_at' => now(),
+        ]);
+
+        if ($payment->wallet_deduction > 0) {
+            $userWallet = $payment->user->wallet;
+            if ($userWallet) {
+                $userWallet->balance -= $payment->wallet_deduction;
+                $userWallet->save();
+
+                \App\Models\WalletTransaction::create([
+                    'wallet_id' => $userWallet->id,
+                    'amount' => -$payment->wallet_deduction,
+                    'type' => 'payment',
+                    'description' => "Wallet payment for reservation(s)",
+                    'reference_type' => 'payment',
+                    'reference_id' => $payment->id,
+                    'status' => 'completed',
+                    'balance_after' => $userWallet->balance,
+                ]);
+            }
+        }
+
+        // Update associated entities
+        if ($payment->type === 'reservation') {
+            $reservations = Reservation::where('mpesa_checkout_request_id', $checkoutRequestId)->get();
+            $walletService = app(WalletService::class);
+
+            foreach ($reservations as $reservation) {
+                $reservation->update(['status' => 'paid']);
+
+                // Credit the trader's wallet
+                $trader = $reservation->trader;
+                if ($trader) {
+                    $wallet = $walletService->getOrCreateForTrader($trader->id);
+                    $creditAmount = $reservation->unit_price * $reservation->quantity;
+                    $productName = $reservation->product->name ?? 'Product';
+                    $walletService->credit(
+                        $wallet,
+                        $creditAmount,
+                        "Sale: {$reservation->reservation_code} — {$productName}",
+                        'reservation',
+                        (string) $reservation->id
+                    );
+                }
+
+                // Trigger Notification
+                $this->notificationService->notifyReservationUpdate(
+                    $payment->user,
+                    $reservation,
+                    'paid'
+                );
+            }
+        } elseif ($payment->type === 'product_boost' && $payment->product_id) {
+            $payment->product->update([
+                'is_boosted' => true,
+                'boosted_until' => now()->addHours(24),
+            ]);
+
+            // Notify Trader
+            $this->notificationService->send(
+                $payment->user,
+                'Product Boosted!',
+                "Your product '{$payment->product->name}' is now appearing at the top of search results for the next 24 hours.",
+                'promotion',
+                ['product_id' => $payment->product_id],
+                true
+            );
+        } elseif ($payment->type === 'market_fee' || $payment->type === 'wallet_topup') {
+            $walletService = app(WalletService::class);
+            $wallet = $walletService->getOrCreateForUser($payment->user_id);
+            
+            // Credit the wallet
+            $walletService->credit(
+                $wallet, 
+                $payment->amount, 
+                "M-Pesa Top-up: {$transactionId}",
+                'mpesa',
+                $transactionId
+            );
+
+            // Notify Trader (or resident in this case, actually topups can be both)
+            $this->notificationService->send(
+                $payment->user,
+                'Wallet Topped Up',
+                "Your wallet balance has been credited with KES {$payment->amount}. Thank you.",
+                'payment',
+                ['transaction_id' => $transactionId],
+                true
+            );
+        }
     }
 
     /**
@@ -138,81 +282,7 @@ class MpesaController extends Controller
             $meta = $body['CallbackMetadata']['Item'];
             $transactionId = collect($meta)->firstWhere('Name', 'MpesaReceiptNumber')['Value'];
 
-            $payment->update([
-                'status' => 'completed',
-                'mpesa_transaction_id' => $transactionId,
-                'mpesa_response' => $data,
-                'paid_at' => now(),
-            ]);
-
-            // Update associated entities
-            if ($payment->type === 'reservation') {
-                $reservations = Reservation::where('mpesa_checkout_request_id', $checkoutRequestId)->get();
-                $walletService = app(WalletService::class);
-
-                foreach ($reservations as $reservation) {
-                    $reservation->update(['status' => 'paid']);
-
-                    // Credit the trader's wallet
-                    $trader = $reservation->trader;
-                    if ($trader) {
-                        $wallet = $walletService->getOrCreateForTrader($trader->id);
-                        $creditAmount = $reservation->unit_price * $reservation->quantity;
-                        $productName = $reservation->product->name ?? 'Product';
-                        $walletService->credit(
-                            $wallet,
-                            $creditAmount,
-                            "Sale: {$reservation->reservation_code} — {$productName}",
-                            'reservation',
-                            (string) $reservation->id
-                        );
-                    }
-
-                    // Trigger Notification
-                    $this->notificationService->notifyReservationUpdate(
-                        $payment->user,
-                        $reservation,
-                        'paid'
-                    );
-                }
-            } elseif ($payment->type === 'product_boost' && $payment->product_id) {
-                $payment->product->update([
-                    'is_boosted' => true,
-                    'boosted_until' => now()->addHours(24),
-                ]);
-
-                // Notify Trader
-                $this->notificationService->send(
-                    $payment->user,
-                    'Product Boosted!',
-                    "Your product '{$payment->product->name}' is now appearing at the top of search results for the next 24 hours.",
-                    'promotion',
-                    ['product_id' => $payment->product_id],
-                    true
-                );
-            } elseif ($payment->type === 'market_fee' || $payment->type === 'wallet_topup') {
-                $walletService = app(WalletService::class);
-                $wallet = $walletService->getOrCreateForUser($payment->user_id);
-                
-                // Credit the wallet
-                $walletService->credit(
-                    $wallet, 
-                    $payment->amount, 
-                    "M-Pesa Top-up: {$transactionId}",
-                    'mpesa',
-                    $transactionId
-                );
-
-                // Notify Trader
-                $this->notificationService->send(
-                    $payment->user,
-                    'Wallet Topped Up',
-                    "Your wallet balance has been credited with KES {$payment->amount}. Thank you.",
-                    'payment',
-                    ['transaction_id' => $transactionId],
-                    true
-                );
-            }
+            $this->processSuccessfulPayment($payment, $checkoutRequestId, $transactionId, $data);
 
             Log::info('M-Pesa Payment Successful and Notifications Sent: ' . $transactionId);
         } else {

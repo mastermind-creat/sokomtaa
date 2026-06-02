@@ -150,6 +150,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/cloudinary/sign', [\App\Http\Controllers\CloudinaryController::class, 'getSignature']);
     });
 
+    // ── Resident Wallet ──────────────────────────────────────────────────────
+    Route::prefix('resident/wallet')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Resident\WalletController::class, 'index']);
+        Route::get('/transactions', [\App\Http\Controllers\Resident\WalletController::class, 'transactions']);
+        Route::post('/withdraw', [\App\Http\Controllers\Resident\WalletController::class, 'withdraw']);
+    });
+
     // ── M-Pesa Payment Initiation ────────────────────────────────────────────
     Route::prefix('payments/mpesa')->group(function () {
         Route::post('/stkpush', [\App\Http\Controllers\Payment\MpesaController::class, 'initiateSTK']);
