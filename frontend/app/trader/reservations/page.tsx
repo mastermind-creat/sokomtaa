@@ -160,7 +160,9 @@ function OrderCard({ order, onMarkReady, onMarkComplete, isUpdating, onDownloadR
                 ) : order.pickup_deadline && (
                     <div className={`flex items-center gap-2 text-xs font-medium ${isUrgent ? 'text-red-600' : 'text-text-secondary'}`}>
                         <Clock className="w-3.5 h-3.5" />
-                        Pickup deadline: {deadlineStr}
+                        {deadlineStr === 'Expired' && (order.status === 'paid' || order.status === 'ready')
+                            ? 'Processing Overdue'
+                            : `Pickup deadline: ${deadlineStr}`}
                     </div>
                 )}
             </div>

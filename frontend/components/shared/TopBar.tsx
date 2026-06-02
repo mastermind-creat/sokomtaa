@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, LogOut, ChevronDown, User as UserIcon, Menu } from 'lucide-react';
+import { Search, LogOut, ChevronDown, User as UserIcon, Menu, ShoppingCart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
@@ -12,6 +12,8 @@ import NotificationBell from './NotificationBell';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useLogout } from '@/hooks/useLogout';
+import { useCartStore } from '@/store/cartStore';
+import CartFlow from '@/components/resident/CartFlow';
 
 import { Logo } from './Logo';
 
@@ -27,6 +29,8 @@ export default function TopBar({ title: propTitle, onMenuToggle }: TopBarProps) 
     const { t } = useTranslation();
     const router = useRouter();
     const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+    const [isCartOpen, setIsCartOpen] = React.useState(false);
+    const { items, getTotalItems } = useCartStore();
 
     // Header title priority: static title prop > store title > translation default
     const displayTitle = propTitle || pageTitle || t('common.dashboard');
@@ -79,8 +83,21 @@ export default function TopBar({ title: propTitle, onMenuToggle }: TopBarProps) 
                 <div className="hidden lg:block">
                     <LanguageToggle />
                 </div>
-                
                 <NotificationBell />
+
+                {user?.role === 'resident' && (
+                    <button 
+                        onClick={() => setIsCartOpen(true)}
+                        className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-50 active:scale-95 transition-all text-gray-500 hover:text-brand-600"
+                    >
+                        <ShoppingCart size={20} />
+                        {items.length > 0 && (
+                            <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-brand-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm">
+                                {getTotalItems()}
+                            </span>
+                        )}
+                    </button>
+                )}
 
                 <div className="w-[1px] h-6 bg-gray-200" />
 
@@ -144,6 +161,10 @@ export default function TopBar({ title: propTitle, onMenuToggle }: TopBarProps) 
                     </AnimatePresence>
                 </div>
             </div>
+
+            <AnimatePresence>
+                {isCartOpen && <CartFlow onClose={() => setIsCartOpen(false)} />}
+            </AnimatePresence>
         </header>
     );
 }
