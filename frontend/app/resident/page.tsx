@@ -51,13 +51,13 @@ export default function HomePage() {
 
     // Initialize geolocation tracking
     useGeolocation();
-    const { coords } = useLocationStore();
+    const { coords, radius, setRadius } = useLocationStore();
 
     // Fetch Markets
     const { data: marketData, isLoading: marketsLoading } = useQuery<ApiResponse<Market[]> | any>({
-        queryKey: ['markets', coords?.lat, coords?.lng],
+        queryKey: ['markets', coords?.lat, coords?.lng, radius],
         queryFn: () => {
-            const params = coords ? `?lat=${coords.lat}&lng=${coords.lng}` : '';
+            const params = coords ? `?lat=${coords.lat}&lng=${coords.lng}&radius=${radius}` : '';
             return api.get(`/markets${params}`);
         },
     });
@@ -196,6 +196,36 @@ export default function HomePage() {
                                     <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest leading-none">Live Market Map</p>
                                     <p className="text-xs font-bold text-green-950">Locate stalls in real-time</p>
                                 </div>
+                            </div>
+                        </motion.div>
+
+                        {/* 2.5. Radius Selector */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.6 }}
+                            className="mt-6 max-w-2xl bg-white border border-brand-100 rounded-3xl p-5 shadow-sm"
+                        >
+                            <div className="flex items-center justify-between mb-3">
+                                <label className="text-[10px] md:text-xs font-black text-green-950 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <MapPin size={16} className="text-brand-600" />
+                                    Search Distance
+                                </label>
+                                <span className="text-xs font-black text-brand-700 bg-brand-50 border border-brand-100 px-3 py-1 rounded-xl shadow-inner">{radius} KM</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                min="1" 
+                                max="100" 
+                                step="1"
+                                value={radius} 
+                                onChange={(e) => setRadius(Number(e.target.value))}
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-600 outline-none focus:ring-2 focus:ring-brand-500/50"
+                            />
+                            <div className="flex justify-between mt-2 px-1">
+                                <span className="text-[8px] font-bold text-text-muted uppercase">1km</span>
+                                <span className="text-[8px] font-bold text-text-muted uppercase">50km</span>
+                                <span className="text-[8px] font-bold text-text-muted uppercase">100km</span>
                             </div>
                         </motion.div>
                     </motion.div>

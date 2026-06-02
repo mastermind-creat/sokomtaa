@@ -42,12 +42,12 @@ interface RecommendationsData {
 import { useLocationStore } from '@/store/locationStore';
 
 export default function RecommendationSection() {
-    const { coords } = useLocationStore();
+    const { coords, radius } = useLocationStore();
 
     const { data: recommendationsData, isLoading } = useQuery<ApiResponse<RecommendationsData>>({
-        queryKey: ['recommendations', coords?.lat, coords?.lng],
+        queryKey: ['recommendations', coords?.lat, coords?.lng, radius],
         queryFn: () => {
-            const params = coords ? `?lat=${coords.lat}&lng=${coords.lng}` : '';
+            const params = coords ? `?lat=${coords.lat}&lng=${coords.lng}&radius=${radius}` : '';
             return api.get(`/recommendations${params}`);
         },
     });

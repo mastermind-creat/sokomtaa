@@ -21,7 +21,7 @@ class MarketController extends Controller
     {
         $lat    = $request->filled('lat')    ? (float) $request->lat    : null;
         $lng    = $request->filled('lng')    ? (float) $request->lng    : null;
-        $radius = $request->filled('radius') ? (float) $request->radius : 5.0;
+        $radius = $request->filled('radius') ? (float) $request->radius : 50.0;
 
         $query = Market::where('is_active', true)
             ->withCount('traders')
@@ -69,7 +69,7 @@ class MarketController extends Controller
 
         $lat = $request->lat;
         $lng = $request->lng;
-        $radius = $request->radius ?? 10; // Default 10km
+        $radius = $request->radius ?? 50; // Default 50km
 
         // Haversine formula to find markets within radius
         $markets = Market::where('is_active', true)

@@ -29,7 +29,7 @@ export const useLocationStore = create<LocationState>()(
         (set) => ({
             coords: null,
             permissionStatus: 'unknown',
-            radius: 5, // Default 5 km
+            radius: 50, // Default 50 km
             isLocating: false,
             error: null,
 

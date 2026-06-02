@@ -12,7 +12,7 @@ class SearchService
     /**
      * Conduct a global weighted search across the marketplace.
      */
-    public function globalSearch(?string $query = null, ?int $categoryId = null, ?float $lat = null, ?float $lng = null, float $radius = 5.0): array
+    public function globalSearch(?string $query = null, ?int $categoryId = null, ?float $lat = null, ?float $lng = null, float $radius = 50.0): array
     {
         // 1. PRODUCTS
         $productsQuery = Product::with(['trader.market', 'category']);
@@ -168,7 +168,7 @@ class SearchService
     /**
      * Get discovery segments for the Resident Home page.
      */
-    public function getDiscoverySegments(?float $lat = null, ?float $lng = null, float $radius = 5.0): array
+    public function getDiscoverySegments(?float $lat = null, ?float $lng = null, float $radius = 50.0): array
     {
         // 1. Boosted Products (Global or Nearby)
         $boostedQuery = Product::with(['trader.market', 'category'])
