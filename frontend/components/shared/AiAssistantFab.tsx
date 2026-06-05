@@ -106,6 +106,7 @@ export default function AiAssistantFab() {
   const [showTooltip, setShowTooltip] = useState(false);
 
   // Voice state
+  const [voiceMode, setVoiceMode] = useState(false); // Full-screen voice UI
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -158,12 +159,15 @@ export default function AiAssistantFab() {
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
-    recognition.onstart = () => setIsListening(true);
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceMode(true); // Enter voice mode when listening starts
+    };
 
     recognition.onresult = (event: { results: { [key: number]: { [key: number]: { transcript: string } } } }) => {
       const transcript = event.results[0][0].transcript;
-      setInput(transcript);
       setIsListening(false);
+      sendMessage(transcript); // Auto-send
     };
 
     recognition.onerror = (event: { error: string }) => {
@@ -171,18 +175,33 @@ export default function AiAssistantFab() {
       setIsListening(false);
       if (event.error !== 'no-speech') {
         toast.error('Could not hear you. Please try again.');
+        setVoiceMode(false);
       }
     };
 
     recognition.onend = () => setIsListening(false);
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (e) {
+      // Ignore start errors if already started
+    }
   }, []);
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
     setIsListening(false);
   }, []);
+
+  const toggleVoiceMode = () => {
+    if (voiceMode) {
+      setVoiceMode(false);
+      stopListening();
+      window.speechSynthesis.cancel();
+    } else {
+      startListening();
+    }
+  };
 
   const toggleVoice = () => {
     if (isSpeaking) window.speechSynthesis.cancel();
@@ -210,8 +229,8 @@ export default function AiAssistantFab() {
   }, []);
 
   // ── Send message ──────────────────────────────────────────────────────────
-  const handleSend = async () => {
-    const text = input.trim();
+  const sendMessage = async (textToSend: string) => {
+    const text = textToSend.trim();
     if (!text || isLoading) return;
 
     const userMessage: ChatMessage = { role: 'user', content: text };
@@ -227,7 +246,7 @@ export default function AiAssistantFab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: updatedMessages,
-          token: token ?? null, // pass auth token for tool-calling on behalf of user
+          token: token ?? null,
         }),
       });
 
@@ -238,8 +257,10 @@ export default function AiAssistantFab() {
       const aiMessage: ChatMessage = { role: 'assistant', content: data.response };
       setMessages(prev => [...prev, aiMessage]);
 
-      // Speak the response if voice is enabled
-      speak(data.response);
+      // Speak the response if voice is enabled or we are in voice mode
+      if (voiceEnabled || voiceMode) {
+        speak(data.response);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Soko AI is currently offline.';
       toast.error(msg);
@@ -251,6 +272,8 @@ export default function AiAssistantFab() {
       setIsLoading(false);
     }
   };
+
+  const handleSend = () => sendMessage(input);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
@@ -350,82 +373,131 @@ export default function AiAssistantFab() {
                 </div>
               </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar bg-neutral-50/50">
-                {messages.length === 0 && (
-                  <div className="text-center py-10 space-y-4">
-                    <div className="w-14 h-14 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center mx-auto">
-                      <MessageSquare size={28} />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="font-black text-green-950">Habari, {user?.name?.split(' ')[0] || 'rafiki'}!</p>
-                      <p className="text-xs text-text-secondary font-medium">
-                        I can search products, make reservations, and pay via M-Pesa for you.
-                        {speechSupported && ' You can also talk to me! 🎤'}
+              {/* Messages Area */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar bg-neutral-50/50 relative">
+                {/* Voice Mode Overlay */}
+                <AnimatePresence>
+                  {voiceMode && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.05 }}
+                      className="absolute inset-0 z-20 bg-brand-900 flex flex-col items-center justify-center p-6 text-center"
+                    >
+                      <button 
+                        onClick={toggleVoiceMode}
+                        className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-md transition-colors"
+                      >
+                        <X size={20} />
+                      </button>
+
+                      <div className="relative mb-8">
+                        {/* Ripples */}
+                        {(isListening || isSpeaking) && (
+                          <>
+                            <div className="absolute inset-0 bg-brand-500 rounded-full animate-ping opacity-20" style={{ animationDuration: '3s' }} />
+                            <div className="absolute inset-[-20px] bg-brand-400 rounded-full animate-ping opacity-10" style={{ animationDuration: '3s', animationDelay: '1s' }} />
+                          </>
+                        )}
+
+                        {/* Central Avatar */}
+                        <div className={`w-32 h-32 rounded-full flex items-center justify-center shadow-2xl relative z-10 transition-colors duration-500 ${
+                          isListening ? 'bg-red-500' : isSpeaking ? 'bg-amber-500' : 'bg-brand-600'
+                        }`}>
+                          {isListening ? (
+                            <Mic size={50} className="text-white animate-pulse" />
+                          ) : isSpeaking ? (
+                            <Volume2 size={50} className="text-white animate-bounce" />
+                          ) : isLoading ? (
+                            <Bot size={50} className="text-white animate-[spin_3s_linear_infinite]" />
+                          ) : (
+                            <Bot size={50} className="text-white" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Status Text */}
+                      <h2 className="text-2xl font-black text-white tracking-wide mb-2">
+                        {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : isLoading ? 'Thinking...' : 'Ready'}
+                      </h2>
+                      
+                      <p className="text-brand-200 text-sm font-medium max-w-[250px]">
+                        {isListening 
+                          ? 'Go ahead, I am listening to your request.' 
+                          : isSpeaking 
+                          ? 'Listen to the response...' 
+                          : isLoading 
+                          ? 'Processing your request...' 
+                          : 'Tap the microphone to speak.'}
                       </p>
-                    </div>
-                    <div className="flex flex-wrap justify-center gap-2 pt-2">
-                      {['Find sukuma wiki', 'Best rated traders', 'Reserve tomatoes for me'].map((tip) => (
+
+                      {/* Manual Trigger */}
+                      {!isListening && !isLoading && !isSpeaking && (
                         <button
-                          key={tip}
-                          onClick={() => setInput(tip)}
-                          className="px-3 py-1.5 bg-white border border-gray-100 rounded-full text-[10px] font-black text-brand-600 uppercase tracking-widest shadow-sm hover:border-brand-500 transition-all"
+                          onClick={startListening}
+                          className="mt-12 px-8 py-3 bg-white text-brand-900 rounded-full font-bold shadow-xl hover:scale-105 active:scale-95 transition-transform"
                         >
-                          {tip}
+                          Tap to Speak
                         </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-                {messages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${
-                      msg.role === 'user'
-                        ? 'bg-brand-600 text-white text-sm font-medium rounded-tr-none'
-                        : 'bg-white rounded-tl-none border border-gray-100'
-                    }`}>
-                      {msg.role === 'assistant'
-                        ? <AiMessageRenderer text={msg.content} />
-                        : msg.content
-                      }
+                {/* Normal Chat Messages (Hidden when voice mode is active) */}
+                <div className={voiceMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}>
+                  {messages.length === 0 && (
+                    <div className="text-center py-10 space-y-4">
+                      <div className="w-14 h-14 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center mx-auto">
+                        <MessageSquare size={28} />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-black text-green-950">Habari, {user?.name?.split(' ')[0] || 'rafiki'}!</p>
+                        <p className="text-xs text-text-secondary font-medium">
+                          I can search products, make reservations, and pay via M-Pesa for you.
+                          {speechSupported && ' You can also talk to me! 🎤'}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-2 pt-2">
+                        {['Find sukuma wiki', 'Best rated traders', 'Reserve tomatoes for me'].map((tip) => (
+                          <button
+                            key={tip}
+                            onClick={() => setInput(tip)}
+                            className="px-3 py-1.5 bg-white border border-gray-100 rounded-full text-[10px] font-black text-brand-600 uppercase tracking-widest shadow-sm hover:border-brand-500 transition-all"
+                          >
+                            {tip}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )}
 
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm flex items-center gap-2">
-                      <Loader2 size={14} className="animate-spin text-brand-600" />
-                      <span className="text-[11px] text-gray-400 font-medium">Thinking...</span>
+                  {messages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
+                      <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${
+                        msg.role === 'user'
+                          ? 'bg-brand-600 text-white text-sm font-medium rounded-tr-none'
+                          : 'bg-white rounded-tl-none border border-gray-100'
+                      }`}>
+                        {msg.role === 'assistant'
+                          ? <AiMessageRenderer text={msg.content} />
+                          : msg.content
+                        }
+                      </div>
                     </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
+                  ))}
+
+                  {isLoading && (
+                    <div className="flex justify-start mb-4">
+                      <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm flex items-center gap-2">
+                        <Loader2 size={14} className="animate-spin text-brand-600" />
+                        <span className="text-[11px] text-gray-400 font-medium">Thinking...</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
               </div>
-
-              {/* Voice listening indicator */}
-              <AnimatePresence>
-                {isListening && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="mx-4 mb-2 px-4 py-2 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2"
-                  >
-                    <div className="flex gap-0.5">
-                      {[0, 1, 2, 3].map(j => (
-                        <div
-                          key={j}
-                          className="w-1 bg-red-400 rounded-full animate-pulse"
-                          style={{ height: `${8 + j * 4}px`, animationDelay: `${j * 0.1}s` }}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-xs font-bold text-red-600">Listening... tap mic to stop</span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
               {/* Input */}
               <div className="p-4 bg-white border-t border-gray-100 shrink-0">
@@ -434,16 +506,16 @@ export default function AiAssistantFab() {
                   {speechSupported && (
                     <motion.button
                       whileTap={{ scale: 0.9 }}
-                      onClick={isListening ? stopListening : startListening}
+                      onClick={toggleVoiceMode}
                       disabled={isLoading}
                       className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                        isListening
+                        voiceMode
                           ? 'bg-red-500 text-white shadow-lg shadow-red-200'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          : 'bg-brand-100 text-brand-600 hover:bg-brand-200'
                       }`}
-                      aria-label={isListening ? 'Stop listening' : 'Start voice input'}
+                      aria-label={voiceMode ? 'Exit voice mode' : 'Enter voice mode'}
                     >
-                      {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+                      {voiceMode ? <X size={18} /> : <Mic size={18} />}
                     </motion.button>
                   )}
 
