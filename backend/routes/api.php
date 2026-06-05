@@ -16,6 +16,7 @@ use App\Http\Controllers\Public\GlobalStatsController;
 
 Route::get('/stats', [GlobalStatsController::class, 'index']);
 Route::get('/traders/featured', [GlobalStatsController::class, 'featuredTraders']);
+Route::post('/track-visit', [\App\Http\Controllers\Internal\TrafficTrackerController::class, 'track']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -294,6 +295,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/menu-counts', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'menuCounts']);
         Route::get('/trends', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'revenueTrends']);
         Route::get('/activity', [\App\Http\Controllers\Admin\AdminActivityController::class, 'index']);
+        Route::get('/traffic-stats', [\App\Http\Controllers\Internal\TrafficTrackerController::class, 'stats']);
 
         // System Settings
         Route::prefix('settings')->group(function () {

@@ -22,7 +22,8 @@ import {
     Ticket,
     ShoppingBag,
     Star,
-    Bell
+    Bell,
+    Activity
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -112,6 +113,7 @@ export default function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             items: [
                 { icon: LayoutDashboard, label: t('admin.dashboard_title'), path: '/admin/dashboard' },
                 { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
+                { icon: Activity, label: 'Traffic Analytics', path: '/admin/traffic' },
                 { icon: MapIcon, label: t('common.market_map') || 'Market Map', path: '/admin/map' },
             ]
         },

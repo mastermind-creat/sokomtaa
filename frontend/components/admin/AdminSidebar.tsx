@@ -21,7 +21,8 @@ import {
     UsersRound,
     ShieldCheck,
     GanttChartSquare,
-    Terminal
+    Terminal,
+    Activity
 } from 'lucide-react';
 
 const Building2 = ({ size, className, strokeWidth }: { size?: number; className?: string; strokeWidth?: number }) => (
@@ -127,6 +128,7 @@ export default function AdminSidebar() {
             items: [
                 { icon: LayoutDashboard, label: t('admin.dashboard_title'), path: '/admin/dashboard' },
                 { icon: BarChart3, label: t('Analytics') || 'Analytics', path: '/admin/analytics' },
+                { icon: Activity, label: 'Traffic Analytics', path: '/admin/traffic' },
                 { icon: MapIcon, label: t('Market_map') || 'Market Map', path: '/admin/map' },
             ]
         },
