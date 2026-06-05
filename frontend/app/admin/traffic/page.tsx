@@ -38,8 +38,8 @@ export default function TrafficAnalyticsPage() {
         refetchInterval: 15000 // Poll every 15s for live active users
     });
 
-    const activities = (activityDataRaw as any)?.data?.data || [];
-    const stats = (trafficStatsRaw as any)?.data?.data || {
+    const activities = (activityDataRaw as any)?.data || [];
+    const stats = (trafficStatsRaw as any)?.data || {
         active_users: 0,
         page_views_today: 0,
         unique_visitors_today: 0,

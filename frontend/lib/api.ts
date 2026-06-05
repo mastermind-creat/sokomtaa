@@ -30,8 +30,8 @@ api.interceptors.request.use((config) => {
             config.headers.Authorization = `Bearer ${token}`;
         }
         
-        // Only show global loader for mutations (non-GET requests)
-        if (config.method && config.method.toUpperCase() !== 'GET') {
+        // Only show global loader for mutations (non-GET requests) unless silent is true
+        if (config.method && config.method.toUpperCase() !== 'GET' && !(config as any).silent) {
             requestCount++;
             useUIStore.getState().setIsGlobalLoading(true);
         }
@@ -43,7 +43,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => {
         if (typeof window !== 'undefined') {
-            if (response.config.method && response.config.method.toUpperCase() !== 'GET') {
+            if (response.config.method && response.config.method.toUpperCase() !== 'GET' && !(response.config as any).silent) {
                 requestCount = Math.max(0, requestCount - 1);
                 if (requestCount === 0) useUIStore.getState().setIsGlobalLoading(false);
             }
@@ -52,7 +52,7 @@ api.interceptors.response.use(
     },
     (error) => {
         if (typeof window !== 'undefined') {
-            if (error.config?.method && error.config.method.toUpperCase() !== 'GET') {
+            if (error.config?.method && error.config.method.toUpperCase() !== 'GET' && !(error.config as any).silent) {
                 requestCount = Math.max(0, requestCount - 1);
                 if (requestCount === 0) useUIStore.getState().setIsGlobalLoading(false);
             }
