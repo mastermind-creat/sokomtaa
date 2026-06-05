@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import api from '@/lib/api';
 
-export function TrafficTracker() {
+function TrackerInner() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const isMounted = useRef(false);
@@ -27,4 +27,12 @@ export function TrafficTracker() {
     }, [pathname, searchParams]);
 
     return null;
+}
+
+export function TrafficTracker() {
+    return (
+        <Suspense fallback={null}>
+            <TrackerInner />
+        </Suspense>
+    );
 }
