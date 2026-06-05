@@ -399,3 +399,8 @@ Route::group(['prefix' => 'ai'], function () {
         Route::post('chat', [\App\Http\Controllers\AiController::class, 'chat']);
     });
 });
+
+// Internal AI Config (Server-to-Server)
+Route::group(['prefix' => 'internal', 'middleware' => [\App\Http\Middleware\InternalApiAuth::class]], function () {
+    Route::get('ai-config', [\App\Http\Controllers\Internal\AIConfigController::class, 'getConfig']);
+});
