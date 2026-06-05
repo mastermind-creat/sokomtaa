@@ -90,6 +90,10 @@ class ProductController extends Controller
                 return $this->error('Image upload failed.', 'UPLOAD_FAILED', 500);
             }
             $data['image_url'] = $imageUrl;
+        } else {
+            $category = \App\Models\Category::find($data['category_id']);
+            $catName = urlencode($category ? $category->name : 'Product');
+            $data['image_url'] = "https://placehold.co/600x400/1B6B3A/FFFFFF?text={$catName}";
         }
 
         $product = Product::create($data);

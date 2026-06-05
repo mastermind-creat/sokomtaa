@@ -247,6 +247,7 @@ export default function AiAssistantFab() {
         body: JSON.stringify({
           messages: updatedMessages,
           token: token ?? null,
+          role: user?.role,
         }),
       });
 

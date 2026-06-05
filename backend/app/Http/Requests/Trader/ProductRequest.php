@@ -24,7 +24,7 @@ class ProductRequest extends FormRequest
             'price' => 'required|numeric|min:0',
             'unit' => 'required|string|max:50', // e.g., kg, piece, bunch
             'stock_quantity' => 'nullable|integer|min:0',
-            'image' => $isPost ? 'required|image|max:5120' : 'nullable|image|max:5120', // 5MB limit
+            'image' => 'nullable|image|max:5120', // 5MB limit
             'is_active' => 'nullable|boolean',
         ];
     }
