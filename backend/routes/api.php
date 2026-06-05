@@ -16,7 +16,7 @@ use App\Http\Controllers\Public\GlobalStatsController;
 
 Route::get('/stats', [GlobalStatsController::class, 'index']);
 Route::get('/traders/featured', [GlobalStatsController::class, 'featuredTraders']);
-Route::post('/track-visit', [\App\Http\Controllers\Internal\TrafficTrackerController::class, 'track']);
+Route::post('/ping-session', [\App\Http\Controllers\Internal\TrafficTrackerController::class, 'track']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
