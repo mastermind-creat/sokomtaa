@@ -19,7 +19,9 @@ import {
     Activity,
     Layers,
     Warehouse,
-    Coins
+    Coins,
+    Bot,
+    Key
 } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useUIStore } from '@/store/uiStore';
@@ -139,6 +141,9 @@ export default function AdminSettingsPage() {
                         <TabsTrigger value="security" className="rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-gray-950 data-[state=active]:text-white flex-1 whitespace-nowrap">
                             Security
                         </TabsTrigger>
+                        <TabsTrigger value="ai" className="rounded-xl px-4 py-2 text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-gray-950 data-[state=active]:text-white flex-1 whitespace-nowrap">
+                            AI Capabilities
+                        </TabsTrigger>
                     </TabsList>
 
                     {/* Infrastructure Modules */}
@@ -243,6 +248,101 @@ export default function AdminSettingsPage() {
                                                 Changes to service fees apply immediately to all new reservations. Existing pending reservations will retain their original fee structure to maintain financial integrity.
                                             </p>
                                         </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </TabsContent>
+
+                    {/* AI Capabilities Hub */}
+                    <TabsContent value="ai" className="space-y-4">
+                        <div className="bg-white rounded-[2.5rem] p-6 border border-gray-50 shadow-sm">
+                            <h3 className="text-sm font-black text-green-950 uppercase tracking-tight mb-6 flex items-center gap-2">
+                                <Bot size={16} className="text-purple-600" />
+                                AI Agent Configuration
+                            </h3>
+
+                            {settingsLoading ? (
+                                <div className="py-12 flex flex-col items-center justify-center gap-4">
+                                    <div className="w-8 h-8 border-4 border-gray-100 border-t-purple-600 rounded-full animate-spin" />
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loading AI Settings...</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {/* Provider Selection */}
+                                    <div className="space-y-2 px-2">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
+                                                Active AI Provider
+                                            </label>
+                                            <span className="text-[8px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+                                                REQUIRED
+                                            </span>
+                                        </div>
+                                        <select
+                                            value={localSettings['ai_provider'] || 'groq'}
+                                            onChange={(e) => handleSettingChange('ai_provider', e.target.value)}
+                                            className="w-full bg-gray-50/50 border border-gray-100 h-14 px-5 rounded-2xl font-black text-sm text-green-950 outline-none focus:border-purple-500 focus:bg-white transition-all appearance-none"
+                                        >
+                                            <option value="groq">Groq (Llama 3)</option>
+                                            <option value="openai">OpenAI (GPT-4o)</option>
+                                        </select>
+                                        <p className="text-[9px] font-bold text-text-muted/60 tracking-wide px-1">
+                                            Select the primary engine powering the Soko Mtaa autonomous assistant.
+                                        </p>
+                                    </div>
+
+                                    {/* Groq API Key */}
+                                    <div className="space-y-2 px-2">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
+                                                Groq API Key
+                                            </label>
+                                            <Key size={12} className="text-gray-400" />
+                                        </div>
+                                        <input
+                                            type="password"
+                                            value={localSettings['groq_api_key'] || ''}
+                                            onChange={(e) => handleSettingChange('groq_api_key', e.target.value)}
+                                            placeholder="gsk_..."
+                                            className="w-full bg-gray-50/50 border border-gray-100 h-14 px-5 rounded-2xl font-black text-lg text-green-950 outline-none focus:border-purple-500 focus:bg-white transition-all"
+                                        />
+                                    </div>
+
+                                    {/* OpenAI API Key */}
+                                    <div className="space-y-2 px-2">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
+                                                OpenAI API Key
+                                            </label>
+                                            <Key size={12} className="text-gray-400" />
+                                        </div>
+                                        <input
+                                            type="password"
+                                            value={localSettings['openai_api_key'] || ''}
+                                            onChange={(e) => handleSettingChange('openai_api_key', e.target.value)}
+                                            placeholder="sk-..."
+                                            className="w-full bg-gray-50/50 border border-gray-100 h-14 px-5 rounded-2xl font-black text-lg text-green-950 outline-none focus:border-purple-500 focus:bg-white transition-all"
+                                        />
+                                    </div>
+
+                                    {/* AI Model Name */}
+                                    <div className="space-y-2 px-2">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
+                                                AI Model Name
+                                            </label>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={localSettings['ai_model'] || ''}
+                                            onChange={(e) => handleSettingChange('ai_model', e.target.value)}
+                                            placeholder="e.g., llama-3.3-70b-versatile"
+                                            className="w-full bg-gray-50/50 border border-gray-100 h-14 px-5 rounded-2xl font-black text-sm text-green-950 outline-none focus:border-purple-500 focus:bg-white transition-all"
+                                        />
+                                        <p className="text-[9px] font-bold text-text-muted/60 tracking-wide px-1">
+                                            Must be a valid model identifier for the selected provider.
+                                        </p>
                                     </div>
                                 </div>
                             )}
