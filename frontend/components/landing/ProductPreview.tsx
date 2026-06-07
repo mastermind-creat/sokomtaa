@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { Product, ApiResponse } from '@/types';
-import { ShoppingBag, ArrowRight, Tag, Store, Star, Flame } from 'lucide-react';
+import { ShoppingBag, ArrowRight, Tag, Store, Star, Flame, Plus } from 'lucide-react';
 
 export const ProductPreview = () => {
   const [hasHydrated, setHasHydrated] = React.useState(false);
@@ -23,7 +23,7 @@ export const ProductPreview = () => {
     queryFn: () => api.get('/recommendations'),
   });
 
-  const popularProducts = response?.data?.popular_products || [];
+  const popularProducts = (response?.data?.popular_products || []).slice(0, 12);
   const boostedProducts = response?.data?.boosted_products || [];
 
   const containerVariants: Variants = {
@@ -137,7 +137,7 @@ export const ProductPreview = () => {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true, margin: "-50px" }}
-                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
+                className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6"
               >
                 {popularProducts.map((product) => (
                   <motion.div variants={itemVariants} key={`popular-${product.id}`} className="group relative">
@@ -166,11 +166,10 @@ export const ProductPreview = () => {
                           </div>
                         </div>
 
-                        {/* Quick Action Overlay (Indicator) */}
-                        <div className="absolute inset-x-3 bottom-3 translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                          <div className="w-full bg-brand-600 text-white py-2.5 rounded-lg flex items-center justify-center gap-2 text-xs font-bold shadow-lg hover:bg-brand-500 transition-colors">
-                            <ShoppingBag size={14} />
-                            Quick Reserve
+                        {/* Quick Action Button */}
+                        <div className="absolute bottom-3 right-3">
+                          <div className="w-10 h-10 bg-brand-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-brand-500 hover:scale-110 transition-all duration-300">
+                            <Plus size={18} strokeWidth={2.5} />
                           </div>
                         </div>
                       </div>

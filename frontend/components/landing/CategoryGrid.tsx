@@ -15,7 +15,7 @@ export const CategoryGrid = () => {
     queryFn: () => api.get('/categories'),
   });
 
-  const categories = response?.data || [];
+  const categories = (response?.data || []).slice(0, 6);
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -52,7 +52,7 @@ export const CategoryGrid = () => {
             </h2>
           </div>
           <Link 
-            href="/resident/search" 
+            href="/categories" 
             className="text-brand-600 font-black uppercase tracking-widest text-xs hover:opacity-70 transition-opacity flex items-center gap-2"
           >
             View All Categories <Icons.ArrowRight size={14} />
@@ -81,12 +81,12 @@ export const CategoryGrid = () => {
               >
                 <Link 
                   href={`/resident/search?category=${cat.id}`}
-                  className="group flex flex-col items-center justify-center p-8 bg-surface-base border border-gray-100 rounded-[32px] hover:bg-white hover:shadow-xl hover:shadow-brand-500/10 hover:border-brand-100 transition-all duration-300"
+                  className="group flex flex-col items-center justify-center p-8 bg-gradient-to-br from-white to-gray-50 border border-gray-100/80 shadow-sm rounded-[32px] hover:-translate-y-1 hover:shadow-xl hover:shadow-brand-500/15 hover:border-brand-200 transition-all duration-300 relative overflow-hidden"
                 >
+                  <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div 
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6"
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 relative z-10 bg-white shadow-sm border border-gray-100"
                     style={{ 
-                      backgroundColor: cat.color ? `${cat.color}15` : '#1B6B3A15', 
                       color: cat.color || '#1B6B3A' 
                     }}
                   >

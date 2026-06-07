@@ -78,9 +78,9 @@ export default function NotificationBell() {
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="fixed md:absolute bottom-0 md:bottom-auto left-0 md:left-auto right-0 md:mt-3 w-full md:w-96 bg-white rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border border-gray-100 z-[90] overflow-hidden"
+                            className="fixed md:absolute inset-x-0 bottom-0 md:bottom-auto md:left-auto md:right-0 md:mt-3 w-full md:w-96 bg-white rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border border-gray-100 z-[90] flex flex-col max-h-[80vh] md:max-h-[600px] overflow-hidden"
                         >
-                            <div className="p-6 pb-4 bg-brand-600 text-white flex flex-col md:flex-row md:justify-between md:items-center shrink-0">
+                            <div className="p-6 pb-4 bg-brand-600 text-white flex flex-col md:flex-row md:justify-between md:items-center shrink-0 z-10">
                                 <div className="w-12 h-1 bg-white/30 rounded-full mx-auto mb-3 md:hidden" />
                                 <div className="flex justify-between items-center w-full">
                                     <h3 className="font-black tracking-tight text-lg">Notifications</h3>
@@ -94,7 +94,7 @@ export default function NotificationBell() {
                                 </div>
                             </div>
                             
-                            <div className="max-h-[60vh] md:max-h-[450px] overflow-y-auto no-scrollbar pb-safe">
+                            <div className="flex-1 overflow-y-auto min-h-0 no-scrollbar">
                                 {notifications.length === 0 ? (
                                     <div className="p-16 text-center text-text-muted">
                                         <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -117,7 +117,7 @@ export default function NotificationBell() {
                                                 </div>
                                                 <div className="flex-1 space-y-1">
                                                     <div className="flex items-center justify-between">
-                                                        <p className={`text-sm tracking-tight ${!n.is_read ? 'font-black text-green-955' : 'font-bold text-gray-700'}`}>
+                                                        <p className={`text-sm tracking-tight ${!n.is_read ? 'font-black text-green-950' : 'font-bold text-gray-700'}`}>
                                                             {n.title}
                                                         </p>
                                                         {!n.is_read && <div className="w-2 h-2 bg-brand-600 rounded-full" />}

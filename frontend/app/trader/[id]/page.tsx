@@ -277,9 +277,9 @@ export default function TraderStorefrontPage() {
                                                 )}
                                             >
                                                 {product.stock_status === 'out_of_stock' ? (
-                                                    t('common.sold_out') || 'Sold Out'
+                                                    <ShoppingBag size={18} />
                                                 ) : (
-                                                    <><ShoppingCart size={14} /> {t('common.add_to_cart') || 'Add to Cart'}</>
+                                                    <ShoppingCart size={18} />
                                                 )}
                                             </button>
                                         </div>
@@ -406,8 +406,8 @@ export default function TraderStorefrontPage() {
             </div>
 
             {/* 6. Sticky Bottom Action Bar */}
-            <div className="fixed bottom-[80px] md:bottom-0 left-0 right-0 z-50 px-6 pb-4 md:pb-6 lg:pb-10 pointer-events-none">
-                <div className="max-w-[480px] mx-auto bg-white/80 backdrop-blur-2xl border border-white p-2 md:p-3 rounded-2xl md:rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex gap-2 md:gap-3 pointer-events-auto">
+            <div className="fixed bottom-[80px] md:bottom-0 left-0 right-0 z-40 pl-4 pr-20 md:px-6 pb-4 md:pb-6 lg:pb-10 pointer-events-none flex justify-start md:justify-center">
+                <div className="w-full max-w-[480px] bg-white/80 backdrop-blur-2xl border border-white p-2 md:p-3 rounded-2xl md:rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex gap-2 md:gap-3 pointer-events-auto">
                     <a 
                         href={`tel:0712345678`}
                         className="w-12 h-12 md:w-16 md:h-16 bg-neutral-100 rounded-xl md:rounded-2xl flex items-center justify-center text-green-955 active:scale-95 transition-all border border-gray-100 shrink-0"
