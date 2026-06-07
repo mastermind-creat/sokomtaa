@@ -267,7 +267,14 @@ export default function CartFlow({ onClose }: CartFlowProps) {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-bold text-green-950 truncate">{item.name}</h4>
-                                            <p className="text-xs text-text-muted font-mono">KES {item.price} / {item.unit}</p>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <p className="text-xs text-text-muted font-mono">
+                                                    KES {Number(item.active_price ?? item.price)} / {item.unit}
+                                                </p>
+                                                {item.active_price != null && Number(item.active_price) < Number(item.price) && (
+                                                    <p className="text-[10px] text-gray-400 line-through font-mono">KES {Number(item.price)}</p>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
                                             <div className="flex items-center gap-2 bg-white rounded-xl border border-neutral-100 p-1">

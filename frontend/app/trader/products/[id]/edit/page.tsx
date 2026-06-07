@@ -32,6 +32,9 @@ interface EditProductForm {
     name: string;
     category_id: string;
     price: string;
+    discount_price?: string;
+    discount_start_date?: string;
+    discount_end_date?: string;
     unit: string;
     stock_quantity: number;
     description: string;
@@ -69,6 +72,9 @@ export default function EditProductPage() {
                 name: product.name,
                 category_id: String(product.category_id),
                 price: String(product.price),
+                discount_price: product.discount_price ? String(product.discount_price) : '',
+                discount_start_date: product.discount_start_date ? new Date(product.discount_start_date).toISOString().slice(0,16) : '',
+                discount_end_date: product.discount_end_date ? new Date(product.discount_end_date).toISOString().slice(0,16) : '',
                 unit: product.unit,
                 stock_quantity: product.stock_quantity || 0,
                 description: product.description || '',
@@ -161,6 +167,10 @@ export default function EditProductPage() {
         formData.append('description', data.description || '');
         formData.append('is_active', data.is_active ? '1' : '0');
 
+        if (data.discount_price) formData.append('discount_price', data.discount_price);
+        if (data.discount_start_date) formData.append('discount_start_date', data.discount_start_date);
+        if (data.discount_end_date) formData.append('discount_end_date', data.discount_end_date);
+
         if (data.image && data.image[0]) {
             formData.append('image', data.image[0]);
         }
@@ -182,6 +192,8 @@ export default function EditProductPage() {
             <div className="p-6 flex items-center justify-between">
                 <button
                     onClick={() => router.back()}
+                    aria-label="Go back"
+                    title="Go back"
                     className="p-3 bg-white border border-gray-100 rounded-2xl text-text-secondary hover:text-green-950 transition-all active:scale-95 shadow-sm"
                 >
                     <ChevronLeft size={24} />
@@ -189,6 +201,8 @@ export default function EditProductPage() {
 
                 <button
                     onClick={() => setShowDeleteConfirm(true)}
+                    aria-label="Delete product"
+                    title="Delete product"
                     className="p-3 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-100 transition-all active:scale-95 border border-rose-100"
                 >
                     <Trash2 size={20} />
@@ -283,6 +297,44 @@ export default function EditProductPage() {
                                 </div>
                                 {errors.stock_quantity && <p className="text-xs font-bold text-rose-500 flex items-center gap-1"><AlertTriangle size={12} /> {errors.stock_quantity.message}</p>}
                             </div>
+                        </div>
+
+                        {/* Discount Row */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-pink-50 rounded-xl text-pink-600">
+                                    <Tag size={18} />
+                                </div>
+                                <label className="text-sm font-black text-green-950 uppercase tracking-wider">Discount Pricing (Optional)</label>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="relative">
+                                    <input 
+                                        type="number"
+                                        {...register('discount_price')}
+                                        className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl font-bold text-base text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
+                                        placeholder="Discounted Price"
+                                    />
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-neutral-400">KES</div>
+                                </div>
+                                <div className="relative">
+                                    <label className="absolute -top-2 left-4 px-1 bg-[#FAFAF8] text-[9px] font-black uppercase text-neutral-500 z-10">Start Date</label>
+                                    <input 
+                                        type="datetime-local"
+                                        {...register('discount_start_date')}
+                                        className="w-full h-16 px-4 bg-white border border-gray-100 rounded-2xl font-bold text-sm text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <label className="absolute -top-2 left-4 px-1 bg-[#FAFAF8] text-[9px] font-black uppercase text-neutral-500 z-10">End Date</label>
+                                    <input 
+                                        type="datetime-local"
+                                        {...register('discount_end_date')}
+                                        className="w-full h-16 px-4 bg-white border border-gray-100 rounded-2xl font-bold text-sm text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-xs font-bold text-text-muted mt-1"><AlertTriangle size={12} className="inline mr-1" />Set a start and end time to automatically apply this discount.</p>
                         </div>
                     </div>
                 </div>
@@ -419,6 +471,8 @@ export default function EditProductPage() {
                     </div>
                     <button
                         type="button"
+                        aria-label="Toggle visibility"
+                        title="Toggle visibility"
                         onClick={() => setValue('is_active', !watch('is_active'))}
                         className={cn(
                             "relative w-14 h-8 rounded-full transition-colors",

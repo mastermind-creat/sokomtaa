@@ -64,7 +64,7 @@ export const useCartStore = create<CartState>()(
 
             getTotalItems: () => get().items.reduce((sum, item) => sum + item.cartQuantity, 0),
             
-            getTotalAmount: () => get().items.reduce((sum, item) => sum + (Number(item.price) * item.cartQuantity), 0),
+            getTotalAmount: () => get().items.reduce((sum, item) => sum + (Number(item.active_price ?? item.price) * item.cartQuantity), 0),
         }),
         {
             name: 'sokomtaa-cart',

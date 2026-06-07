@@ -36,6 +36,19 @@ export const ProductPreview = () => {
     visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
   };
 
+  const getActivePrice = (product: Product): number => {
+    // Prefer server-computed value (accurate timezone)
+    if (product.active_price != null) return Number(product.active_price);
+    // Fallback client-side check
+    if (product.discount_price != null) {
+      const now = new Date();
+      const startValid = !product.discount_start_date || new Date(product.discount_start_date) <= now;
+      const endValid = !product.discount_end_date || new Date(product.discount_end_date) >= now;
+      if (startValid && endValid) return Number(product.discount_price);
+    }
+    return Number(product.price);
+  };
+
   return (
     <section id="products" className="py-20 px-6 bg-surface-base relative overflow-hidden">
       {/* Decorative background blur */}
@@ -118,7 +131,12 @@ export const ProductPreview = () => {
                           <h4 className="font-display text-base font-black text-green-950 tracking-tight mb-0.5 truncate group-hover:text-brand-600 transition-colors">
                             {product.name}
                           </h4>
-                          <p className="text-brand-600 font-black text-sm mb-2">KES {product.price}</p>
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="text-brand-600 font-black text-sm">KES {getActivePrice(product)}</p>
+                            {getActivePrice(product) < Number(product.price) && (
+                              <p className="text-gray-400 font-bold text-[10px] line-through">KES {product.price}</p>
+                            )}
+                          </div>
                           <div className="inline-flex w-full items-center justify-center gap-2 py-1.5 bg-green-50 text-brand-700 rounded-lg font-bold text-[10px] group-hover:bg-brand-600 group-hover:text-white transition-colors">
                             Reserve
                           </div>
@@ -160,10 +178,15 @@ export const ProductPreview = () => {
                         )}
 
                         {/* Price Badge */}
-                        <div className="absolute top-3 right-3">
+                        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
                           <div className="px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-lg text-[10px] font-black uppercase tracking-widest text-green-950 shadow-sm border border-white/20">
-                            KES {product.price}
+                            KES {getActivePrice(product)}
                           </div>
+                          {getActivePrice(product) < Number(product.price) && (
+                            <div className="px-1.5 py-0.5 bg-white/80 backdrop-blur-sm rounded text-[8px] font-bold uppercase tracking-widest text-gray-500 line-through shadow-sm">
+                              {product.price}
+                            </div>
+                          )}
                         </div>
 
                         {/* Quick Action Button */}

@@ -57,8 +57,20 @@ export default function TraderStorefrontPage() {
     const { data: reviewsData, isLoading: isReviewsLoading } = useQuery<ApiResponse<any>>({
         queryKey: ['trader-reviews', id],
         queryFn: () => api.get(`/traders/${id}/reviews`),
-        enabled: selectedTab === 'reviews'
     });
+
+    const getActivePrice = (product: Product): number => {
+        // Prefer server-computed value (accurate timezone)
+        if (product.active_price != null) return Number(product.active_price);
+        // Fallback client-side check
+        if (product.discount_price != null) {
+            const now = new Date();
+            const startValid = !product.discount_start_date || new Date(product.discount_start_date) <= now;
+            const endValid = !product.discount_end_date || new Date(product.discount_end_date) >= now;
+            if (startValid && endValid) return Number(product.discount_price);
+        }
+        return Number(product.price);
+    };
 
     const trader = storefrontData?.data?.trader;
     const products = storefrontData?.data?.products?.data || [];
@@ -254,12 +266,15 @@ export default function TraderStorefrontPage() {
                                     <div className="p-4 flex-1 flex flex-col gap-3">
                                         <div className="space-y-1">
                                             <h4 className="font-bold text-green-950 text-xs md:text-sm truncate leading-tight group-hover:text-brand-600 transition-colors">{product.name}</h4>
-                                            <div className="flex items-center justify-between">
+                                            <div className="flex flex-col gap-0.5">
                                                 <div className="flex items-baseline gap-0.5">
                                                     <span className="text-[8px] font-black text-brand-500 uppercase tracking-tighter">KES</span>
-                                                    <span className="text-base font-black text-green-950 font-mono tracking-tighter">{product.price}</span>
+                                                    <span className="text-base font-black text-green-950 font-mono tracking-tighter">{getActivePrice(product)}</span>
+                                                    <span className="text-[9px] text-text-muted lowercase font-bold ml-1">/{product.unit}</span>
                                                 </div>
-                                                <span className="text-[9px] text-text-muted lowercase font-bold">/{product.unit}</span>
+                                                {getActivePrice(product) < Number(product.price) && (
+                                                    <span className="text-[10px] font-bold text-gray-400 line-through">KES {product.price}</span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="mt-auto">

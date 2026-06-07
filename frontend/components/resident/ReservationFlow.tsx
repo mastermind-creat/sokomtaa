@@ -67,7 +67,8 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
     const feeAmount = parseFloat(settings?.fees?.find(s => s.key === 'resident_service_fee')?.value || '10');
     const threshold = parseFloat(settings?.fees?.find(s => s.key === 'service_fee_threshold')?.value || '200');
     
-    const subtotal = product.price * quantity;
+    const activePrice = Number(product.active_price ?? product.price);
+    const subtotal = activePrice * quantity;
     const activeFee = subtotal > threshold ? feeAmount : 0;
     const totalWithFee = subtotal + activeFee;
 
@@ -176,9 +177,12 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     <h3 className="text-xl font-black text-green-950 leading-tight">{product.name}</h3>
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-xs font-bold text-text-muted">KES</span>
-                                        <span className="text-2xl font-black text-green-950 font-mono">{product.price}</span>
+                                        <span className="text-2xl font-black text-green-950 font-mono">{activePrice}</span>
                                         <span className="text-xs text-text-muted">/{product.unit}</span>
                                     </div>
+                                    {activePrice < Number(product.price) && (
+                                        <p className="text-xs text-gray-400 line-through font-mono">KES {Number(product.price)} original</p>
+                                    )}
                                     <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 rounded-lg w-fit mt-2">
                                         <TrendingUp size={12} className="text-green-600" />
                                         <span className="text-[9px] font-black text-green-700 uppercase">Best Price</span>
@@ -211,7 +215,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                             <div className="space-y-4 pt-4 border-t border-neutral-100">
                                 <div className="flex items-center justify-between px-4">
                                     <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Subtotal</span>
-                                    <span className="text-sm font-black text-green-950 font-mono">KES {product.price * quantity}</span>
+                                    <span className="text-sm font-black text-green-950 font-mono">KES {activePrice * quantity}</span>
                                 </div>
                                 <div className="flex items-center justify-between px-4">
                                     <div className="flex items-center gap-1.5">

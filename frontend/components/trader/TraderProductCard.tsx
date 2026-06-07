@@ -59,6 +59,19 @@ export default function TraderProductCard({
         }
     };
 
+    const getActivePrice = (product: Product): number => {
+        // Prefer server-computed value (accurate timezone)
+        if (product.active_price != null) return Number(product.active_price);
+        // Fallback client-side check
+        if (product.discount_price != null) {
+            const now = new Date();
+            const startValid = !product.discount_start_date || new Date(product.discount_start_date) <= now;
+            const endValid = !product.discount_end_date || new Date(product.discount_end_date) >= now;
+            if (startValid && endValid) return Number(product.discount_price);
+        }
+        return Number(product.price);
+    };
+
     return (
         <motion.div
             layout
@@ -182,10 +195,15 @@ export default function TraderProductCard({
                 <div className="pt-2 flex justify-between items-end border-t border-neutral-50">
                     <div>
                         <p className="text-[8px] font-black text-text-muted uppercase tracking-widest mb-0.5">Price / Unit</p>
-                        <div className="font-mono text-xl font-black text-green-950 flex items-baseline gap-1">
-                            <span className="text-[10px] font-bold text-brand-600">KES</span>
-                            {Number(product.price).toLocaleString()}
-                            <span className="text-[10px] font-bold text-text-muted">/{product.unit}</span>
+                        <div className="flex flex-col gap-0.5">
+                            <div className="font-mono text-xl font-black text-green-950 flex items-baseline gap-1">
+                                <span className="text-[10px] font-bold text-brand-600">KES</span>
+                                {getActivePrice(product).toLocaleString()}
+                                <span className="text-[10px] font-bold text-text-muted">/{product.unit}</span>
+                            </div>
+                            {getActivePrice(product) < Number(product.price) && (
+                                <div className="text-[10px] font-bold text-gray-400 line-through">KES {Number(product.price).toLocaleString()}</div>
+                            )}
                         </div>
                     </div>
 

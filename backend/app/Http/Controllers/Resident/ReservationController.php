@@ -104,7 +104,7 @@ class ReservationController extends Controller
             // Preliminary check and total calculation
             foreach ($request->items as $itemData) {
                 $product = Product::findOrFail($itemData['product_id']);
-                $totalCartAmount += $product->price * $itemData['quantity'];
+                $totalCartAmount += $product->active_price * $itemData['quantity'];
             }
 
             $serviceFeeAmount = SystemSetting::get('resident_service_fee', 10.00);
@@ -131,7 +131,7 @@ class ReservationController extends Controller
 
                 // Apply service fee only once to the first item in the whole cart if total > threshold
                 $currentServiceFee = ($index === 0 && $applyFee) ? $serviceFeeAmount : 0.00;
-                $subtotal = $product->price * $itemData['quantity'];
+                $subtotal = $product->active_price * $itemData['quantity'];
                 
                 // Calculate dynamic delivery fee if requested
                 $deliveryFee = 0.00;
@@ -169,7 +169,7 @@ class ReservationController extends Controller
                     'trader_id' => $product->trader_id,
                     'product_id' => $product->id,
                     'quantity' => $itemData['quantity'],
-                    'unit_price' => $product->price,
+                    'unit_price' => $product->active_price,
                     'service_fee' => $currentServiceFee,
                     'delivery_option' => (bool) $request->delivery_option,
                     'delivery_status' => $request->delivery_option ? 'pending_assignment' : null,
@@ -256,7 +256,7 @@ class ReservationController extends Controller
 
             $serviceFeeAmount = SystemSetting::get('resident_service_fee', 10.00);
             $serviceFeeThreshold = SystemSetting::get('service_fee_threshold', 200.00);
-            $subtotal = $product->price * $request->quantity;
+            $subtotal = $product->active_price * $request->quantity;
             
             $serviceFee = ($subtotal > $serviceFeeThreshold) ? $serviceFeeAmount : 0.00;
             
@@ -297,7 +297,7 @@ class ReservationController extends Controller
                 'trader_id' => $product->trader_id,
                 'product_id' => $product->id,
                 'quantity' => $request->quantity,
-                'unit_price' => $product->price,
+                'unit_price' => $product->active_price,
                 'service_fee' => $serviceFee,
                 'delivery_option' => (bool) $request->delivery_option,
                 'delivery_status' => $request->delivery_option ? 'pending_assignment' : null,

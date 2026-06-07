@@ -176,6 +176,10 @@ export interface Product {
     name_sw?: string | null;
     description?: string | null;
     price: number;
+    discount_price?: number | null;
+    discount_start_date?: string | null;
+    discount_end_date?: string | null;
+    active_price?: number | null;     // server-computed, always prefer this
     unit: string;
     stock_status: 'available' | 'low' | 'out_of_stock';
     stock_quantity: number | null;
