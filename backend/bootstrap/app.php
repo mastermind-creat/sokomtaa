@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->append(\App\Http\Middleware\LocaleMiddleware::class);
+        $middleware->append(\App\Http\Middleware\SecurityHeadersMiddleware::class);
 
         $middleware->validateCsrfTokens(except: [
             'api/payments/mpesa/callback'

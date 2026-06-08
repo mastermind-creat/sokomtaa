@@ -19,16 +19,16 @@ Route::get('/traders/featured', [GlobalStatsController::class, 'featuredTraders'
 Route::post('/ping-session', [\App\Http\Controllers\Internal\TrafficTrackerController::class, 'track']);
 
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login'])->name('login');
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
+    Route::post('/login', [AuthController::class, 'login'])->name('login')->middleware('throttle:auth');
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
-        Route::post('/verify-phone', [AuthController::class, 'verifyPhone']);
-        Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
+        Route::post('/verify-phone', [AuthController::class, 'verifyPhone'])->middleware('throttle:otp');
+        Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->middleware('throttle:otp');
     });
 });
 
