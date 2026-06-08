@@ -24,11 +24,16 @@ Route::prefix('auth')->group(function () {
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth');
 
+    // Social Authentication Routes
+    Route::get('/{provider}/redirect', [\App\Http\Controllers\Auth\SocialAuthController::class, 'redirect']);
+    Route::get('/{provider}/callback', [\App\Http\Controllers\Auth\SocialAuthController::class, 'callback']);
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/verify-phone', [AuthController::class, 'verifyPhone'])->middleware('throttle:otp');
         Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->middleware('throttle:otp');
+        Route::post('/complete-profile', [\App\Http\Controllers\Auth\SocialAuthController::class, 'completeProfile']);
     });
 });
 

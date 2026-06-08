@@ -1,0 +1,137 @@
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Laravel\Socialite\Facades\Socialite;
+use App\Services\TalkSasaService;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+
+class SocialAuthController extends Controller
+{
+    use ApiResponse, \App\Traits\PhoneNormalization;
+
+    public function redirect($provider)
+    {
+        if (!in_array($provider, ['google', 'apple'])) {
+            return $this->error('Provider not supported.', 'VALIDATION_FAILED', 422);
+        }
+
+        /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+        $driver = Socialite::driver($provider);
+        return $driver->stateless()->redirect();
+    }
+
+    public function callback($provider)
+    {
+        if (!in_array($provider, ['google', 'apple'])) {
+            return $this->error('Provider not supported.', 'VALIDATION_FAILED', 422);
+        }
+
+        try {
+            /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+            $driver = Socialite::driver($provider);
+            $socialUser = $driver->stateless()->user();
+        } catch (\Exception $e) {
+            return $this->error('Authentication failed.', 'AUTH_FAILED', 401);
+        }
+
+        $user = User::where('provider_name', $provider)
+            ->where('provider_id', $socialUser->getId())
+            ->first();
+
+        if (!$user) {
+            // Check if user exists by email
+            $user = User::where('email', $socialUser->getEmail())->first();
+
+            if ($user) {
+                // Link the account
+                $user->update([
+                    'provider_name' => $provider,
+                    'provider_id' => $socialUser->getId(),
+                ]);
+            } else {
+                // Create a new user
+                $user = User::create([
+                    'name' => $socialUser->getName(),
+                    'email' => $socialUser->getEmail(),
+                    'provider_name' => $provider,
+                    'provider_id' => $socialUser->getId(),
+                    'password' => Hash::make(Str::random(24)), // Random dummy password
+                    'phone_verified' => false,
+                ]);
+            }
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return $this->success([
+            'user' => $user,
+            'token' => $token,
+            'requires_profile_completion' => is_null($user->phone),
+        ], 'Social login successful.');
+    }
+
+    public function completeProfile(Request $request): JsonResponse
+    {
+        $request->validate([
+            'phone' => 'required|string',
+            'role' => 'required|in:trader,resident,delivery',
+            'national_id' => 'nullable|string',
+        ]);
+
+        $user = $request->user();
+
+        if ($user->phone) {
+            return $this->error('Profile is already complete.', 'VALIDATION_FAILED', 422);
+        }
+
+        $phone = $this->normalizePhone($request->phone);
+
+        if (User::where('phone', $phone)->exists()) {
+            return $this->error('The phone number has already been taken.', 'VALIDATION_FAILED', 422);
+        }
+
+        $user->update([
+            'phone' => $phone,
+            'role' => $request->role,
+            'national_id' => $request->national_id,
+        ]);
+
+        if ($user->role === 'delivery') {
+            $user->riderProfile()->create([
+                'vehicle_type' => 'motorcycle',
+                'verification_status' => 'not_submitted',
+                'is_available' => false,
+                'earnings_balance' => 0.00,
+            ]);
+        }
+
+        // Generate a 6-digit OTP to verify the newly attached phone number
+        $otp = rand(100000, 999999);
+        Cache::put("otp_{$user->id}", $otp, now()->addMinutes(config('otp.expiry_minutes', 10)));
+
+        $smsService = app(TalkSasaService::class);
+        $message = "Soko Mtaa: Your verification code is {$otp}. Please do not share it with anyone.";
+        $smsService->sendSms($user->phone, $message);
+        
+        Log::info("OTP for {$user->phone}: {$otp}");
+
+        $data = [
+            'user' => $user,
+        ];
+
+        if (config('app.debug')) {
+            $data['debug_otp'] = $otp;
+        }
+
+        return $this->success($data, 'Profile updated. Please verify your phone number.');
+    }
+}
