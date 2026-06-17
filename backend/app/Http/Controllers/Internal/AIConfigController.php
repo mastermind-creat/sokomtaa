@@ -12,13 +12,19 @@ class AIConfigController extends Controller
     {
         $settings = SystemSetting::where('group', 'ai_config')->pluck('value', 'key');
         
+        $openaiKey = $settings->get('openai_api_key');
+        $openaiKey = !empty($openaiKey) ? $openaiKey : env('OPENAI_API_KEY', '');
+        
+        $groqKey = $settings->get('groq_api_key');
+        $groqKey = !empty($groqKey) ? $groqKey : env('GROQ_API_KEY', '');
+
         return response()->json([
             'status' => 'success',
             'data' => [
                 'provider' => $settings->get('ai_provider', 'groq'),
                 'model' => $settings->get('ai_model', 'llama-3.3-70b-versatile'),
-                'groq_api_key' => $settings->get('groq_api_key', ''),
-                'openai_api_key' => $settings->get('openai_api_key', ''),
+                'groq_api_key' => $groqKey,
+                'openai_api_key' => $openaiKey,
             ]
         ]);
     }

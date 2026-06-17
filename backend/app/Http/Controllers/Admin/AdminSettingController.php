@@ -43,7 +43,7 @@ class AdminSettingController extends Controller
         $request->validate([
             'settings'         => 'required|array',
             'settings.*.key'   => 'required|string|max:100',
-            'settings.*.value' => 'required',
+            'settings.*.value' => 'nullable',
         ]);
 
         foreach ($request->settings as $settingData) {
