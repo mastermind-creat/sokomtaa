@@ -36,10 +36,19 @@ class GlobalStatsController extends Controller
     public function featuredTraders(): JsonResponse
     {
         $traders = Trader::where('verification_status', 'verified')
-            ->whereNotNull('avatar_url')
             ->orderByDesc('total_reviews')
-            ->limit(6)
-            ->get(['id', 'business_name', 'avatar_url']);
+            ->limit(10)
+            ->get([
+                'id',
+                'business_name',
+                'avatar_url',
+                'average_rating',
+                'total_reviews',
+                'is_open',
+                'opening_time',
+                'closing_time',
+                'description'
+            ]);
 
         return $this->success($traders);
     }

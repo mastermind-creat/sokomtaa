@@ -26,7 +26,7 @@ class AiService
         }
 
         try {
-            $response = Http::post("{$this->baseUrl}?key={$this->apiKey}", [
+            $response = Http::timeout(3)->post("{$this->baseUrl}?key={$this->apiKey}", [
                 'contents' => [
                     [
                         'parts' => [

@@ -57,57 +57,68 @@ export async function POST(req: Request) {
       model = groq(aiConfig.model || 'llama-3.3-70b-versatile');
     }
 
-    // ── System prompt ─────────────────────────────────────────────────────────
-    let systemInstruction = '';
-    
-    if (role === 'admin') {
-      systemInstruction = `You are Soko AI, the intelligent assistant for Soko Mtaa — a neighbourhood digital marketplace in Kenya.
-You are assisting an ADMIN. You help them monitor market health, manage disputes, and oversee fee collections.
-
-CAPABILITIES:
-- Get an overview of market statistics using get_market_health
-- Find traders who are behind on fees using get_fee_defaulters
-- Summarize open complaints to speed up dispute resolution using summarize_complaints
-
-RULES:
-- Be concise, professional, and clear.
-- Do not make up metrics or complaints. Only use the data provided by the tools.
-- Highlight important numbers (like revenue or high-priority complaints) in bold.`;
-    } else if (role === 'trader') {
-      systemInstruction = `You are Soko AI, the intelligent assistant for Soko Mtaa — a neighbourhood digital marketplace in Kenya.
-You are assisting a TRADER. You help them manage their stall, add products, update stock levels, and analyze their inventory and sales.
-
-CAPABILITIES:
-- View categories using get_categories
-- Add a new product to their stall using add_product. You are an expert SEO copywriter: if the trader asks to add a product but doesn't provide a description, automatically generate a compelling, market-friendly description (in English or Swahili) before saving.
-- Update the stock quantity of an existing product using update_stock
-- Analyze their current inventory using analyze_stock
-- View sales and revenue insights using get_sales_insights
-
-RULES:
-- When adding a product, always fetch categories first to ensure you use the correct category ID.
-- Do not make up product IDs; use analyze_stock to find the product ID before updating stock.
-- Be concise. Use bullet points for lists. Greet in Swahili occasionally.
-- If a tool returns an error, apologize and explain what went wrong.`;
-    } else {
-      systemInstruction = `You are Soko AI, the intelligent assistant for Soko Mtaa — a neighbourhood digital marketplace in Kenya.
-You help residents discover traders, find products, make reservations, and pay via M-Pesa.
-
-CAPABILITIES:
-- Search for products in the market using the search_products tool
-- Create a reservation for a product on behalf of the user using create_reservation tool
-- Initiate an M-Pesa STK push payment using trigger_mpesa_payment tool
-- Track the status of a user's reservations using track_reservation
-
-RULES:
-- Always search before making a reservation to confirm the product exists
-- Recipe to Cart / Price Comparison: If a user asks for a recipe or wants to compare prices, autonomously use the search_products tool multiple times (if needed) to find the best or cheapest ingredients, then offer to reserve them.
-- Only create reservations when the user explicitly confirms they want to reserve
-- Before triggering M-Pesa, confirm the amount and phone number with the user
-- Be concise. Use bullet points for product lists. Greet in Swahili occasionally.
-- Never make up product names, prices, or stall numbers — only use data from tool results.
-- If a tool returns an error, apologize and explain what went wrong.`;
+    // Fetch user location if authenticated
+    let userLocation: { lat: number; lng: number } | null = null;
+    if (token) {
+      try {
+        if (role === 'trader') {
+          const profileRes = await laravelFetch('/trader/me', token);
+          if (profileRes.ok) {
+            const profileData = await profileRes.json();
+            const trader = profileData.data || profileData;
+            if (trader.latitude && trader.longitude) {
+              userLocation = {
+                lat: parseFloat(trader.latitude),
+                lng: parseFloat(trader.longitude),
+              };
+            }
+          }
+        } else {
+          const profileRes = await laravelFetch('/profile', token);
+          if (profileRes.ok) {
+            const profileData = await profileRes.json();
+            const user = profileData.data || profileData;
+            if (user.default_delivery_latitude && user.default_delivery_longitude) {
+              userLocation = {
+                lat: parseFloat(user.default_delivery_latitude),
+                lng: parseFloat(user.default_delivery_longitude),
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch user location:', err);
+      }
     }
+
+    // ── System prompt ─────────────────────────────────────────────────────────
+    const systemInstruction = `You are Soko AI, the intelligent assistant for Soko Mtaa — a neighbourhood digital marketplace in Kenya.
+You have full access to all resident, trader, and admin capabilities. Assist the user based on their context and role (${role || 'resident'}), but feel free to utilize any tool if relevant.
+
+LANGUAGE & INTERACTION RULES:
+- Use English as your default language for all responses.
+- Only speak or respond in Swahili if the user explicitly initiates in Swahili or requests Swahili.
+- Keep your answers concise, professional, and directly actionable.
+- Never make up information (products, ratings, fees, or complaints) — only use real data returned by the tools.
+- If a tool returns an error, apologize and explain what went wrong.
+
+CAPABILITIES:
+1. Resident:
+   - Discover traders using get_featured_traders or search_traders.
+   - Search for products using search_products.
+   - Create reservations using create_reservation.
+   - Initiate M-Pesa payments using trigger_mpesa_payment.
+   - Track reservations using track_reservation.
+2. Trader:
+   - View sales/revenue insights using get_sales_insights.
+   - Analyze inventory/stock levels using analyze_stock.
+   - View categories using get_categories.
+   - Add new products using add_product. (If adding a product without a description, generate a compelling SEO description in English).
+   - Update stock levels using update_stock.
+3. Admin:
+   - Monitor market statistics/health using get_market_health.
+   - Retrieve delinquent fee records using get_fee_defaulters.
+   - Summarize open disputes/complaints using summarize_complaints.`;
 
     // Build history prompt
     const historyPrompt = (messages as { role: string; content: string }[])
@@ -116,6 +127,62 @@ RULES:
 
     // ── Agentic Tools ─────────────────────────────────────────────────────────
     const tools = {
+      get_featured_traders: tool({
+        description: 'Get a list of featured or top-rated verified traders in the market, ordered by their total reviews.',
+        inputSchema: jsonSchema<Record<string, never>>({
+          type: 'object',
+          properties: {},
+          required: [],
+        }),
+        // @ts-expect-error - AI SDK v6 strict type inference workaround
+        execute: async () => {
+          const res = await fetch(`${apiUrl}/traders/featured`, {
+            headers: { 'Accept': 'application/json' },
+          });
+          if (!res.ok) return { error: 'Failed to fetch featured traders.' };
+          const data = await res.json();
+          const traders = data.data || data;
+          return { traders: Array.isArray(traders) ? traders : [] };
+        },
+      }),
+
+      search_traders: tool({
+        description: 'Search for traders in the marketplace by business name or swahili business name query.',
+        inputSchema: jsonSchema<{ query: string }>({
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'The search query for the business name' },
+          },
+          required: ['query'],
+        }),
+        // @ts-expect-error - AI SDK v6 strict type inference workaround
+        execute: async ({ query }: { query: string }) => {
+          const params = new URLSearchParams({ q: query });
+          if (userLocation) {
+            params.append('lat', String(userLocation.lat));
+            params.append('lng', String(userLocation.lng));
+          }
+          const res = await fetch(`${apiUrl}/traders/search?${params}`, {
+            headers: { 'Accept': 'application/json' },
+          });
+          if (!res.ok) return { error: 'Failed to search traders.' };
+          const data = await res.json();
+          const traders = data.data?.data || data.data || [];
+          return {
+            results: traders.map((t: any) => ({
+              id: t.id,
+              business_name: t.business_name,
+              business_name_sw: t.business_name_sw,
+              description: t.description,
+              rating: t.average_rating,
+              reviews_count: t.total_reviews,
+              market: t.market?.name,
+              stall: t.stall?.stall_number,
+            })),
+          };
+        },
+      }),
+
       search_products: tool({
         description: 'Search for products available in the market by keyword. Returns a list of matching products with prices, stock status, and trader info.',
         inputSchema: jsonSchema<{ query: string; category: string | null }>({
@@ -128,24 +195,29 @@ RULES:
         }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async ({ query, category }: { query: string; category: string | null }) => {
-          const params = new URLSearchParams({ search: query });
+          const params = new URLSearchParams({ q: query });
           if (category) params.append('category', category);
+          if (userLocation) {
+            params.append('lat', String(userLocation.lat));
+            params.append('lng', String(userLocation.lng));
+          }
           const res = await fetch(`${apiUrl}/search?${params}`, {
             headers: { 'Accept': 'application/json' },
           });
           if (!res.ok) return { error: 'Search failed. Please try again.' };
           const data = await res.json();
-          const products = (data.data ?? data).slice(0, 5);
+          const results = data.data?.results || data.results || [];
+          const products = results.filter((item: any) => item.search_type === 'product').slice(0, 5);
           if (!products.length) return { message: `No products found for "${query}".` };
           return {
-            results: products.map((p: Record<string, unknown>) => ({
+            results: products.map((p: any) => ({
               id: p.id,
               name: p.name,
               price: p.price,
               unit: p.unit,
               stock_status: p.stock_status,
-              trader: (p.trader as Record<string, unknown>)?.business_name ?? 'Unknown',
-              trader_id: (p.trader as Record<string, unknown>)?.id,
+              trader: p.trader?.business_name ?? 'Unknown',
+              trader_id: p.trader?.id,
             })),
           };
         },
