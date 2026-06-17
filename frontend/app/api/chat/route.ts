@@ -1,13 +1,13 @@
-import { generateText, tool, stepCountIs } from 'ai';
+import { generateText, tool, stepCountIs, jsonSchema } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
 import { createOpenAI } from '@ai-sdk/openai';
-import { z } from 'zod';
 
 export const maxDuration = 30;
 
 // ── Helper: call Laravel API with user token ──────────────────────────────────
 async function laravelFetch(path: string, token: string, options: RequestInit = {}) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  // Use server-side API_URL for route handlers; it resolves 127.0.0.1 reliably
+  const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
   return fetch(`${apiUrl}${path}`, {
     ...options,
     headers: {
@@ -24,7 +24,8 @@ export async function POST(req: Request) {
     const { messages, token, role } = await req.json();
 
     // ── Fetch AI config securely (server-to-server) ───────────────────────────
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    // Use server-side API_URL for route handlers; it resolves 127.0.0.1 reliably
+    const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
     const internalSecret = process.env.INTERNAL_API_SECRET || '';
 
     const configRes = await fetch(`${apiUrl}/internal/ai-config`, {
@@ -45,7 +46,9 @@ export async function POST(req: Request) {
         return Response.json({ error: 'OpenAI API key not configured in Admin → Settings → AI' }, { status: 500 });
       }
       const openai = createOpenAI({ apiKey: aiConfig.openai_api_key });
-      model = openai(aiConfig.model || 'gpt-4o');
+      // Use .chat() to force /v1/chat/completions — the newer Responses API
+      // in @ai-sdk/openai v3 has a schema serialization issue (type: null).
+      model = openai.chat(aiConfig.model || 'gpt-4o-mini');
     } else {
       if (!aiConfig.groq_api_key) {
         return Response.json({ error: 'Groq API key not configured. Go to Admin → Settings → AI to add it.' }, { status: 500 });
@@ -115,12 +118,16 @@ RULES:
     const tools = {
       search_products: tool({
         description: 'Search for products available in the market by keyword. Returns a list of matching products with prices, stock status, and trader info.',
-        parameters: z.object({
-          query: z.string().describe('The product or item to search for, e.g. "sukuma wiki", "tomatoes", "maize flour"'),
-          category: z.string().optional().describe('Optional category filter, e.g. "vegetables", "grains"'),
+        inputSchema: jsonSchema<{ query: string; category: string | null }>({
+          type: 'object',
+          properties: {
+            query:    { type: 'string', description: 'The product or item to search for, e.g. "sukuma wiki", "tomatoes", "maize flour"' },
+            category: { type: 'string', description: 'Optional category filter, e.g. "vegetables", "grains". Pass empty string to skip.' },
+          },
+          required: ['query', 'category'],
         }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
-        execute: async ({ query, category }: { query: string; category?: string }) => {
+        execute: async ({ query, category }: { query: string; category: string | null }) => {
           const params = new URLSearchParams({ search: query });
           if (category) params.append('category', category);
           const res = await fetch(`${apiUrl}/search?${params}`, {
@@ -146,13 +153,17 @@ RULES:
 
       create_reservation: tool({
         description: 'Create a reservation for a product on behalf of the user. The user must be authenticated.',
-        parameters: z.object({
-          product_id: z.number().describe('The ID of the product to reserve'),
-          quantity: z.number().min(1).describe('Number of units to reserve'),
-          notes: z.string().optional().describe('Optional pickup notes from the user'),
+        inputSchema: jsonSchema<{ product_id: number; quantity: number; notes: string }>({
+          type: 'object',
+          properties: {
+            product_id: { type: 'number', description: 'The ID of the product to reserve' },
+            quantity:   { type: 'number', description: 'Number of units to reserve (minimum 1)' },
+            notes:      { type: 'string', description: 'Optional pickup notes from the user. Pass empty string if none.' },
+          },
+          required: ['product_id', 'quantity', 'notes'],
         }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
-        execute: async ({ product_id, quantity, notes }: { product_id: number; quantity: number; notes?: string }) => {
+        execute: async ({ product_id, quantity, notes }: { product_id: number; quantity: number; notes?: string | null }) => {
           if (!token) return { error: 'You must be logged in to make a reservation.' };
           const res = await laravelFetch('/reservations', token, {
             method: 'POST',
@@ -171,9 +182,13 @@ RULES:
 
       trigger_mpesa_payment: tool({
         description: 'Initiates an M-Pesa STK push to the user\'s phone to pay for a reservation. The user will receive a PIN prompt on their phone.',
-        parameters: z.object({
-          reservation_id: z.number().describe('The reservation ID to pay for'),
-          phone_number: z.string().describe('Kenyan phone number to send STK push to, e.g. 0712345678'),
+        inputSchema: jsonSchema<{ reservation_id: number; phone_number: string }>({
+          type: 'object',
+          properties: {
+            reservation_id: { type: 'number', description: 'The reservation ID to pay for' },
+            phone_number:   { type: 'string', description: 'Kenyan phone number to send STK push to, e.g. 0712345678' },
+          },
+          required: ['reservation_id', 'phone_number'],
         }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async ({ reservation_id, phone_number }: { reservation_id: number; phone_number: string }) => {
@@ -194,7 +209,11 @@ RULES:
 
       track_reservation: tool({
         description: 'Fetches the resident\'s most recent reservations to check their status.',
-        parameters: z.object({}),
+        inputSchema: jsonSchema<Record<string, never>>({
+          type: 'object',
+          properties: {},
+          required: [],
+        }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in.' };
@@ -217,10 +236,13 @@ RULES:
         },
       }),
 
-      // ── TRADER TOOLS ────────────────────────────────────────────────────────
       get_sales_insights: tool({
         description: 'Fetches the trader\'s dashboard statistics to report on revenue, pending reservations, and active products.',
-        parameters: z.object({}),
+        inputSchema: jsonSchema<Record<string, never>>({
+          type: 'object',
+          properties: {},
+          required: [],
+        }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in as a trader.' };
@@ -232,7 +254,11 @@ RULES:
       }),
       analyze_stock: tool({
         description: 'Fetches the trader\'s products and returns an analysis of their stock levels, including out-of-stock and low-stock items.',
-        parameters: z.object({}),
+        inputSchema: jsonSchema<Record<string, never>>({
+          type: 'object',
+          properties: {},
+          required: [],
+        }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in as a trader.' };
@@ -259,7 +285,11 @@ RULES:
 
       get_categories: tool({
         description: 'Fetches a list of available product categories. Use this to find the correct category_id before adding a product.',
-        parameters: z.object({}),
+        inputSchema: jsonSchema<Record<string, never>>({
+          type: 'object',
+          properties: {},
+          required: [],
+        }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           const res = await fetch(`${apiUrl}/categories`, { headers: { 'Accept': 'application/json' } });
@@ -271,13 +301,17 @@ RULES:
 
       add_product: tool({
         description: 'Adds a new product to the trader\'s stall.',
-        parameters: z.object({
-          name: z.string().describe('The name of the product'),
-          category_id: z.number().describe('The ID of the category (use get_categories to find this first)'),
-          price: z.number().describe('The price of the product in KES'),
-          stock_quantity: z.number().describe('The initial stock quantity available'),
-          unit: z.string().describe('The unit of measurement (e.g., "kg", "piece", "bunch", "litre")'),
-          description: z.string().optional().describe('A brief description of the product'),
+        inputSchema: jsonSchema<{ name: string; category_id: number; price: number; stock_quantity: number; unit: string; description: string }>({
+          type: 'object',
+          properties: {
+            name:           { type: 'string', description: 'The name of the product' },
+            category_id:    { type: 'number', description: 'The ID of the category (use get_categories to find this first)' },
+            price:          { type: 'number', description: 'The price of the product in KES' },
+            stock_quantity: { type: 'number', description: 'The initial stock quantity available' },
+            unit:           { type: 'string', description: 'The unit of measurement (e.g., "kg", "piece", "bunch", "litre")' },
+            description:    { type: 'string', description: 'A brief description of the product. Pass empty string to auto-generate.' },
+          },
+          required: ['name', 'category_id', 'price', 'stock_quantity', 'unit', 'description'],
         }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async (payload: { name: string; category_id: number; price: number; stock_quantity: number; unit: string; description?: string }) => {
@@ -298,9 +332,13 @@ RULES:
 
       update_stock: tool({
         description: 'Updates the stock quantity of an existing product.',
-        parameters: z.object({
-          product_id: z.number().describe('The ID of the product to update (use analyze_stock to find this)'),
-          stock_quantity: z.number().describe('The new stock quantity'),
+        inputSchema: jsonSchema<{ product_id: number; stock_quantity: number }>({
+          type: 'object',
+          properties: {
+            product_id:     { type: 'number', description: 'The ID of the product to update (use analyze_stock to find this)' },
+            stock_quantity: { type: 'number', description: 'The new stock quantity' },
+          },
+          required: ['product_id', 'stock_quantity'],
         }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async ({ product_id, stock_quantity }: { product_id: number; stock_quantity: number }) => {
@@ -337,7 +375,11 @@ RULES:
       // ── ADMIN TOOLS ─────────────────────────────────────────────────────────
       get_market_health: tool({
         description: 'Fetches overall system statistics for the admin dashboard.',
-        parameters: z.object({}),
+        inputSchema: jsonSchema<Record<string, never>>({
+          type: 'object',
+          properties: {},
+          required: [],
+        }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in as an admin.' };
@@ -350,7 +392,11 @@ RULES:
 
       get_fee_defaulters: tool({
         description: 'Fetches a list of traders who are delinquent on their market fees.',
-        parameters: z.object({}),
+        inputSchema: jsonSchema<Record<string, never>>({
+          type: 'object',
+          properties: {},
+          required: [],
+        }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in as an admin.' };
@@ -371,7 +417,11 @@ RULES:
 
       summarize_complaints: tool({
         description: 'Fetches the latest open complaints to summarize for the admin.',
-        parameters: z.object({}),
+        inputSchema: jsonSchema<Record<string, never>>({
+          type: 'object',
+          properties: {},
+          required: [],
+        }),
         // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in as an admin.' };
