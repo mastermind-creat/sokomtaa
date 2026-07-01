@@ -44,6 +44,9 @@ use App\Http\Controllers\CategoryController;
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::post('/categories', [CategoryController::class, 'store'])->middleware('auth:sanctum');
 
+// Web Push VAPID Public Key
+Route::get('/push-subscriptions/vapid-key', [\App\Http\Controllers\PushSubscriptionController::class, 'vapidKey']);
+
 // Market Discovery (Public)
 Route::prefix('markets')->group(function () {
     Route::get('/', [\App\Http\Controllers\Resident\MarketController::class, 'index']);
@@ -255,6 +258,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ─────────────────────────────────────────────────────────────────────────
 
     Route::middleware(['auth:sanctum'])->group(function () {
+        // ── Web Push Subscriptions ───────────────────────────────────────────────
+        Route::prefix('push-subscriptions')->group(function () {
+            Route::post('/', [\App\Http\Controllers\PushSubscriptionController::class, 'store']);
+            Route::delete('/', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy']);
+        });
+
         // ── Notifications (all roles) ────────────────────────────────────────────
         Route::prefix('notifications')->group(function () {
             Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index']);

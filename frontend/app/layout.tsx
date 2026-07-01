@@ -8,6 +8,7 @@ import AiAssistantFab from "@/components/shared/AiAssistantFab";
 import { TrafficTracker } from "@/components/shared/TrafficTracker";
 import NextTopLoader from 'nextjs-toploader';
 import { Toaster } from 'sonner';
+import PushNotificationManager from "@/components/shared/PushNotificationManager";
 
 // Bypass Google Fonts due to build environment network restrictions
 const plusJakarta = { variable: "--font-display" };
@@ -85,6 +86,7 @@ export default function RootLayout({
           <div className="w-full min-h-screen bg-white relative">
             <OfflineBanner />
             <TrafficTracker />
+            <PushNotificationManager />
             {children}
             <AiAssistantFab />
           </div>

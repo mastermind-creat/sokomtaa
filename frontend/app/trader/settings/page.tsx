@@ -11,6 +11,8 @@ import {
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useUIStore } from '@/store/uiStore';
+import { useWebPush } from '@/hooks/useWebPush';
+import { toast } from 'sonner';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -403,6 +405,65 @@ function CustomMpesaSection() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+function WebPushSettingsRow() {
+    const { isSupported, isSubscribed, subscribe, unsubscribe } = useWebPush();
+    const [isLoading, setIsLoading] = React.useState(false);
+
+    const handleToggle = async (checked: boolean) => {
+        setIsLoading(true);
+        try {
+            if (checked) {
+                const success = await subscribe();
+                if (success) {
+                    toast.success('Push notifications enabled!');
+                } else {
+                    toast.error('Could not enable push notifications.');
+                }
+            } else {
+                const success = await unsubscribe();
+                if (success) {
+                    toast.success('Push notifications disabled.');
+                }
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    if (!isSupported) {
+        return (
+            <div className="flex items-center justify-between py-4 border-b border-gray-50 last:border-0">
+                <div className="min-w-0 pr-4">
+                    <p className="font-semibold text-sm text-gray-900">Device Push Notifications</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Not supported by your browser/device.</p>
+                </div>
+                <button disabled className="relative w-12 h-6 rounded-full bg-gray-200 shrink-0 cursor-not-allowed">
+                    <span className="absolute top-0.5 left-0.5 w-5 h-5 bg-white/50 rounded-full shadow" />
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex items-center justify-between py-4 border-b border-gray-50 last:border-0">
+            <div className="min-w-0 pr-4">
+                <p className="font-semibold text-sm text-gray-900">Device Push Notifications</p>
+                <p className="text-xs text-gray-500 mt-0.5">Receive real-time alerts on your device home screen</p>
+            </div>
+            <button
+                onClick={() => !isLoading && handleToggle(!isSubscribed)}
+                disabled={isLoading}
+                className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${isSubscribed ? 'bg-brand-600' : 'bg-gray-300'} ${isLoading ? 'opacity-50 cursor-wait' : ''}`}
+                aria-label="Device Push Notifications"
+                role="switch"
+                aria-checked={isSubscribed}
+            >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isSubscribed ? 'translate-x-6' : 'translate-x-0'}`} />
+            </button>
+        </div>
+    );
+}
+
 export default function TraderSettingsPage() {
     const [saved, setSaved] = useState(false);
     const { setPageTitle } = useUIStore();
@@ -430,7 +491,7 @@ export default function TraderSettingsPage() {
     const update = (path: string, value: boolean | string) => {
         if (!current) return;
         const [section, key] = path.split('.');
-        setLocal({ ...current, [section]: { ...(current as Record<string, unknown>)[section] as Record<string, unknown>, [key]: value } } as TraderSettings);
+        setLocal({ ...current, [section]: { ...(current as unknown as Record<string, unknown>)[section] as Record<string, unknown>, [key]: value } } as TraderSettings);
     };
 
     if (isLoading || !current) {
@@ -448,17 +509,19 @@ export default function TraderSettingsPage() {
                     <h1 className="text-2xl font-black text-green-950 tracking-tight">Settings</h1>
                     <p className="text-sm text-text-muted mt-1">Manage your store preferences and integrations</p>
                 </div>
-                {local && (
-                    <motion.button
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => save(current)}
-                        disabled={isPending}
-                        className="px-6 py-3 bg-brand-600 text-white rounded-xl font-bold text-sm hover:bg-brand-500 transition-colors disabled:opacity-60 shadow-lg shadow-brand-600/20 flex items-center gap-2"
-                    >
-                        {saved ? <CheckCircle2 className="w-4 h-4" /> : null}
-                        {saved ? 'Saved' : isPending ? 'Saving...' : 'Save Changes'}
-                    </motion.button>
-                )}
+                <div className="flex items-center gap-3">
+                    {local && (
+                        <motion.button
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => save(current)}
+                            disabled={isPending}
+                            className="px-6 py-3 bg-brand-600 text-white rounded-xl font-bold text-sm hover:bg-brand-500 transition-colors disabled:opacity-60 shadow-lg shadow-brand-600/20 flex items-center gap-2"
+                        >
+                            {saved ? <CheckCircle2 className="w-4 h-4" /> : null}
+                            {saved ? 'Saved' : isPending ? 'Saving...' : 'Save Changes'}
+                        </motion.button>
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -466,6 +529,10 @@ export default function TraderSettingsPage() {
                 <div className="space-y-6">
                     {/* Notifications */}
                     <Section title="Notifications" icon={<Bell className="w-4 h-4" />}>
+                        {/* Web Push Hook Integration */}
+                        <WebPushSettingsRow />
+                        <div className="h-px w-full bg-gray-50 my-1"></div>
+
                         <ToggleRow label="New Orders (SMS)" description="Get an SMS when a new order is placed" checked={current.notifications.new_order_sms} onChange={v => update('notifications.new_order_sms', v)} />
                         <ToggleRow label="New Orders (In-App)" checked={current.notifications.new_order_app} onChange={v => update('notifications.new_order_app', v)} />
                         <ToggleRow label="Market Fee Reminder (SMS)" checked={current.notifications.fee_reminder_sms} onChange={v => update('notifications.fee_reminder_sms', v)} />

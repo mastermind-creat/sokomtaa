@@ -53,6 +53,11 @@ class NotificationService
             }
         }
 
+        // 3. Send Web Push Notification
+        if (class_exists(\App\Notifications\WebPushNotification::class)) {
+            $user->notify(new \App\Notifications\WebPushNotification($title, $body, $data ?? []));
+        }
+
         return $notification;
     }
 
