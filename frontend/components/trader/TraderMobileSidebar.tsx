@@ -83,7 +83,7 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
                 { icon: MessageSquare, label: t('sidebar.reviews'), path: '/trader/reviews' },
                 { icon: FileText, label: 'Business Reports', path: '/trader/reports' },
                 { icon: MapPin, label: stallApp ? `${t('sidebar.stall_application') || 'Stall App'} (${stallBadge[stallApp.status] ?? ''})` : (t('sidebar.stall_application') || 'Stall Application'), path: '/trader/apply-stall' },
-                { icon: Settings, label: t('common.settings'), path: '/trader/profile' },
+                { icon: Settings, label: t('common.settings'), path: '/trader/settings' },
             ]
         }
     ];
@@ -168,7 +168,7 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
                                     <div className="space-y-1">
                                         {section.items.map((item) => {
                                             // Handle exact match for dashboard, startsWith for others
-                                            const isActive = item.path === '/trader/dashboard' || item.path === '/profile' 
+                                            const isActive = item.path === '/trader/dashboard' || item.path === '/trader/settings' 
                                                 ? pathname === item.path 
                                                 : pathname.startsWith(item.path);
                                             

@@ -225,6 +225,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::put('/', [\App\Http\Controllers\Trader\TraderSettingsController::class, 'update']);
         });
 
+        // Custom M-Pesa Daraja Integration (trader's own credentials)
+        Route::prefix('trader/mpesa-integration')->group(function () {
+            Route::get('/',    [\App\Http\Controllers\Trader\TraderMpesaController::class, 'show']);
+            Route::post('/',   [\App\Http\Controllers\Trader\TraderMpesaController::class, 'store']);
+            Route::delete('/', [\App\Http\Controllers\Trader\TraderMpesaController::class, 'destroy']);
+        });
+
         // Stall Application
         Route::prefix('trader/stall-application')->group(function () {
             Route::get('/', [\App\Http\Controllers\Trader\TraderStallApplicationController::class, 'show']);

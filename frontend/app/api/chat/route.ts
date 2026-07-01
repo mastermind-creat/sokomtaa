@@ -24,18 +24,43 @@ export async function POST(req: Request) {
     const { messages, token, role } = await req.json();
 
     // ── Fetch AI config securely (server-to-server) ───────────────────────────
-    // Use server-side API_URL for route handlers; it resolves 127.0.0.1 reliably
-    const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
+    const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || '';
     const internalSecret = process.env.INTERNAL_API_SECRET || '';
 
-    const configRes = await fetch(`${apiUrl}/internal/ai-config`, {
-      method: 'GET',
-      headers: { 'X-Internal-Secret': internalSecret, 'Accept': 'application/json' },
-      cache: 'no-store',
-    });
+    // Guard: catch misconfigured production deployments early
+    if (!apiUrl) {
+      return Response.json({
+        error: 'API_URL is not configured. Set it in your Vercel environment variables (e.g. https://your-backend.com/api).'
+      }, { status: 500 });
+    }
+    const isLocalhostInProd = process.env.NODE_ENV === 'production' &&
+      (apiUrl.includes('127.0.0.1') || apiUrl.includes('localhost'));
+    if (isLocalhostInProd) {
+      return Response.json({
+        error: 'API_URL is set to localhost but the app is running in production. Update API_URL in your Vercel environment variables to your live backend URL.'
+      }, { status: 500 });
+    }
+
+    let configRes: Response;
+    try {
+      configRes = await fetch(`${apiUrl}/internal/ai-config`, {
+        method: 'GET',
+        headers: { 'X-Internal-Secret': internalSecret, 'Accept': 'application/json' },
+        cache: 'no-store',
+      });
+    } catch (fetchErr) {
+      console.error('[chat] Failed to reach backend at', apiUrl, fetchErr);
+      return Response.json({
+        error: `Cannot reach the backend at ${apiUrl}. Ensure API_URL is correct and the server is running.`
+      }, { status: 500 });
+    }
 
     if (!configRes.ok) {
-      return Response.json({ error: 'AI configuration unavailable' }, { status: 500 });
+      const body = await configRes.text().catch(() => '');
+      console.error('[chat] AI config endpoint returned', configRes.status, body);
+      return Response.json({
+        error: `AI configuration unavailable (backend returned ${configRes.status}). Check INTERNAL_API_SECRET and backend health.`
+      }, { status: 500 });
     }
 
     const { data: aiConfig } = await configRes.json();

@@ -209,11 +209,11 @@ export default function TraderSidebar() {
             {/* Footer Area */}
             <div className="p-6 space-y-4 border-t border-gray-100">
                 <button 
-                    onClick={() => handleNavigate('/trader/profile')}
+                    onClick={() => handleNavigate('/trader/settings')}
                     disabled={navigatingPath !== null}
                     className="w-full flex items-center justify-center gap-4 p-4 rounded-2xl text-text-secondary hover:bg-gray-50 transition-all font-bold text-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                    {navigatingPath === '/trader/profile' ? (
+                    {navigatingPath === '/trader/settings' ? (
                         <Loader2 size={20} className="animate-spin text-brand-600" />
                     ) : (
                         <Settings size={20} className="text-gray-400" />

@@ -40,17 +40,91 @@ class Trader extends Model
         'average_rating',
         'total_reviews',
         'profile_views',
+        // Custom M-Pesa integration
+        'custom_mpesa_enabled',
+        'custom_mpesa_consumer_key',
+        'custom_mpesa_consumer_secret',
+        'custom_mpesa_passkey',
+        'custom_mpesa_shortcode',
+        'custom_mpesa_transaction_type',
+        'custom_mpesa_environment',
+        'custom_mpesa_verified_at',
+    ];
+
+    /**
+     * Raw credential fields are never serialised to JSON/API responses.
+     * The controller uses getDecrypted*() helpers instead.
+     */
+    protected $hidden = [
+        'custom_mpesa_consumer_key',
+        'custom_mpesa_consumer_secret',
+        'custom_mpesa_passkey',
     ];
 
     protected $casts = [
-        'is_open' => 'boolean',
-        'average_rating' => 'decimal:2',
-        'latitude' => 'decimal:7',
-        'longitude' => 'decimal:7',
-        'last_fee_deduction_at' => 'datetime',
+        'is_open'                  => 'boolean',
+        'custom_mpesa_enabled'     => 'boolean',
+        'average_rating'           => 'decimal:2',
+        'latitude'                 => 'decimal:7',
+        'longitude'                => 'decimal:7',
+        'last_fee_deduction_at'    => 'datetime',
+        'custom_mpesa_verified_at' => 'datetime',
     ];
 
     protected $appends = ['is_currently_open'];
+
+    // ── Encrypted Credential Accessors / Mutators ─────────────────────────────
+
+    /**
+     * Automatically encrypt when setting consumer key.
+     */
+    public function setCustomMpesaConsumerKeyAttribute(?string $value): void
+    {
+        $this->attributes['custom_mpesa_consumer_key'] = $value ? encrypt($value) : null;
+    }
+
+    /**
+     * Decrypt the consumer key for internal service use.
+     */
+    public function getDecryptedConsumerKey(): ?string
+    {
+        $raw = $this->attributes['custom_mpesa_consumer_key'] ?? null;
+        return $raw ? decrypt($raw) : null;
+    }
+
+    public function setCustomMpesaConsumerSecretAttribute(?string $value): void
+    {
+        $this->attributes['custom_mpesa_consumer_secret'] = $value ? encrypt($value) : null;
+    }
+
+    public function getDecryptedConsumerSecret(): ?string
+    {
+        $raw = $this->attributes['custom_mpesa_consumer_secret'] ?? null;
+        return $raw ? decrypt($raw) : null;
+    }
+
+    public function setCustomMpesaPasskeyAttribute(?string $value): void
+    {
+        $this->attributes['custom_mpesa_passkey'] = $value ? encrypt($value) : null;
+    }
+
+    public function getDecryptedPasskey(): ?string
+    {
+        $raw = $this->attributes['custom_mpesa_passkey'] ?? null;
+        return $raw ? decrypt($raw) : null;
+    }
+
+    /**
+     * Returns true only when all required custom credentials are stored.
+     */
+    public function hasValidCustomMpesa(): bool
+    {
+        return $this->custom_mpesa_enabled
+            && !empty($this->attributes['custom_mpesa_consumer_key'])
+            && !empty($this->attributes['custom_mpesa_consumer_secret'])
+            && !empty($this->attributes['custom_mpesa_passkey'])
+            && !empty($this->custom_mpesa_shortcode);
+    }
 
     /**
      * Get the effective open status of the trader.

@@ -44,7 +44,12 @@ class TraderController extends Controller
                 });
             })
             ->latest()
-            ->get();
+            ->get()
+            ->map(function ($trader) {
+                // Append custom M-Pesa status without exposing raw credentials
+                $trader->custom_mpesa_active = $trader->hasValidCustomMpesa();
+                return $trader;
+            });
 
         return response()->json([
             'success' => true,
