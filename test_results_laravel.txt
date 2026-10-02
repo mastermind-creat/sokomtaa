@@ -1,0 +1,470 @@
+PHPUnit 12.5.19 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.3.6
+Configuration: /opt/lampp/htdocs/sokomtaa/backend/phpunit.xml
+
+.....[31;1mE[0m..[41;37mF[0m.[41;37mF[0m...........[41;37mF[0m[41;37mF[0m[41;37mF[0m[41;37mF[0m......[31;1mE[0m[31;1mE[0m[31;1mE[0m[31;1mE[0m[31;1mE[0m                             37 / 37 (100%)
+
+Time: 00:09.599, Memory: 67.00 MB
+
+[4mAi Pipeline Logging (Tests\Unit\Polyglot\AiPipelineLogging)[0m
+[32m ✔ [0mText field is redacted from log on fastapi error
+[32m ✔ [0mText field is redacted on connection exception
+[32m ✔ [0mFastapi channel is used not default
+
+[4mCommunication Contracts (Tests\Feature\Polyglot\CommunicationContracts)[0m
+[32m ✔ [0mMap stalls requires sanctum auth
+[32m ✔ [0mAi chat requires sanctum auth
+[32m ✔ [0mAi chat requires resident role
+[32m ✔ [0mInternal match traders rejects missing token
+[32m ✔ [0mInternal match traders rejects wrong token
+[33m ✘ [0mInternal match traders accepts correct token
+   [33m┐[0m
+   [33m├[0m [43;30mError: Object of class Closure could not be converted to string[0m
+   [33m│[0m
+   [33m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mTesting[2m/[22mTestResponse.php[2m:[22m[34m190[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Testing/TestResponse.php[22m[2m:[22m[34m174[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mFeature[2m/[22mPolyglot[2m/[22mCommunicationContractsTest.php[2m:[22m[34m98[0m
+   [33m┴[0m
+[32m ✔ [0mFastapi config uses internal token
+[32m ✔ [0mRider events channel constant is correct
+
+[4mGeo Service (Tests\Unit\Polyglot\GeoService)[0m
+[33m ✘ [0mAdd trader to geo writes to redis
+   [33m┐[0m
+   [33m├[0m [43;30mError: Class "Redis" not found[0m
+   [33m│[0m
+   [33m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mRedis[2m/[22mConnectors[2m/[22mPhpRedisConnector.php[2m:[22m[34m80[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php[22m[2m:[22m[34m34[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php[22m[2m:[22m[34m39[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/[22mRedisManager.php[2m:[22m[34m113[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php[22m[2m:[22m[34m94[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php[22m[2m:[22m[34m288[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/[22mSupport[2m/[22mFacades[2m/[22mFacade.php[2m:[22m[34m363[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mUnit[2m/[22mPolyglot[2m/[22mGeoServiceTest.php[2m:[22m[34m28[0m
+   [33m┴[0m
+[33m ✘ [0mRemove trader from geo deletes from redis
+   [33m┐[0m
+   [33m├[0m [43;30mError: Class "Redis" not found[0m
+   [33m│[0m
+   [33m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mRedis[2m/[22mConnectors[2m/[22mPhpRedisConnector.php[2m:[22m[34m80[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php[22m[2m:[22m[34m34[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php[22m[2m:[22m[34m39[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/[22mRedisManager.php[2m:[22m[34m113[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php[22m[2m:[22m[34m94[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php[22m[2m:[22m[34m288[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/[22mSupport[2m/[22mFacades[2m/[22mFacade.php[2m:[22m[34m363[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mUnit[2m/[22mPolyglot[2m/[22mGeoServiceTest.php[2m:[22m[34m28[0m
+   [33m┴[0m
+[33m ✘ [0mMaintenance stalls excluded from viewport
+   [33m┐[0m
+   [33m├[0m [43;30mError: Class "Redis" not found[0m
+   [33m│[0m
+   [33m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mRedis[2m/[22mConnectors[2m/[22mPhpRedisConnector.php[2m:[22m[34m80[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php[22m[2m:[22m[34m34[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php[22m[2m:[22m[34m39[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/[22mRedisManager.php[2m:[22m[34m113[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php[22m[2m:[22m[34m94[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php[22m[2m:[22m[34m288[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/[22mSupport[2m/[22mFacades[2m/[22mFacade.php[2m:[22m[34m363[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mUnit[2m/[22mPolyglot[2m/[22mGeoServiceTest.php[2m:[22m[34m28[0m
+   [33m┴[0m
+[33m ✘ [0mOpen close redis round trip
+   [33m┐[0m
+   [33m├[0m [43;30mError: Class "Redis" not found[0m
+   [33m│[0m
+   [33m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mRedis[2m/[22mConnectors[2m/[22mPhpRedisConnector.php[2m:[22m[34m80[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php[22m[2m:[22m[34m34[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php[22m[2m:[22m[34m39[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/[22mRedisManager.php[2m:[22m[34m113[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php[22m[2m:[22m[34m94[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php[22m[2m:[22m[34m288[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/[22mSupport[2m/[22mFacades[2m/[22mFacade.php[2m:[22m[34m363[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mUnit[2m/[22mPolyglot[2m/[22mGeoServiceTest.php[2m:[22m[34m28[0m
+   [33m┴[0m
+[33m ✘ [0mGeoadd overwrites previous position
+   [33m┐[0m
+   [33m├[0m [43;30mError: Class "Redis" not found[0m
+   [33m│[0m
+   [33m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mRedis[2m/[22mConnectors[2m/[22mPhpRedisConnector.php[2m:[22m[34m80[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php[22m[2m:[22m[34m34[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php[22m[2m:[22m[34m39[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/[22mRedisManager.php[2m:[22m[34m113[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php[22m[2m:[22m[34m94[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php[22m[2m:[22m[34m288[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/[22mSupport[2m/[22mFacades[2m/[22mFacade.php[2m:[22m[34m363[0m
+   [33m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mUnit[2m/[22mPolyglot[2m/[22mGeoServiceTest.php[2m:[22m[34m28[0m
+   [33m┴[0m
+
+[4mHealth Endpoint (Tests\Feature\Polyglot\HealthEndpoint)[0m
+[31m ✘ [0mHealth returns 200 when db is reachable
+   [31m┐[0m
+   [31m├[0m [41;37mExpected response status code [200] but received 503.[0m
+   [31m├[0m [41;37mFailed asserting that 503 is identical to 200.       [0m
+   [31m│[0m
+   [31m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mTesting[2m/[22mTestResponseAssert.php[2m:[22m[34m45[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Testing/[22mTestResponse.php[2m:[22m[34m176[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mFeature[2m/[22mPolyglot[2m/[22mHealthEndpointTest.php[2m:[22m[34m21[0m
+   [31m┴[0m
+[32m ✔ [0mHealth response contains required keys
+[31m ✘ [0mHealth is unauthenticated
+   [31m┐[0m
+   [31m├[0m [41;37mExpected response status code [200] but received 503.[0m
+   [31m├[0m [41;37mFailed asserting that 503 is identical to 200.       [0m
+   [31m│[0m
+   [31m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mTesting[2m/[22mTestResponseAssert.php[2m:[22m[34m45[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Testing/[22mTestResponse.php[2m:[22m[34m176[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mFeature[2m/[22mPolyglot[2m/[22mHealthEndpointTest.php[2m:[22m[34m38[0m
+   [31m┴[0m
+
+[4mInternal Api Auth (Tests\Feature\Polyglot\InternalApiAuth)[0m
+[32m ✔ [0mRejects request with no token
+[32m ✔ [0mRejects request with wrong token
+[32m ✔ [0mAccepts request with valid token
+
+[4mStall Map Controller (Tests\Feature\Polyglot\StallMapController)[0m
+[32m ✔ [0mReturns 422 when lon out of range
+[32m ✔ [0mReturns 422 when lat out of range
+[32m ✔ [0mReturns 422 when max lon out of range
+[32m ✔ [0mReturns 422 when max lat out of range
+[32m ✔ [0mReturns 422 when bbox is inverted lon
+[32m ✔ [0mReturns 422 when bbox is inverted lat
+[32m ✔ [0mReturns 422 when bbox params missing
+[32m ✔ [0mRequires authentication
+[31m ✘ [0mReturns 200 with stalls in valid bbox
+   [31m┐[0m
+   [31m├[0m [41;37mExpected response status code [200] but received 500.                    [0m
+   [31m├[0m [41;37mFailed asserting that 500 is identical to 200.                           [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mThe following exception occurred during the last request:                [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mError: Class "Redis" not found in /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php:80[0m
+   [31m├[0m [41;37mStack trace:                                                             [0m
+   [31m├[0m [41;37m#0 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php(34): Illuminate\Redis\Connectors\PhpRedisConnector->createClient()[0m
+   [31m├[0m [41;37m#1 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php(39): Illuminate\Redis\Connectors\PhpRedisConnector->Illuminate\Redis\Connectors\{closure}()[0m
+   [31m├[0m [41;37m#2 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(113): Illuminate\Redis\Connectors\PhpRedisConnector->connect()[0m
+   [31m├[0m [41;37m#3 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(94): Illuminate\Redis\RedisManager->resolve()[0m
+   [31m├[0m [41;37m#4 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(288): Illuminate\Redis\RedisManager->connection()[0m
+   [31m├[0m [41;37m#5 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate\Redis\RedisManager->__call()[0m
+   [31m├[0m [41;37m#6 /opt/lampp/htdocs/sokomtaa/backend/app/Services/GeoService.php(19): Illuminate\Support\Facades\Facade::__callStatic()[0m
+   [31m├[0m [41;37m#7 /opt/lampp/htdocs/sokomtaa/backend/app/Http/Controllers/Map/StallMapController.php(35): App\Services\GeoService->stallsWithinViewport()[0m
+   [31m├[0m [41;37m#8 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(46): App\Http\Controllers\Map\StallMapController->withinViewport()[0m
+   [31m├[0m [41;37m#9 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(269): Illuminate\Routing\ControllerDispatcher->dispatch()[0m
+   [31m├[0m [41;37m#10 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(215): Illuminate\Routing\Route->runController()[0m
+   [31m├[0m [41;37m#11 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(822): Illuminate\Routing\Route->run()[0m
+   [31m├[0m [41;37m#12 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate\Routing\Router->Illuminate\Routing\{closure}()[0m
+   [31m├[0m [41;37m#13 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(52): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#14 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Routing\Middleware\SubstituteBindings->handle()[0m
+   [31m├[0m [41;37m#15 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(168): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#16 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(93): Illuminate\Routing\Middleware\ThrottleRequests->handleRequest()[0m
+   [31m├[0m [41;37m#17 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Routing\Middleware\ThrottleRequests->handle()[0m
+   [31m├[0m [41;37m#18 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php(63): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#19 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Auth\Middleware\Authenticate->handle()[0m
+   [31m├[0m [41;37m#20 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#21 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(821): Illuminate\Pipeline\Pipeline->then()[0m
+   [31m├[0m [41;37m#22 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(800): Illuminate\Routing\Router->runRouteWithinStack()[0m
+   [31m├[0m [41;37m#23 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(764): Illuminate\Routing\Router->runRoute()[0m
+   [31m├[0m [41;37m#24 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(753): Illuminate\Routing\Router->dispatchToRoute()[0m
+   [31m├[0m [41;37m#25 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\Routing\Router->dispatch()[0m
+   [31m├[0m [41;37m#26 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate\Foundation\Http\Kernel->Illuminate\Foundation\Http\{closure}()[0m
+   [31m├[0m [41;37m#27 /opt/lampp/htdocs/sokomtaa/backend/app/Http/Middleware/LocaleMiddleware.php(27): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#28 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): App\Http\Middleware\LocaleMiddleware->handle()[0m
+   [31m├[0m [41;37m#29 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#30 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle()[0m
+   [31m├[0m [41;37m#31 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull->handle()[0m
+   [31m├[0m [41;37m#32 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#33 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(51): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle()[0m
+   [31m├[0m [41;37m#34 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\TrimStrings->handle()[0m
+   [31m├[0m [41;37m#35 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php(27): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#36 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\ValidatePostSize->handle()[0m
+   [31m├[0m [41;37m#37 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(109): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#38 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance->handle()[0m
+   [31m├[0m [41;37m#39 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(74): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#40 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\HandleCors->handle()[0m
+   [31m├[0m [41;37m#41 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(58): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#42 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\TrustProxies->handle()[0m
+   [31m├[0m [41;37m#43 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php(22): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#44 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks->handle()[0m
+   [31m├[0m [41;37m#45 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php(28): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#46 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\ValidatePathEncoding->handle()[0m
+   [31m├[0m [41;37m#47 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#48 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\Pipeline\Pipeline->then()[0m
+   [31m├[0m [41;37m#49 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\Foundation\Http\Kernel->sendRequestThroughRouter()[0m
+   [31m├[0m [41;37m#50 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(607): Illuminate\Foundation\Http\Kernel->handle()[0m
+   [31m├[0m [41;37m#51 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(573): Illuminate\Foundation\Testing\TestCase->call()[0m
+   [31m├[0m [41;37m#52 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(381): Illuminate\Foundation\Testing\TestCase->json()[0m
+   [31m├[0m [41;37m#53 /opt/lampp/htdocs/sokomtaa/backend/tests/Feature/Polyglot/StallMapControllerTest.php(121): Illuminate\Foundation\Testing\TestCase->getJson()[0m
+   [31m├[0m [41;37m#54 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(1335): Tests\Feature\Polyglot\StallMapControllerTest->test_returns_200_with_stalls_in_valid_bbox()[0m
+   [31m├[0m [41;37m#55 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(519): PHPUnit\Framework\TestCase->runTest()[0m
+   [31m├[0m [41;37m#56 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestRunner/TestRunner.php(99): PHPUnit\Framework\TestCase->runBare()[0m
+   [31m├[0m [41;37m#57 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(359): PHPUnit\Framework\TestRunner->run()[0m
+   [31m├[0m [41;37m#58 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestSuite.php(374): PHPUnit\Framework\TestCase->run()[0m
+   [31m├[0m [41;37m#59 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestSuite.php(374): PHPUnit\Framework\TestSuite->run()[0m
+   [31m├[0m [41;37m#60 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/TextUI/TestRunner.php(64): PHPUnit\Framework\TestSuite->run()[0m
+   [31m├[0m [41;37m#61 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/TextUI/Application.php(229): PHPUnit\TextUI\TestRunner->run()[0m
+   [31m├[0m [41;37m#62 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/phpunit(104): PHPUnit\TextUI\Application->run()[0m
+   [31m├[0m [41;37m#63 {main}                                                               [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37m----------------------------------------------------------------------------------[0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mClass "Redis" not found                                                  [0m
+   [31m│[0m
+   [31m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mTesting[2m/[22mTestResponseAssert.php[2m:[22m[34m45[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Testing/[22mTestResponse.php[2m:[22m[34m176[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mFeature[2m/[22mPolyglot[2m/[22mStallMapControllerTest.php[2m:[22m[34m123[0m
+   [31m┴[0m
+[31m ✘ [0mExcludes maintenance stalls from response
+   [31m┐[0m
+   [31m├[0m [41;37mExpected response status code [200] but received 500.                    [0m
+   [31m├[0m [41;37mFailed asserting that 500 is identical to 200.                           [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mThe following exception occurred during the last request:                [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mError: Class "Redis" not found in /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php:80[0m
+   [31m├[0m [41;37mStack trace:                                                             [0m
+   [31m├[0m [41;37m#0 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php(34): Illuminate\Redis\Connectors\PhpRedisConnector->createClient()[0m
+   [31m├[0m [41;37m#1 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php(39): Illuminate\Redis\Connectors\PhpRedisConnector->Illuminate\Redis\Connectors\{closure}()[0m
+   [31m├[0m [41;37m#2 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(113): Illuminate\Redis\Connectors\PhpRedisConnector->connect()[0m
+   [31m├[0m [41;37m#3 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(94): Illuminate\Redis\RedisManager->resolve()[0m
+   [31m├[0m [41;37m#4 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(288): Illuminate\Redis\RedisManager->connection()[0m
+   [31m├[0m [41;37m#5 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate\Redis\RedisManager->__call()[0m
+   [31m├[0m [41;37m#6 /opt/lampp/htdocs/sokomtaa/backend/app/Services/GeoService.php(19): Illuminate\Support\Facades\Facade::__callStatic()[0m
+   [31m├[0m [41;37m#7 /opt/lampp/htdocs/sokomtaa/backend/app/Http/Controllers/Map/StallMapController.php(35): App\Services\GeoService->stallsWithinViewport()[0m
+   [31m├[0m [41;37m#8 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(46): App\Http\Controllers\Map\StallMapController->withinViewport()[0m
+   [31m├[0m [41;37m#9 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(269): Illuminate\Routing\ControllerDispatcher->dispatch()[0m
+   [31m├[0m [41;37m#10 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(215): Illuminate\Routing\Route->runController()[0m
+   [31m├[0m [41;37m#11 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(822): Illuminate\Routing\Route->run()[0m
+   [31m├[0m [41;37m#12 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate\Routing\Router->Illuminate\Routing\{closure}()[0m
+   [31m├[0m [41;37m#13 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(52): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#14 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Routing\Middleware\SubstituteBindings->handle()[0m
+   [31m├[0m [41;37m#15 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(168): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#16 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(93): Illuminate\Routing\Middleware\ThrottleRequests->handleRequest()[0m
+   [31m├[0m [41;37m#17 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Routing\Middleware\ThrottleRequests->handle()[0m
+   [31m├[0m [41;37m#18 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php(63): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#19 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Auth\Middleware\Authenticate->handle()[0m
+   [31m├[0m [41;37m#20 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#21 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(821): Illuminate\Pipeline\Pipeline->then()[0m
+   [31m├[0m [41;37m#22 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(800): Illuminate\Routing\Router->runRouteWithinStack()[0m
+   [31m├[0m [41;37m#23 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(764): Illuminate\Routing\Router->runRoute()[0m
+   [31m├[0m [41;37m#24 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(753): Illuminate\Routing\Router->dispatchToRoute()[0m
+   [31m├[0m [41;37m#25 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\Routing\Router->dispatch()[0m
+   [31m├[0m [41;37m#26 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate\Foundation\Http\Kernel->Illuminate\Foundation\Http\{closure}()[0m
+   [31m├[0m [41;37m#27 /opt/lampp/htdocs/sokomtaa/backend/app/Http/Middleware/LocaleMiddleware.php(27): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#28 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): App\Http\Middleware\LocaleMiddleware->handle()[0m
+   [31m├[0m [41;37m#29 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#30 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle()[0m
+   [31m├[0m [41;37m#31 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull->handle()[0m
+   [31m├[0m [41;37m#32 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#33 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(51): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle()[0m
+   [31m├[0m [41;37m#34 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\TrimStrings->handle()[0m
+   [31m├[0m [41;37m#35 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php(27): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#36 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\ValidatePostSize->handle()[0m
+   [31m├[0m [41;37m#37 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(109): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#38 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance->handle()[0m
+   [31m├[0m [41;37m#39 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(74): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#40 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\HandleCors->handle()[0m
+   [31m├[0m [41;37m#41 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(58): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#42 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\TrustProxies->handle()[0m
+   [31m├[0m [41;37m#43 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php(22): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#44 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks->handle()[0m
+   [31m├[0m [41;37m#45 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php(28): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#46 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\ValidatePathEncoding->handle()[0m
+   [31m├[0m [41;37m#47 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#48 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\Pipeline\Pipeline->then()[0m
+   [31m├[0m [41;37m#49 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\Foundation\Http\Kernel->sendRequestThroughRouter()[0m
+   [31m├[0m [41;37m#50 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(607): Illuminate\Foundation\Http\Kernel->handle()[0m
+   [31m├[0m [41;37m#51 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(573): Illuminate\Foundation\Testing\TestCase->call()[0m
+   [31m├[0m [41;37m#52 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(381): Illuminate\Foundation\Testing\TestCase->json()[0m
+   [31m├[0m [41;37m#53 /opt/lampp/htdocs/sokomtaa/backend/tests/Feature/Polyglot/StallMapControllerTest.php(158): Illuminate\Foundation\Testing\TestCase->getJson()[0m
+   [31m├[0m [41;37m#54 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(1335): Tests\Feature\Polyglot\StallMapControllerTest->test_excludes_maintenance_stalls_from_response()[0m
+   [31m├[0m [41;37m#55 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(519): PHPUnit\Framework\TestCase->runTest()[0m
+   [31m├[0m [41;37m#56 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestRunner/TestRunner.php(99): PHPUnit\Framework\TestCase->runBare()[0m
+   [31m├[0m [41;37m#57 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(359): PHPUnit\Framework\TestRunner->run()[0m
+   [31m├[0m [41;37m#58 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestSuite.php(374): PHPUnit\Framework\TestCase->run()[0m
+   [31m├[0m [41;37m#59 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestSuite.php(374): PHPUnit\Framework\TestSuite->run()[0m
+   [31m├[0m [41;37m#60 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/TextUI/TestRunner.php(64): PHPUnit\Framework\TestSuite->run()[0m
+   [31m├[0m [41;37m#61 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/TextUI/Application.php(229): PHPUnit\TextUI\TestRunner->run()[0m
+   [31m├[0m [41;37m#62 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/phpunit(104): PHPUnit\TextUI\Application->run()[0m
+   [31m├[0m [41;37m#63 {main}                                                               [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37m----------------------------------------------------------------------------------[0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mClass "Redis" not found                                                  [0m
+   [31m│[0m
+   [31m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mTesting[2m/[22mTestResponseAssert.php[2m:[22m[34m45[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Testing/[22mTestResponse.php[2m:[22m[34m176[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mFeature[2m/[22mPolyglot[2m/[22mStallMapControllerTest.php[2m:[22m[34m160[0m
+   [31m┴[0m
+[31m ✘ [0mResponse stalls contain required fields
+   [31m┐[0m
+   [31m├[0m [41;37mExpected response status code [200] but received 500.                    [0m
+   [31m├[0m [41;37mFailed asserting that 500 is identical to 200.                           [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mThe following exception occurred during the last request:                [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mError: Class "Redis" not found in /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php:80[0m
+   [31m├[0m [41;37mStack trace:                                                             [0m
+   [31m├[0m [41;37m#0 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php(34): Illuminate\Redis\Connectors\PhpRedisConnector->createClient()[0m
+   [31m├[0m [41;37m#1 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php(39): Illuminate\Redis\Connectors\PhpRedisConnector->Illuminate\Redis\Connectors\{closure}()[0m
+   [31m├[0m [41;37m#2 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(113): Illuminate\Redis\Connectors\PhpRedisConnector->connect()[0m
+   [31m├[0m [41;37m#3 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(94): Illuminate\Redis\RedisManager->resolve()[0m
+   [31m├[0m [41;37m#4 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(288): Illuminate\Redis\RedisManager->connection()[0m
+   [31m├[0m [41;37m#5 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate\Redis\RedisManager->__call()[0m
+   [31m├[0m [41;37m#6 /opt/lampp/htdocs/sokomtaa/backend/app/Services/GeoService.php(19): Illuminate\Support\Facades\Facade::__callStatic()[0m
+   [31m├[0m [41;37m#7 /opt/lampp/htdocs/sokomtaa/backend/app/Http/Controllers/Map/StallMapController.php(35): App\Services\GeoService->stallsWithinViewport()[0m
+   [31m├[0m [41;37m#8 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(46): App\Http\Controllers\Map\StallMapController->withinViewport()[0m
+   [31m├[0m [41;37m#9 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(269): Illuminate\Routing\ControllerDispatcher->dispatch()[0m
+   [31m├[0m [41;37m#10 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(215): Illuminate\Routing\Route->runController()[0m
+   [31m├[0m [41;37m#11 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(822): Illuminate\Routing\Route->run()[0m
+   [31m├[0m [41;37m#12 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate\Routing\Router->Illuminate\Routing\{closure}()[0m
+   [31m├[0m [41;37m#13 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(52): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#14 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Routing\Middleware\SubstituteBindings->handle()[0m
+   [31m├[0m [41;37m#15 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(168): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#16 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(93): Illuminate\Routing\Middleware\ThrottleRequests->handleRequest()[0m
+   [31m├[0m [41;37m#17 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Routing\Middleware\ThrottleRequests->handle()[0m
+   [31m├[0m [41;37m#18 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php(63): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#19 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Auth\Middleware\Authenticate->handle()[0m
+   [31m├[0m [41;37m#20 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#21 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(821): Illuminate\Pipeline\Pipeline->then()[0m
+   [31m├[0m [41;37m#22 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(800): Illuminate\Routing\Router->runRouteWithinStack()[0m
+   [31m├[0m [41;37m#23 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(764): Illuminate\Routing\Router->runRoute()[0m
+   [31m├[0m [41;37m#24 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(753): Illuminate\Routing\Router->dispatchToRoute()[0m
+   [31m├[0m [41;37m#25 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\Routing\Router->dispatch()[0m
+   [31m├[0m [41;37m#26 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate\Foundation\Http\Kernel->Illuminate\Foundation\Http\{closure}()[0m
+   [31m├[0m [41;37m#27 /opt/lampp/htdocs/sokomtaa/backend/app/Http/Middleware/LocaleMiddleware.php(27): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#28 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): App\Http\Middleware\LocaleMiddleware->handle()[0m
+   [31m├[0m [41;37m#29 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#30 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle()[0m
+   [31m├[0m [41;37m#31 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull->handle()[0m
+   [31m├[0m [41;37m#32 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#33 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(51): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle()[0m
+   [31m├[0m [41;37m#34 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\TrimStrings->handle()[0m
+   [31m├[0m [41;37m#35 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php(27): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#36 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\ValidatePostSize->handle()[0m
+   [31m├[0m [41;37m#37 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(109): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#38 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance->handle()[0m
+   [31m├[0m [41;37m#39 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(74): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#40 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\HandleCors->handle()[0m
+   [31m├[0m [41;37m#41 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(58): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#42 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\TrustProxies->handle()[0m
+   [31m├[0m [41;37m#43 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php(22): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#44 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks->handle()[0m
+   [31m├[0m [41;37m#45 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php(28): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#46 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\ValidatePathEncoding->handle()[0m
+   [31m├[0m [41;37m#47 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#48 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\Pipeline\Pipeline->then()[0m
+   [31m├[0m [41;37m#49 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\Foundation\Http\Kernel->sendRequestThroughRouter()[0m
+   [31m├[0m [41;37m#50 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(607): Illuminate\Foundation\Http\Kernel->handle()[0m
+   [31m├[0m [41;37m#51 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(573): Illuminate\Foundation\Testing\TestCase->call()[0m
+   [31m├[0m [41;37m#52 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(381): Illuminate\Foundation\Testing\TestCase->json()[0m
+   [31m├[0m [41;37m#53 /opt/lampp/htdocs/sokomtaa/backend/tests/Feature/Polyglot/StallMapControllerTest.php(188): Illuminate\Foundation\Testing\TestCase->getJson()[0m
+   [31m├[0m [41;37m#54 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(1335): Tests\Feature\Polyglot\StallMapControllerTest->test_response_stalls_contain_required_fields()[0m
+   [31m├[0m [41;37m#55 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(519): PHPUnit\Framework\TestCase->runTest()[0m
+   [31m├[0m [41;37m#56 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestRunner/TestRunner.php(99): PHPUnit\Framework\TestCase->runBare()[0m
+   [31m├[0m [41;37m#57 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(359): PHPUnit\Framework\TestRunner->run()[0m
+   [31m├[0m [41;37m#58 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestSuite.php(374): PHPUnit\Framework\TestCase->run()[0m
+   [31m├[0m [41;37m#59 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestSuite.php(374): PHPUnit\Framework\TestSuite->run()[0m
+   [31m├[0m [41;37m#60 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/TextUI/TestRunner.php(64): PHPUnit\Framework\TestSuite->run()[0m
+   [31m├[0m [41;37m#61 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/TextUI/Application.php(229): PHPUnit\TextUI\TestRunner->run()[0m
+   [31m├[0m [41;37m#62 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/phpunit(104): PHPUnit\TextUI\Application->run()[0m
+   [31m├[0m [41;37m#63 {main}                                                               [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37m----------------------------------------------------------------------------------[0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mClass "Redis" not found                                                  [0m
+   [31m│[0m
+   [31m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mTesting[2m/[22mTestResponseAssert.php[2m:[22m[34m45[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Testing/[22mTestResponse.php[2m:[22m[34m176[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mFeature[2m/[22mPolyglot[2m/[22mStallMapControllerTest.php[2m:[22m[34m190[0m
+   [31m┴[0m
+[31m ✘ [0mReturns empty array when no stalls in bbox
+   [31m┐[0m
+   [31m├[0m [41;37mExpected response status code [200] but received 500.                    [0m
+   [31m├[0m [41;37mFailed asserting that 500 is identical to 200.                           [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mThe following exception occurred during the last request:                [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mError: Class "Redis" not found in /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php:80[0m
+   [31m├[0m [41;37mStack trace:                                                             [0m
+   [31m├[0m [41;37m#0 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php(34): Illuminate\Redis\Connectors\PhpRedisConnector->createClient()[0m
+   [31m├[0m [41;37m#1 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/Connectors/PhpRedisConnector.php(39): Illuminate\Redis\Connectors\PhpRedisConnector->Illuminate\Redis\Connectors\{closure}()[0m
+   [31m├[0m [41;37m#2 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(113): Illuminate\Redis\Connectors\PhpRedisConnector->connect()[0m
+   [31m├[0m [41;37m#3 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(94): Illuminate\Redis\RedisManager->resolve()[0m
+   [31m├[0m [41;37m#4 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Redis/RedisManager.php(288): Illuminate\Redis\RedisManager->connection()[0m
+   [31m├[0m [41;37m#5 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(363): Illuminate\Redis\RedisManager->__call()[0m
+   [31m├[0m [41;37m#6 /opt/lampp/htdocs/sokomtaa/backend/app/Services/GeoService.php(19): Illuminate\Support\Facades\Facade::__callStatic()[0m
+   [31m├[0m [41;37m#7 /opt/lampp/htdocs/sokomtaa/backend/app/Http/Controllers/Map/StallMapController.php(35): App\Services\GeoService->stallsWithinViewport()[0m
+   [31m├[0m [41;37m#8 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(46): App\Http\Controllers\Map\StallMapController->withinViewport()[0m
+   [31m├[0m [41;37m#9 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(269): Illuminate\Routing\ControllerDispatcher->dispatch()[0m
+   [31m├[0m [41;37m#10 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(215): Illuminate\Routing\Route->runController()[0m
+   [31m├[0m [41;37m#11 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(822): Illuminate\Routing\Route->run()[0m
+   [31m├[0m [41;37m#12 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate\Routing\Router->Illuminate\Routing\{closure}()[0m
+   [31m├[0m [41;37m#13 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(52): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#14 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Routing\Middleware\SubstituteBindings->handle()[0m
+   [31m├[0m [41;37m#15 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(168): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#16 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(93): Illuminate\Routing\Middleware\ThrottleRequests->handleRequest()[0m
+   [31m├[0m [41;37m#17 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Routing\Middleware\ThrottleRequests->handle()[0m
+   [31m├[0m [41;37m#18 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php(63): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#19 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Auth\Middleware\Authenticate->handle()[0m
+   [31m├[0m [41;37m#20 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#21 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(821): Illuminate\Pipeline\Pipeline->then()[0m
+   [31m├[0m [41;37m#22 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(800): Illuminate\Routing\Router->runRouteWithinStack()[0m
+   [31m├[0m [41;37m#23 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(764): Illuminate\Routing\Router->runRoute()[0m
+   [31m├[0m [41;37m#24 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(753): Illuminate\Routing\Router->dispatchToRoute()[0m
+   [31m├[0m [41;37m#25 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\Routing\Router->dispatch()[0m
+   [31m├[0m [41;37m#26 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate\Foundation\Http\Kernel->Illuminate\Foundation\Http\{closure}()[0m
+   [31m├[0m [41;37m#27 /opt/lampp/htdocs/sokomtaa/backend/app/Http/Middleware/LocaleMiddleware.php(27): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#28 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): App\Http\Middleware\LocaleMiddleware->handle()[0m
+   [31m├[0m [41;37m#29 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#30 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle()[0m
+   [31m├[0m [41;37m#31 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull->handle()[0m
+   [31m├[0m [41;37m#32 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#33 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(51): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle()[0m
+   [31m├[0m [41;37m#34 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\TrimStrings->handle()[0m
+   [31m├[0m [41;37m#35 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php(27): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#36 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\ValidatePostSize->handle()[0m
+   [31m├[0m [41;37m#37 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(109): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#38 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance->handle()[0m
+   [31m├[0m [41;37m#39 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(74): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#40 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\HandleCors->handle()[0m
+   [31m├[0m [41;37m#41 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(58): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#42 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\TrustProxies->handle()[0m
+   [31m├[0m [41;37m#43 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php(22): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#44 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks->handle()[0m
+   [31m├[0m [41;37m#45 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php(28): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#46 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\Http\Middleware\ValidatePathEncoding->handle()[0m
+   [31m├[0m [41;37m#47 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}()[0m
+   [31m├[0m [41;37m#48 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\Pipeline\Pipeline->then()[0m
+   [31m├[0m [41;37m#49 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\Foundation\Http\Kernel->sendRequestThroughRouter()[0m
+   [31m├[0m [41;37m#50 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(607): Illuminate\Foundation\Http\Kernel->handle()[0m
+   [31m├[0m [41;37m#51 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(573): Illuminate\Foundation\Testing\TestCase->call()[0m
+   [31m├[0m [41;37m#52 /opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Foundation/Testing/Concerns/MakesHttpRequests.php(381): Illuminate\Foundation\Testing\TestCase->json()[0m
+   [31m├[0m [41;37m#53 /opt/lampp/htdocs/sokomtaa/backend/tests/Feature/Polyglot/StallMapControllerTest.php(205): Illuminate\Foundation\Testing\TestCase->getJson()[0m
+   [31m├[0m [41;37m#54 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(1335): Tests\Feature\Polyglot\StallMapControllerTest->test_returns_empty_array_when_no_stalls_in_bbox()[0m
+   [31m├[0m [41;37m#55 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(519): PHPUnit\Framework\TestCase->runTest()[0m
+   [31m├[0m [41;37m#56 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestRunner/TestRunner.php(99): PHPUnit\Framework\TestCase->runBare()[0m
+   [31m├[0m [41;37m#57 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestCase.php(359): PHPUnit\Framework\TestRunner->run()[0m
+   [31m├[0m [41;37m#58 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestSuite.php(374): PHPUnit\Framework\TestCase->run()[0m
+   [31m├[0m [41;37m#59 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/Framework/TestSuite.php(374): PHPUnit\Framework\TestSuite->run()[0m
+   [31m├[0m [41;37m#60 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/TextUI/TestRunner.php(64): PHPUnit\Framework\TestSuite->run()[0m
+   [31m├[0m [41;37m#61 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/src/TextUI/Application.php(229): PHPUnit\TextUI\TestRunner->run()[0m
+   [31m├[0m [41;37m#62 /opt/lampp/htdocs/sokomtaa/backend/vendor/phpunit/phpunit/phpunit(104): PHPUnit\TextUI\Application->run()[0m
+   [31m├[0m [41;37m#63 {main}                                                               [0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37m----------------------------------------------------------------------------------[0m
+   [31m├[0m                                                                          
+   [31m├[0m [41;37mClass "Redis" not found                                                  [0m
+   [31m│[0m
+   [31m│[0m [2m/[22mopt[2m/[22mlampp[2m/[22mhtdocs[2m/[22msokomtaa[2m/[22mbackend[2m/[22mvendor[2m/[22mlaravel[2m/[22mframework[2m/[22msrc[2m/[22mIlluminate[2m/[22mTesting[2m/[22mTestResponseAssert.php[2m:[22m[34m45[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/vendor/laravel/framework/src/Illuminate/Testing/[22mTestResponse.php[2m:[22m[34m176[0m
+   [31m│[0m [2m/opt/lampp/htdocs/sokomtaa/backend/[22mtests[2m/[22mFeature[2m/[22mPolyglot[2m/[22mStallMapControllerTest.php[2m:[22m[34m207[0m
+   [31m┴[0m
+
+[4mThrottle (Tests\Feature\Polyglot\Throttle)[0m
+[32m ✔ [0mMap stalls returns 429 after 60 requests
+[32m ✔ [0mAi chat returns 429 after 10 requests
+[32m ✔ [0mThrottle is per user not global
+
+[37;41mERRORS![0m
+[37;41mTests: 37[0m[37;41m, Assertions: 113[0m[37;41m, Errors: 6[0m[37;41m, Failures: 6[0m[37;41m.[0m
+LARAVEL_EXIT_CODE:2

@@ -65,6 +65,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/setup', [TraderProfileController::class, 'setup']);
         Route::get('/me', [TraderProfileController::class, 'me']);
         Route::put('/update', [TraderProfileController::class, 'update']);
+        Route::put('/status', [TraderProfileController::class, 'toggleOpen']);
         Route::post('/avatar', [TraderProfileController::class, 'uploadAvatar']);
     });
 
@@ -277,6 +278,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 });
 
-Route::get('/health', function () {
-    return response()->json(['status' => 'ok', 'timestamp' => now()]);
+Route::get('/health', \App\Http\Controllers\HealthController::class);
+
+Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
+    Route::get('/map/stalls', [\App\Http\Controllers\Map\StallMapController::class, 'withinViewport']);
+});
+
+Route::middleware(['auth:sanctum', 'role:resident', 'throttle:10,1'])->group(function () {
+    Route::post('/ai/chat', [\App\Http\Controllers\Ai\AiController::class, 'chat']);
+    Route::post('/ai/pipeline', [\App\Http\Controllers\Ai\AiController::class, 'chat']); // alias kept for backwards compat
+    Route::post('/checkout/multi', [\App\Http\Controllers\Delivery\MultiCheckoutController::class, 'store']);
+});
+
+Route::middleware('internal.auth')->prefix('internal')->group(function () {
+    Route::post('/ai/match-traders', [\App\Http\Controllers\Internal\AiMatchController::class, 'match']);
 });

@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role'            => \App\Http\Middleware\RoleMiddleware::class,
             'trader.verified' => \App\Http\Middleware\EnsureTraderVerified::class,
+            'internal.auth'   => \App\Http\Middleware\InternalApiAuth::class,
         ]);
 
         $middleware->append(\App\Http\Middleware\LocaleMiddleware::class);

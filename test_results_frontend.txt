@@ -1,0 +1,84 @@
+
+ RUN  v2.1.9 /opt/lampp/htdocs/sokomtaa/frontend
+
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > transitions to "timeout" after exactly 100 pending responses (300 s)
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > makes no further API calls after transitioning to "timeout"
+ ✓ hooks/__tests__/useStallMap.test.ts > useStallMap — debounce (300 ms) > fires fetch only ONCE after 300 ms even when moveend fires multiple times
+ ✓ hooks/__tests__/useStallMap.test.ts > useStallMap — debounce (300 ms) > does NOT call fetch before 300 ms elapses since last event
+ ✓ hooks/__tests__/useStallMap.test.ts > useStallMap — debounce (300 ms) > resets debounce timer on each new event
+ ✓ hooks/__tests__/useStallMap.test.ts > useStallMap — offline behaviour > sets isOffline=true and serves cache when navigator.onLine is false
+ ✓ hooks/__tests__/useStallMap.test.ts > useStallMap — offline behaviour > transitions isOffline true→false on "online" event
+ ✓ hooks/__tests__/useRiderTracking.test.ts > computeBackoffDelay — exponential backoff formula > attempt 1 → 1000 ms
+ ✓ hooks/__tests__/useRiderTracking.test.ts > computeBackoffDelay — exponential backoff formula > attempt 2 → 2000 ms
+ ✓ hooks/__tests__/useRiderTracking.test.ts > computeBackoffDelay — exponential backoff formula > attempt 3 → 4000 ms
+ ✓ hooks/__tests__/useRiderTracking.test.ts > computeBackoffDelay — exponential backoff formula > attempt 4 → 8000 ms
+ ✓ hooks/__tests__/useRiderTracking.test.ts > computeBackoffDelay — exponential backoff formula > attempt 5 → 16000 ms
+ ✓ hooks/__tests__/useRiderTracking.test.ts > computeBackoffDelay — exponential backoff formula > attempt 6 → 30000 ms (cap)
+ ✓ hooks/__tests__/useRiderTracking.test.ts > computeBackoffDelay — exponential backoff formula > attempt 7 → 30000 ms (still capped)
+ ✓ hooks/__tests__/useRiderTracking.test.ts > computeBackoffDelay — exponential backoff formula > attempt 10 → 30000 ms (still capped)
+ ✓ hooks/__tests__/useRiderTracking.test.ts > computeBackoffDelay — exponential backoff formula > delay never exceeds 30000 ms for any attempt 1–20
+ ✓ hooks/__tests__/useRiderTracking.test.ts > computeBackoffDelay — exponential backoff formula > delay is monotonically non-decreasing
+ ✓ hooks/__tests__/useRiderTracking.test.ts > computeBackoffDelay — exponential backoff formula > first attempt starts at exactly 1000 ms
+ ✓ hooks/__tests__/useRiderTracking.test.ts > useRiderTracking — reconnect & unavailability > isTrackingUnavailable is false initially
+ ✓ hooks/__tests__/useRiderTracking.test.ts > useRiderTracking — reconnect & unavailability > sets isTrackingUnavailable=true after 3 failed connections
+ ✓ hooks/__tests__/useRiderTracking.test.ts > useRiderTracking — reconnect & unavailability > resets isTrackingUnavailable and attempt counter for a new riderId
+ ✓ hooks/__tests__/useRiderTracking.test.ts > useRiderTracking — reconnect & unavailability > sets isConnected=true on successful WebSocket open
+ ✓ hooks/__tests__/useRiderTracking.test.ts > useRiderTracking — reconnect & unavailability > updates position from incoming message
+ ✓ hooks/__tests__/useRiderTracking.test.ts > useRiderTracking — reconnect & unavailability > does not reconnect after isTrackingUnavailable is set
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > does NOT time out before 300 s when status is always pending
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > times out correctly for orderId "order-abc-001"
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > times out correctly for orderId "order-xyz-999"
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > times out correctly for orderId "4XD76138X7329860L"
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > times out correctly for orderId "PAYPAL-TEST-ORDER"
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > times out correctly for orderId "aaaaaaaaaaaaaaaaaaaa"
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > does not reach timeout when payment completes before 300 s
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > does not reach timeout when payment fails before 300 s
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > stops polling at or after exactly 300 seconds of elapsed time
+ ✓ hooks/__tests__/usePayPal.property.test.ts > Property 9: Polling Timeout Termination > resets timeout counter on a new pollStatus call after manual stopPolling
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > selecting "mpesa" writes it to localStorage
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > selecting "paypal" writes it to localStorage
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > onSelect callback is called with the selected method
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > switching between methods always writes the latest selection
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > re-mounting pre-selects stored "mpesa"
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > re-mounting pre-selects stored "paypal"
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > overrides stored value when defaultMethod prop is provided
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > falls back to "mpesa" without throwing when localStorage.getItem throws
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > falls back to "mpesa" without throwing when localStorage.setItem throws
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > falls back to "mpesa" when stored value is an unrecognised string
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > falls back to "mpesa" when localStorage is empty
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > works correctly for reservationTotal = 0
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > works correctly for reservationTotal = 1
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > works correctly for reservationTotal = 100
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > works correctly for reservationTotal = 250
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > works correctly for reservationTotal = 9999
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > works correctly for reservationTotal = 100000
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > displays USD equivalent when NEXT_PUBLIC_PAYPAL_RATE is set
+ ✓ components/shared/__tests__/PaymentMethodSelector.property.test.tsx > Property 8: Payment Method Preference Persistence > does not display USD when NEXT_PUBLIC_PAYPAL_RATE is not set
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > Summary state (idle) > renders KES amount
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > Summary state (idle) > renders USD equivalent when NEXT_PUBLIC_PAYPAL_RATE is set
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > Summary state (idle) > does not render USD when NEXT_PUBLIC_PAYPAL_RATE is absent
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > Summary state (idle) > renders the exchange-rate disclaimer
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > Summary state (idle) > renders the "Pay with PayPal" button with min-height class
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > Summary state (idle) > calls createOrder when Pay button is clicked
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > Exchange-rate disclaimer > contains Swahili text
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > Exchange-rate disclaimer > contains English text
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > failed state > renders inline error element (not a modal/toast)
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > failed state > inline error has role="alert"
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > failed state > renders bilingual default error when error prop is null
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > failed state > "Try Again" button calls reset()
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > failed state > "Switch to M-Pesa" button calls onCancel
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > timeout state > renders the Swahili timeout message
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > timeout state > renders the English timeout message
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > timeout state > renders both Swahili and English messages simultaneously
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > loading states use skeleton loaders (no spinners) > "creating" status renders skeleton blocks
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > loading states use skeleton loaders (no spinners) > "capturing" status renders skeleton blocks
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > loading states use skeleton loaders (no spinners) > "polling" status renders skeleton blocks
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > close (X) button calls reset and onCancel
+ ✓ components/shared/__tests__/PayPalPaymentSheet.test.tsx > PayPalPaymentSheet > does not render the sheet when isOpen is false
+
+ Test Files  5 passed (5)
+      Tests  74 passed (74)
+   Start at  15:04:26
+   Duration  5.27s (transform 1.07s, setup 1.44s, collect 5.06s, tests 1.66s, environment 8.24s, prepare 1.23s)
+
+FRONTEND_EXIT_CODE:0

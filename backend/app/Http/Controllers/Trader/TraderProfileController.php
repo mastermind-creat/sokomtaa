@@ -98,6 +98,27 @@ class TraderProfileController extends Controller
 
         return $this->success($trader, 'Profile updated successfully.');
     }
+
+    /**
+     * Toggle stall open/closed and sync Redis GEO within the same request.
+     */
+    public function toggleOpen(\Illuminate\Http\Request $request, \App\Services\GeoService $geoService): JsonResponse
+    {
+        $trader = $request->user()->trader;
+
+        if (! $trader) {
+            return $this->error('Profile not found.', 'NOT_FOUND', 404);
+        }
+
+        $trader->is_open = ! $trader->is_open;
+        $trader->save();
+
+        if ($trader->stall) {
+            $geoService->syncTraderOpenState($trader->stall, (bool) $trader->is_open);
+        }
+
+        return $this->success($trader, $trader->is_open ? 'Stall is now open.' : 'Stall is now closed.');
+    }
     /**
      * Upload an avatar for the trader profile.
      */

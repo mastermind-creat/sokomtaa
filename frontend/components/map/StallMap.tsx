@@ -1,93 +1,126 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { useStallMap } from '@/hooks/useStallMap';
+import { useMapClusters } from '@/hooks/useMapClusters';
+import ClusterLayer from './ClusterLayer';
+import StallBottomSheet from './StallBottomSheet';
+import RiderMarker from './RiderMarker';
+import type { StallFeature } from '@/lib/mapUtils';
 
-// Fix for default Leaflet icons in Next.js
-
-
-// Custom Brand Icon for Stalls
-const createStallIcon = (color: string) => L.divIcon({
-    html: `<div class="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-brand-md transform active:scale-95 transition-all" style="background: ${color}; border: 3px solid white;">
-             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-           </div>`,
-    className: 'custom-div-icon',
-    iconSize: [40, 40],
-    iconAnchor: [20, 40]
-});
-
-interface Stall {
-    id: number;
-    business_name: string;
-    latitude: number;
-    longitude: number;
-    stall_number: string;
-    category?: { color?: string };
-}
+// Kolenyo Market, Kisumu — default center
+const DEFAULT_CENTER: [number, number] = [34.7679, -0.0917];
+const DEFAULT_ZOOM = 15;
 
 interface StallMapProps {
-    center: [number, number];
-    stalls: Stall[];
-    zoom?: number;
+    /** Optional: rider position [lon, lat] from useRiderTracking */
+    riderPosition?: [number, number] | null;
+    className?: string;
 }
 
+export default function StallMap({ riderPosition = null, className = '' }: StallMapProps) {
+    const mapContainerRef = useRef<HTMLDivElement>(null);
+    const [map, setMap] = useState<maplibregl.Map | null>(null);
+    const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+    const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
+    const [selectedStall, setSelectedStall] = useState<StallFeature | null>(null);
 
+    // Data hooks
+    const { stalls, isLoading, isOffline } = useStallMap(map);
+    const { clusters, supercluster } = useMapClusters(stalls, zoom, bounds);
 
-export default function StallMap({ center, stalls, zoom = 16 }: StallMapProps) {
-    const router = useRouter();
-    const [mapReady, setMapReady] = useState(false);
-
+    // Initialise MapLibre GL
     useEffect(() => {
-        setMapReady(true);
+        if (!mapContainerRef.current) return;
+
+        const instance = new maplibregl.Map({
+            container: mapContainerRef.current,
+            style: 'https://demotiles.maplibre.org/style.json',
+            center: DEFAULT_CENTER,
+            zoom: DEFAULT_ZOOM,
+        });
+
+        instance.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+        const updateViewState = () => {
+            setZoom(instance.getZoom());
+            const b = instance.getBounds();
+            setBounds([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+        };
+
+        instance.on('load', updateViewState);
+        instance.on('moveend', updateViewState);
+        instance.on('zoomend', updateViewState);
+
+        setMap(instance);
+
+        return () => {
+            instance.remove();
+        };
     }, []);
 
-    if (!mapReady) return (
-        <div className="w-full h-full bg-neutral-100 animate-pulse flex flex-col items-center justify-center gap-2">
-            <Loader2 className="animate-spin text-text-muted" />
-            <span className="text-xs font-bold text-text-muted uppercase tracking-widest">Inatayarisha Ramani...</span>
-        </div>
+    // Cluster click: zoom to expand
+    const handleClusterClick = useCallback(
+        (clusterId: number, lng: number, lat: number) => {
+            if (!map || !supercluster) return;
+            const expansionZoom = Math.min(
+                supercluster.getClusterExpansionZoom(clusterId),
+                20
+            );
+            map.easeTo({ center: [lng, lat], zoom: expansionZoom });
+        },
+        [map, supercluster]
     );
 
     return (
-        <MapContainer 
-            center={center} 
-            zoom={zoom} 
-            scrollWheelZoom={false} 
-            className="w-full h-full z-0"
-            zoomControl={false}
-        >
-            <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        <div className={`relative w-full h-full ${className}`}>
+            {/* MapLibre GL canvas */}
+            <div
+                ref={mapContainerRef}
+                className="w-full h-full"
+                aria-label="Live market map"
+                role="application"
             />
-            
-            {stalls.map((stall) => (
-                <Marker 
-                    key={stall.id} 
-                    position={[stall.latitude, stall.longitude]} 
-                    icon={createStallIcon(stall.category?.color || '#1B6B3A')}
+
+            {/* Loading overlay */}
+            {isLoading && (
+                <div
+                    className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-sm z-10 pointer-events-none"
+                    aria-live="polite"
+                    aria-label="Loading stall data"
                 >
-                    <Popup className="custom-popup">
-                        <div className="p-1 min-w-[120px]">
-                            <h4 className="font-bold text-green-950 text-sm leading-tight">{stall.business_name}</h4>
-                            <p className="text-[10px] text-text-muted font-black uppercase mt-1">Stall {stall.stall_number}</p>
-                            <button 
-                                onClick={() => router.push(`/trader/${stall.id}`)}
-                                className="mt-2 w-full bg-brand-600 text-white text-[10px] font-black uppercase tracking-widest py-2 rounded-lg"
-                            >
-                                Tembelea (Visit)
-                            </button>
-                        </div>
-                    </Popup>
-                </Marker>
-            ))}
-        </MapContainer>
+                    <div className="w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+            )}
+
+            {/* Offline indicator badge */}
+            {isOffline && (
+                <div
+                    role="status"
+                    className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-white px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-lg z-10"
+                >
+                    Cached data
+                </div>
+            )}
+
+            {/* Canvas layers (controller components) */}
+            <ClusterLayer
+                map={map}
+                clusters={clusters}
+                onStallClick={setSelectedStall}
+                onClusterClick={handleClusterClick}
+            />
+
+            <RiderMarker map={map} position={riderPosition} />
+
+            {/* Stall bottom sheet */}
+            <StallBottomSheet
+                stall={selectedStall}
+                isOffline={isOffline}
+                onClose={() => setSelectedStall(null)}
+            />
+        </div>
     );
 }
-
-const Loader2 = ({ className }: { className?: string }) => (
-    <svg className={`animate-spin ${className}`} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-);

@@ -1,0 +1,204 @@
+version: "3.9"
+
+# Soko Mtaa — Polyglot Architecture
+# Services: postgres, redis, laravel, fastapi, go_gateway
+# FastAPI is internal-only (no public port exposure).
+
+networks:
+  sokomtaa:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+
+services:
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # PostgreSQL 15 with PostGIS
+  # ──────────────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:15-3.3-alpine
+    restart: unless-stopped
+    networks:
+      - sokomtaa
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-sokomtaa}
+      POSTGRES_USER: ${DB_USERNAME:-sokomtaa}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sokomtaa_secret}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sokomtaa} -d ${DB_DATABASE:-sokomtaa}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "5432:5432"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Redis 7 — GEO, Pub/Sub, Cache
+  # ──────────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - sokomtaa
+    volumes:
+      - redisdata:/data
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-redis_secret}
+      --appendonly yes
+      --appendfsync everysec
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "6379:6379"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Laravel API — Business logic, RBAC, M-Pesa, PostgreSQL
+  # Exposed publicly on port 8000
+  # ──────────────────────────────────────────────────────────────────────────
+  laravel:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - sokomtaa
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-sokomtaa}
+      DB_USERNAME: ${DB_USERNAME:-sokomtaa}
+      DB_PASSWORD: ${DB_PASSWORD:-sokomtaa_secret}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-database}
+      FASTAPI_URL: http://fastapi:8001
+      FASTAPI_INTERNAL_TOKEN: ${FASTAPI_INTERNAL_TOKEN:-${INTERNAL_API_TOKEN:-sokomtaa_internal_secret}}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-sokomtaa_internal_secret}
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:3000}
+      MPESA_CONSUMER_KEY: ${MPESA_CONSUMER_KEY}
+      MPESA_CONSUMER_SECRET: ${MPESA_CONSUMER_SECRET}
+      MPESA_PASSKEY: ${MPESA_PASSKEY}
+      MPESA_SHORTCODE: ${MPESA_SHORTCODE}
+      MPESA_CALLBACK_URL: ${MPESA_CALLBACK_URL}
+      MPESA_ENV: ${MPESA_ENV:-sandbox}
+      TALKSASA_API_KEY: ${TALKSASA_API_KEY}
+      TALKSASA_SENDER_ID: ${TALKSASA_SENDER_ID:-TALK-SASA}
+      TALKSASA_BASE_URL: ${TALKSASA_BASE_URL}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/api/health | grep -q '\"status\":\"ok\"' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    ports:
+      - "8000:8000"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # FastAPI AI Service — NLP parsing, recipe scaling, pantry exclusion
+  # Internal only — NOT exposed publicly; reachable only from laravel service
+  # ──────────────────────────────────────────────────────────────────────────
+  fastapi:
+    build:
+      context: ./fastapi_service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - sokomtaa
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      FASTAPI_INTERNAL_TOKEN: ${FASTAPI_INTERNAL_TOKEN:-${INTERNAL_API_TOKEN:-sokomtaa_internal_secret}}
+      FASTAPI_REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379
+      FASTAPI_ENV: ${FASTAPI_ENV:-production}
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/ai/health')\""]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # Port 8001 is intentionally NOT published — internal Docker network only.
+    # Laravel reaches FastAPI at http://fastapi:8001 inside the network.
+    expose:
+      - "8001"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Nginx Reverse Proxy — public entry point
+  # Routes: /ws/ → Go Gateway (WebSocket), /api/ → Laravel, /go/health → Go
+  # FastAPI is NOT exposed — Laravel reaches it via Docker internal network.
+  # ──────────────────────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    networks:
+      - sokomtaa
+    depends_on:
+      laravel:
+        condition: service_healthy
+      go_gateway:
+        condition: service_healthy
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/api/health | grep -q 'ok' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Go WebSocket Gateway — GPS ingestion, Redis GEO writes
+  # Exposed publicly on port 8002
+  # ──────────────────────────────────────────────────────────────────────────
+  go_gateway:
+    build:
+      context: ./go_gateway
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - sokomtaa
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-sokomtaa_jwt_secret}
+      LARAVEL_URL: http://laravel:8000
+      PORT: "8002"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8002/health | grep -q '\"status\":\"ok\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    ports:
+      - "8002:8002"

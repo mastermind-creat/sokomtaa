@@ -12,9 +12,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('payments', function (Blueprint $table) {
-            DB::statement("ALTER TABLE payments MODIFY COLUMN type ENUM('reservation', 'market_fee', 'wallet_topup') NOT NULL");
-        });
+        // SQLite does not enforce ENUM types; skip this raw ALTER on SQLite (used in tests).
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
+        DB::statement("ALTER TABLE payments MODIFY COLUMN type ENUM('reservation', 'market_fee', 'wallet_topup') NOT NULL");
     }
 
     /**
@@ -22,8 +25,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('payments', function (Blueprint $table) {
-            DB::statement("ALTER TABLE payments MODIFY COLUMN type ENUM('reservation', 'market_fee') NOT NULL");
-        });
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
+        DB::statement("ALTER TABLE payments MODIFY COLUMN type ENUM('reservation', 'market_fee') NOT NULL");
     }
 };

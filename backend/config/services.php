@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'internal_token' => env('INTERNAL_API_TOKEN'),
+
+    'fastapi' => [
+        'url'   => env('FASTAPI_URL', 'http://127.0.0.1:8001'),
+        'token' => env('FASTAPI_INTERNAL_TOKEN', env('INTERNAL_API_TOKEN')),
+    ],
+
 ];

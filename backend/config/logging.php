@@ -134,6 +134,25 @@ return [
             'days'   => 30,
         ],
 
+        'fastapi' => [
+            'driver' => 'daily',
+            'path'   => storage_path('logs/fastapi.log'),
+            'level'  => 'debug',
+            'days'   => 30,
+        ],
+
+        // Structured JSON stdout channel — for centralised log aggregation (Requirement 13.5)
+        'stdout_json' => [
+            'driver'  => 'monolog',
+            'level'   => env('LOG_LEVEL', 'debug'),
+            'handler' => StreamHandler::class,
+            'handler_with' => [
+                'stream' => 'php://stdout',
+            ],
+            'formatter' => \Monolog\Formatter\JsonFormatter::class,
+            'processors' => [PsrLogMessageProcessor::class],
+        ],
+
     ],
 
 ];

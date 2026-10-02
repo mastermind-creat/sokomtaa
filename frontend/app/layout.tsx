@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import OfflineBanner from "@/components/shared/OfflineBanner";
+import ServiceDegradationBanner from "@/components/shared/ServiceDegradationBanner";
 import GlobalLoader from "@/components/shared/GlobalLoader";
 import NextTopLoader from 'nextjs-toploader';
 import { Toaster } from 'sonner';
@@ -34,7 +35,7 @@ export default function RootLayout({
           <Toaster richColors position="top-right" />
           <GlobalLoader />
           <React.Suspense fallback={null}>
-            <NextTopLoader 
+            <NextTopLoader
               color="#2D9653"
               height={4}
               showSpinner={false}
@@ -43,9 +44,10 @@ export default function RootLayout({
           </React.Suspense>
           {/* TV/Large Screen Background Elements */}
           <div className="hidden lg:block fixed inset-0 z-[-1] bg-[radial-gradient(circle_at_top_right,rgba(45,150,83,0.05),transparent),radial-gradient(circle_at_bottom_left,rgba(245,166,35,0.03),transparent)]" />
-          
+
           <div className="w-full min-h-screen bg-white lg:flex lg:flex-row relative">
             <OfflineBanner />
+            <ServiceDegradationBanner />
             {children}
           </div>
         </Providers>

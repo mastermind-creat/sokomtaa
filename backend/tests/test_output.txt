@@ -1,0 +1,4 @@
+PHPUnit 12.5.19 by Sebastian Bergmann and contributors.
+
+Unknown option "--no-ansi". Most similar options are --columns, --covers, --all, --colors, --log-otr
+exit=2

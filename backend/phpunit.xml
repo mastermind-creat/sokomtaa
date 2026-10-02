@@ -32,5 +32,8 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="INTERNAL_API_TOKEN" value="test-internal-token"/>
+        <env name="FASTAPI_URL" value="http://fastapi.test"/>
+        <env name="FASTAPI_INTERNAL_TOKEN" value="test-internal-token"/>
     </php>
 </phpunit>

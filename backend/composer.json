@@ -9,6 +9,7 @@
         "php": "^8.3",
         "africastalking/africastalking": "^3.0",
         "cloudinary/cloudinary_php": "^3.1",
+        "doctrine/dbal": "^4.0",
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0"
