@@ -4,6 +4,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { StatCard } from '@/components/admin/StatCard';
+import Link from 'next/link';
 import {
     Users,
     Home,
@@ -11,7 +12,9 @@ import {
     ArrowRight,
     Activity,
     Map as MapIcon,
-    Filter
+    Filter,
+    ShieldCheck,
+    Coins
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -35,15 +38,47 @@ const StallMapPreview = dynamic(() => import('../../../components/admin/StallMap
     loading: () => <div className="h-[400px] w-full bg-gray-50 animate-pulse rounded-3xl flex items-center justify-center font-black uppercase text-text-muted tracking-widest text-xs">Loading Market Map...</div>
 });
 
+const MetricChart = ({ data, dataKey, title, color }: { data: any, dataKey: string, title: string, color: string }) => (
+    <div className="flex flex-col h-[220px] bg-gray-50/50 rounded-2xl p-4 border border-gray-100/50">
+        <h4 className="text-sm font-black text-gray-700 mb-4 tracking-tight">{title}</h4>
+        <div className="flex-1 w-full overflow-hidden">
+            <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
+                    <defs>
+                        <linearGradient id={`color-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+                            <stop offset="95%" stopColor={color} stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FAFAFA" />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }} dy={10} />
+                    <Tooltip
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                        labelStyle={{ fontWeight: '900', color: '#1A1A1A', marginBottom: '4px' }}
+                        formatter={(value: any) => [`KES ${Number(value || 0).toLocaleString()}`, title]}
+                    />
+                    <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={3} fillOpacity={1} fill={`url(#color-${dataKey})`} animationDuration={1500} />
+                </AreaChart>
+            </ResponsiveContainer>
+        </div>
+    </div>
+);
+
 interface DashboardStats {
     revenue: {
         total: number;
         target: number;
         percentage: number;
+        service_fees_total: number;
+        service_fees_month: number;
     };
     traders: {
         total: number;
-        growth: number;
+        pending: number;
+        new_this_month: number;
+    };
+    delivery?: {
+        pending: number;
     };
     stalls: {
         total: number;
@@ -57,8 +92,11 @@ interface DashboardStats {
 }
 
 interface RevenueTrend {
-    total: number;
     month: string;
+    market_fees: number;
+    service_fees: number;
+    delivery_fees: number;
+    total: number;
 }
 
 export default function AdminDashboard() {
@@ -82,6 +120,11 @@ export default function AdminDashboard() {
             return res.data;
         }
     });
+
+    const pendingTradersCount = stats?.traders?.pending || 0;
+    const pendingRidersCount = stats?.delivery?.pending || 0;
+    const totalPendingKyc = pendingTradersCount + pendingRidersCount;
+    const kycHref = pendingTradersCount === 0 && pendingRidersCount > 0 ? '/admin/users' : '/admin/traders';
 
     // Fetch trends
     const { data: trends, isLoading: trendsLoading } = useQuery({
@@ -123,15 +166,24 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 1. TOP: High-Density Metrics Row */}
-                <div className="grid grid-cols-3 xl:grid-cols-4 gap-2 md:gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2 md:gap-6">
                     <StatCard
-                        title={`Fees`}
+                        title={`Market Fees`}
                         value={`KES ${stats?.revenue?.total !== undefined ? (stats.revenue.total >= 1000 ? (stats.revenue.total / 1000).toFixed(1) + 'k' : stats.revenue.total) : '0'}`}
                         icon={TrendingUp}
                         color="bg-brand-600"
                         variant="compact"
                         trend={{ value: stats?.revenue.percentage || 0, isPositive: true, label: "VS Target" }}
-                        description={t('admin.revenue_subtitle')}
+                        description="Stall Collection"
+                    />
+                    <StatCard
+                        title={`Platform Revenue`}
+                        value={`KES ${stats?.revenue?.service_fees_total !== undefined ? (stats.revenue.service_fees_total >= 1000 ? (stats.revenue.service_fees_total / 1000).toFixed(1) + 'k' : stats.revenue.service_fees_total) : '0'}`}
+                        icon={Coins}
+                        color="bg-blue-600"
+                        variant="compact"
+                        trend={{ value: stats?.revenue.service_fees_month || 0, isPositive: true, label: 'This Month' }}
+                        description="Resident Service Fees"
                     />
                     <StatCard
                         title={t('common.traders')}
@@ -139,26 +191,29 @@ export default function AdminDashboard() {
                         icon={Users}
                         color="bg-amber-500"
                         variant="compact"
-                        trend={{ value: stats?.traders.growth || 0, isPositive: true, label: 'New this month' }}
+                        trend={{ value: stats?.traders.new_this_month || 0, isPositive: true, label: 'New this month' }}
                         description="Verified & Active"
                     />
                     <StatCard
                         title="Occupancy"
                         value={`${stats?.stalls.occupancy_rate || 0}%`}
                         icon={Home}
-                        color="bg-blue-600"
+                        color="bg-indigo-600"
                         variant="compact"
                         description={`${stats?.stalls.occupied} / ${stats?.stalls.total} units filled`}
                     />
                     <div className="hidden xl:block">
-                        <StatCard
-                            title="Pending Orders"
-                            value="142"
-                            icon={Activity}
-                            color="bg-brand-950"
-                            trend={{ value: 8, isPositive: true, label: 'Today' }}
-                            description="Market-wide reservations"
-                        />
+                        <Link href={kycHref}>
+                            <StatCard
+                                title="Pending KYC"
+                                value={totalPendingKyc.toString()}
+                                icon={ShieldCheck}
+                                color="bg-rose-600"
+                                variant="compact"
+                                trend={{ value: totalPendingKyc, isPositive: true, label: 'Awaiting Review' }}
+                                description={`${pendingTradersCount} Traders • ${pendingRidersCount} Riders`}
+                            />
+                        </Link>
                     </div>
                 </div>
 
@@ -166,10 +221,10 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                     {/* Trends Chart */}
                     <div className="xl:col-span-2 bg-white rounded-[2.5rem] p-6 lg:p-10 shadow-sm border border-gray-50">
-                        <div className="flex items-center justify-between mb-8">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                             <div>
                                 <h3 className="text-xl font-black text-green-950 tracking-tight">{t('admin.revenue_trends')}</h3>
-                                <p className="text-text-secondary text-sm font-medium">Monthly collection across all markets.</p>
+                                <p className="text-text-secondary text-sm font-medium">Distinct revenue streams across the platform.</p>
                             </div>
                             <select className="h-10 pl-4 pr-10 bg-gray-50 border-none rounded-xl text-xs font-bold text-text-secondary outline-none appearance-none cursor-pointer hover:bg-gray-100 transition-colors">
                                 <option>Last 6 Months</option>
@@ -177,52 +232,16 @@ export default function AdminDashboard() {
                             </select>
                         </div>
 
-                        <div className="h-[300px] lg:h-[400px] w-full overflow-hidden">
+                        <div className="w-full">
                             {isMounted ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={trends}>
-                                    <defs>
-                                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#1B6B3A" stopOpacity={0.1} />
-                                            <stop offset="95%" stopColor="#1B6B3A" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FAFAFA" />
-                                    <XAxis
-                                        dataKey="month"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }}
-                                        dy={15}
-                                    />
-                                    <YAxis
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#9CA3AF', fontSize: 10, fontWeight: 700 }}
-                                        tickFormatter={(val) => `KES ${val / 1000}k`}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{
-                                            borderRadius: '24px',
-                                            border: 'none',
-                                            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
-                                            padding: '16px'
-                                        }}
-                                        labelStyle={{ fontWeight: '900', color: '#1B6B3A', marginBottom: '8px' }}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="total"
-                                        stroke="#1B6B3A"
-                                        strokeWidth={4}
-                                        fillOpacity={1}
-                                        fill="url(#colorRevenue)"
-                                        animationDuration={1500}
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                                    <MetricChart data={trends} dataKey="total" title="Gross Transaction Value (GTV)" color="#8B5CF6" />
+                                    <MetricChart data={trends} dataKey="market_fees" title="Market Fees (County)" color="#1B6B3A" />
+                                    <MetricChart data={trends} dataKey="service_fees" title="Platform Service Fees" color="#2563EB" />
+                                    <MetricChart data={trends} dataKey="delivery_fees" title="Delivery Revenue (Riders)" color="#F5A623" />
+                                </div>
                             ) : (
-                                <div className="w-full h-full bg-gray-50 rounded-3xl animate-pulse" />
+                                <div className="w-full h-[400px] bg-gray-50 rounded-3xl animate-pulse" />
                             )}
                         </div>
                     </div>

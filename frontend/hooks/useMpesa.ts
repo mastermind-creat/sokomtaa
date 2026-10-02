@@ -61,17 +61,29 @@ export const useMpesa = () => {
         }, 3000);
     }, [stopPolling]);
  
-    const initiateStk = async (phoneNumber: string, type: 'reservation' | 'market_fee', targetId: number) => {
+    const initiateStk = async (
+        phoneNumber: string, 
+        type: 'reservation' | 'market_fee' | 'wallet_topup' | 'product_boost', 
+        targetIdOrIds: number | number[]
+    ) => {
         setIsPolling(true);
         setError(null);
         try {
-            const response = await api.post<ApiResponse<{ checkout_request_id: string }>>('/payments/mpesa/stkpush', {
+            const payload: any = {
                 phone_number: phoneNumber,
-                type,
-                target_id: targetId
-            });
+                type
+            };
+
+            if (Array.isArray(targetIdOrIds)) {
+                payload.target_ids = targetIdOrIds;
+            } else {
+                payload.target_id = targetIdOrIds;
+            }
+
+            const response = await api.post<ApiResponse<{ checkout_request_id: string }>>('/payments/mpesa/stkpush', payload);
             
-            const checkoutId = response.data.checkout_request_id;
+            // The axios interceptor returns response.data, so response IS the Laravel body {success, data, message}
+            const checkoutId = (response as any).data.checkout_request_id;
             pollStatus(checkoutId);
             return checkoutId;
         } catch (err: unknown) {

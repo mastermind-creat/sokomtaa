@@ -10,33 +10,90 @@ import {
     ChevronRight,
     MapPin,
     Heart,
-    HelpCircle
+    HelpCircle,
+    FileText,
+    Loader2
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { ApiResponse } from '@/types';
+
+interface MenuCounts {
+    active_reservations: number;
+    watchlist: number;
+    unread_notifications: number;
+}
+
+interface MenuItem {
+    icon: any;
+    label: string;
+    path: string;
+    badge?: number | string | null;
+}
 
 export default function ResidentSidebar() {
     const router = useRouter();
     const pathname = usePathname();
+    const { logout } = useLogout();
     const { t } = useTranslation();
+    const { user } = useAuthStore();
+    const [mounted, setMounted] = React.useState(false);
+    const [isNavigating, setIsNavigating] = React.useState<string | null>(null);
 
-    const menuItems = [
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Reset navigation state when pathname changes
+    React.useEffect(() => {
+        setIsNavigating(null);
+    }, [pathname]);
+
+    const handleNavigate = (path: string) => {
+        if (pathname === path) return;
+        setIsNavigating(path);
+        router.push(path);
+    };
+
+    // Fetch dynamic menu counts
+    const { data: menuCountsRaw } = useQuery({
+        queryKey: ['resident-menu-counts'],
+        queryFn: async () => {
+            const res = await api.get<never, ApiResponse<MenuCounts>>('/resident/menu-counts');
+            return res.data;
+        },
+        enabled: !!user && user.role === 'resident',
+        refetchInterval: 60000 // Refetch every minute
+    });
+    const counts = menuCountsRaw;
+
+    const menuItems: MenuItem[] = [
         { icon: Home, label: t('common.dashboard'), path: '/resident/dashboard', badge: null },
-        { icon: Search, label: t('nav.discover'), path: '/search', badge: null },
-        { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: 2 }, // Mock badge for active orders
-        { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: null },
-        { icon: MapPin, label: t('common.markets'), path: '/market/map', badge: null },
+        { icon: Search, label: t('nav.discover'), path: '/resident', badge: null },
+        { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: counts?.active_reservations || null },
+        { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: counts?.watchlist || null },
+        { icon: MapPin, label: t('common.markets'), path: '/resident/markets', badge: null },
+        { icon: FileText, label: 'Reports & Archive', path: '/resident/reports', badge: null },
     ];
+
+    // Helper to check if a path is active, but only after mounting to avoid hydration mismatch
+    const getActiveState = (path: string) => {
+        if (!mounted) return false;
+        return pathname === path;
+    };
 
     return (
         <aside className="hidden lg:flex flex-col w-[280px] h-screen bg-[#FAFAF8] border-r border-gray-100 sticky top-0 left-0 overflow-y-auto no-scrollbar">
             {/* Logo Area */}
             <div className="p-8 pb-10">
                 <div 
-                    onClick={() => router.push('/')} 
+                    onClick={() => handleNavigate('/')} 
                     className="cursor-pointer active:scale-95 transition-transform"
                 >
                     <Logo variant="light" width={160} />
@@ -47,23 +104,28 @@ export default function ResidentSidebar() {
             <nav className="flex-1 px-4 space-y-1">
                 <p className="px-4 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">{t('sidebar.discovery')}</p>
                 {menuItems.map((item) => {
-                    const isActive = pathname === item.path;
+                    const isActive = getActiveState(item.path);
                     return (
                         <button
                             key={item.path}
-                            onClick={() => router.push(item.path)}
+                            onClick={() => handleNavigate(item.path)}
+                            disabled={isNavigating !== null}
                             className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group active:scale-[0.98] ${
                                 isActive 
                                     ? 'bg-white text-green-950 shadow-xl shadow-gray-200/50 border border-gray-100' 
                                     : 'text-text-secondary hover:bg-white/50'
-                            }`}
+                            } ${isNavigating === item.path ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
                             <div className="flex items-center gap-4">
-                                <item.icon 
-                                    size={20} 
-                                    className={isActive ? 'text-brand-600' : 'text-gray-400 group-hover:text-brand-600 transition-colors'} 
-                                    strokeWidth={isActive ? 2.5 : 2}
-                                />
+                                {isNavigating === item.path ? (
+                                    <Loader2 size={20} className="animate-spin text-brand-600" />
+                                ) : (
+                                    <item.icon 
+                                        size={20} 
+                                        className={isActive ? 'text-brand-600' : 'text-gray-400 group-hover:text-brand-600 transition-colors'} 
+                                        strokeWidth={isActive ? 2.5 : 2}
+                                    />
+                                )}
                                 <span className={`text-sm font-bold tracking-tight ${isActive ? 'text-green-950 font-black' : ''}`}>
                                     {item.label}
                                 </span>
@@ -87,9 +149,11 @@ export default function ResidentSidebar() {
                     <p className="text-xs font-black uppercase tracking-widest opacity-80 mb-2">Need help?</p>
                     <p className="text-sm font-bold leading-tight mb-4">Having trouble with your reservation?</p>
                     <button 
-                        onClick={() => router.push('/help')}
-                        className="w-full py-3 bg-white text-brand-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-50 transition-colors"
+                        onClick={() => handleNavigate('/help')}
+                        disabled={isNavigating !== null}
+                        className="relative z-10 w-full py-3 bg-white text-brand-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-50 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                     >
+                        {isNavigating === '/help' ? <Loader2 size={16} className="animate-spin" /> : null}
                         Visit Help Center
                     </button>
                 </div>
@@ -98,10 +162,15 @@ export default function ResidentSidebar() {
             {/* Footer Area */}
             <div className="p-6 space-y-4">
                 <button 
-                    onClick={() => router.push('/profile')}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl text-text-secondary hover:bg-white transition-all font-bold text-sm"
+                    onClick={() => handleNavigate('/profile')}
+                    disabled={isNavigating !== null}
+                    className="w-full flex items-center justify-center gap-4 p-4 rounded-2xl text-text-secondary hover:bg-white transition-all font-bold text-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                    <User size={20} className="text-gray-400" />
+                    {isNavigating === '/profile' ? (
+                        <Loader2 size={20} className="animate-spin text-brand-600" />
+                    ) : (
+                        <User size={20} className="text-gray-400" />
+                    )}
                     {t('common.profile')}
                 </button>
                 
@@ -112,11 +181,7 @@ export default function ResidentSidebar() {
                     </div>
                     
                     <button 
-                        onClick={() => {
-                            const { logout } = useAuthStore.getState();
-                            logout();
-                            router.push('/login');
-                        }}
+                        onClick={logout}
                         className="w-full h-12 flex items-center justify-center p-3 rounded-2xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-100 active:scale-95 transition-all"
                     >
                         Sign Out

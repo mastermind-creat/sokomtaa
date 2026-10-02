@@ -92,6 +92,8 @@ export default function RecentActivityFeed() {
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all group-hover:scale-110 shadow-sm ${
                                         activity.type === 'complaint_filed' ? 'bg-red-50 text-red-600' : 
                                         activity.type === 'fee_payment' ? 'bg-green-50 text-brand-600' : 
+                                        activity.type === 'new_order' ? 'bg-blue-50 text-blue-600' :
+                                        activity.type === 'rider_signup' || activity.type === 'rider_kyc_submitted' ? 'bg-orange-50 text-orange-600' :
                                         'bg-brand-50 text-brand-700'
                                     }`}>
                                         <IconComponent size={20} strokeWidth={2.5} />

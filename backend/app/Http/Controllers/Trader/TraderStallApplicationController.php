@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\StallApplication;
 use App\Models\Stall;
 use App\Traits\ApiResponse;
+use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +15,13 @@ use Illuminate\Support\Facades\Auth;
 class TraderStallApplicationController extends Controller
 {
     use ApiResponse;
+
+    protected $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
 
     /**
      * Get the authenticated trader's current stall application.
@@ -26,7 +35,8 @@ class TraderStallApplicationController extends Controller
             return $this->error('User is not a trader.', 'NOT_TRADER', 403);
         }
 
-        $application = StallApplication::where('trader_id', $user->trader->id)
+        $application = StallApplication::with(['market', 'preferredStall', 'trader.stall'])
+            ->where('trader_id', $user->trader->id)
             ->latest()
             ->first();
 
@@ -43,9 +53,10 @@ class TraderStallApplicationController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
+            'stall_type'         => 'required|in:managed,independent',
             'preferred_zone'     => 'nullable|in:A,B,C',
             'preferred_stall_id' => 'nullable|exists:stalls,id',
-            'motivation'         => 'required|string|min:100',
+            'motivation'         => 'required|string|min:10',
         ]);
 
         /** @var \App\Models\User $user */
@@ -56,6 +67,7 @@ class TraderStallApplicationController extends Controller
         }
 
         $traderId = $user->trader->id;
+        $marketName = $user->trader->market->name ?? 'Unknown Market';
 
         // Block if a pending or approved application already exists
         $existing = StallApplication::where('trader_id', $traderId)
@@ -69,11 +81,25 @@ class TraderStallApplicationController extends Controller
         $application = StallApplication::create([
             'trader_id'          => $traderId,
             'market_id'          => $user->trader->market_id,
+            'stall_type'         => $request->stall_type,
             'preferred_stall_id' => $request->preferred_stall_id,
             'preferred_zone'     => $request->preferred_zone,
             'motivation'         => $request->motivation,
             'status'             => 'pending',
         ]);
+
+        // Notify all admins
+        $admins = User::where('role', 'admin')->where('is_active', true)->get();
+        foreach ($admins as $admin) {
+            $this->notificationService->send(
+                $admin,
+                'New Stall Application',
+                "New Stall Application from {$user->trader->business_name} for {$marketName}",
+                'application',
+                ['application_id' => $application->id],
+                false
+            );
+        }
 
         return $this->success($application, 'Stall application submitted successfully.', 201);
     }

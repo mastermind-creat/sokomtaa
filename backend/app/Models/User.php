@@ -19,6 +19,8 @@ class User extends Authenticatable
         'phone',
         'email',
         'password',
+        'provider_name',
+        'provider_id',
         'role',
         'national_id',
         'preferred_language',
@@ -26,6 +28,11 @@ class User extends Authenticatable
         'phone_verified_at',
         'avatar_url',
         'is_active',
+        'default_delivery_address',
+        'default_delivery_mtaa',
+        'default_delivery_image_url',
+        'default_delivery_latitude',
+        'default_delivery_longitude',
     ];
 
     protected $hidden = [
@@ -43,6 +50,16 @@ class User extends Authenticatable
     public function trader(): HasOne
     {
         return $this->hasOne(Trader::class);
+    }
+
+    public function riderProfile(): HasOne
+    {
+        return $this->hasOne(DeliveryProfile::class);
+    }
+
+    public function deliveryTransactions(): HasMany
+    {
+        return $this->hasMany(DeliveryTransaction::class);
     }
 
     public function reservations(): HasMany
@@ -73,5 +90,10 @@ class User extends Authenticatable
     public function watchlist(): HasMany
     {
         return $this->hasMany(ProductWatchlist::class);
+    }
+
+    public function wallet(): HasOne
+    {
+        return $this->hasOne(Wallet::class, 'user_id');
     }
 }

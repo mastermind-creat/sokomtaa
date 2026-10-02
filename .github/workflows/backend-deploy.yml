@@ -21,15 +21,22 @@ jobs:
         server: da27.host-ww.net
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./backend/ # The folder in your GitHub repo
-        # The path on your server (based on our previous setup)
-        server-dir: domains/api.sokomtaa.co.ke/public_html/laravel_app/
-        # Exclude files you don't want to overwrite in production
+        # Always use ./ prefix for local-dir to avoid path resolution errors
+        local-dir: ./backend/
+        # Use absolute path or ./ prefix for server-dir, ensuring it ends in a trailing slash
+        server-dir: /domains/api.sokomtaa.co.ke/public_html/laravel_app/public/epldls/
+        state-name: .ftp-deploy-sync-state.json
+        port: 21
+        timeout: 300000 # 5 minutes
+        # Some servers require this for explicit TLS/SSL
+        security: loose
+        # Exclude files you don't want to overwrite in production using proper glob patterns
         exclude: |
           **/.git*
           **/.git*/**
           **/node_modules/**
           **/storage/**
           **/tests/**
-          .env
-          vendor/
+          **/.env*
+          **/vendor/**
+          **/bootstrap/cache/**

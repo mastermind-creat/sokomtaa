@@ -15,44 +15,139 @@ class AnalyticsController extends Controller
     public function getAnalytics(Request $request): JsonResponse
     {
         $period = $request->query('period', 'month');
+        $now = \Carbon\Carbon::now();
+        
+        switch ($period) {
+            case 'today':
+                $startDate = $now->copy()->startOfDay();
+                $dateFormatter = '%H:00';
+                break;
+            case 'week':
+                $startDate = $now->copy()->subDays(6)->startOfDay();
+                $dateFormatter = '%a';
+                break;
+            case 'month':
+            default:
+                $startDate = $now->copy()->startOfMonth();
+                $dateFormatter = '%d %b';
+                break;
+        }
 
-        // Mock data matching the frontend fallback structure.
-        // In a real implementation, this aggregates actual `payments`, `reservations`, and `trader` tables.
+        // 1. Levy Collection (Market Fees)
+        $levyCollection = \App\Models\Payment::where('type', 'market_fee')
+            ->where('status', 'completed')
+            ->where('paid_at', '>=', $startDate)
+            ->select(\Illuminate\Support\Facades\DB::raw("DATE_FORMAT(paid_at, '{$dateFormatter}') as date"), \Illuminate\Support\Facades\DB::raw("SUM(amount) as amount"))
+            ->groupBy('date')
+            ->orderBy(\Illuminate\Support\Facades\DB::raw("MIN(paid_at)"))
+            ->get();
+
+        // 2. Reservation Volume
+        $reservationVolume = \App\Models\Reservation::where('created_at', '>=', $startDate)
+            ->select(\Illuminate\Support\Facades\DB::raw("DATE_FORMAT(created_at, '{$dateFormatter}') as date"), \Illuminate\Support\Facades\DB::raw("COUNT(*) as count"))
+            ->groupBy('date')
+            ->orderBy(\Illuminate\Support\Facades\DB::raw("MIN(created_at)"))
+            ->get();
+
+        // 3. Category Demand
+        $categoryDemand = \Illuminate\Support\Facades\DB::table('reservations')
+            ->join('products', 'reservations.product_id', '=', 'products.id')
+            ->join('categories', 'products.category_id', '=', 'categories.id')
+            ->where('reservations.created_at', '>=', $startDate)
+            ->select('categories.name', \Illuminate\Support\Facades\DB::raw("COUNT(reservations.id) as value"))
+            ->groupBy('categories.id', 'categories.name')
+            ->orderByDesc('value')
+            ->limit(5)
+            ->get();
+
+        // 4. Peak Hours (Traffic Intensity)
+        $peakHours = \App\Models\Reservation::where('created_at', '>=', $startDate)
+            ->select(\Illuminate\Support\Facades\DB::raw("HOUR(created_at) as hour_num"), \Illuminate\Support\Facades\DB::raw("COUNT(*) as count"))
+            ->groupBy('hour_num')
+            ->orderBy('hour_num')
+            ->get()
+            ->map(function ($item) {
+                $hour = $item->hour_num;
+                $amPm = $hour >= 12 ? 'pm' : 'am';
+                $hour12 = $hour % 12;
+                if ($hour12 == 0) $hour12 = 12;
+                return [
+                    'hour' => $hour12 . $amPm,
+                    'count' => $item->count
+                ];
+            })->values();
+
+        // 5. Occupancy Rate
+        $totalStalls = \App\Models\Stall::count();
+        $occupiedStalls = \App\Models\Stall::where('status', 'occupied')->count();
+        $occupancyRate = $totalStalls > 0 ? round(($occupiedStalls / $totalStalls) * 100) : 0;
+
+        // 6. Top Reserved Products (INTELLIGENCE)
+        $topProducts = \App\Models\Product::join('reservations', 'products.id', '=', 'reservations.product_id')
+            ->select('products.id', 'products.name', 'products.image_url', \Illuminate\Support\Facades\DB::raw("COUNT(reservations.id) as reservations_count"))
+            ->groupBy('products.id', 'products.name', 'products.image_url')
+            ->orderByDesc('reservations_count')
+            ->limit(5)
+            ->get();
+
+        // 7. Planning Insights (AI-POWERED with Fallback)
+        $aiService = new \App\Services\AiService();
+        $topHourLabel = $peakHours->sortByDesc('count')->first()['hour'] ?? 'N/A';
+        $topCategoryName = $categoryDemand->first()->name ?? 'N/A';
+        
+        $aiInsights = $aiService->generatePlanningInsights([
+            'occupancy_rate' => $occupancyRate,
+            'peak_hour' => $topHourLabel,
+            'top_category' => $topCategoryName,
+            'reservation_trend' => $reservationVolume->take(-7) // Last 7 data points
+        ]);
+
+        $planningInsights = !empty($aiInsights) ? $aiInsights : [];
+        
+        // Fallback to Logic-Based Insights if AI fails
+        if (empty($planningInsights)) {
+            // Insight: Occupancy vs Demand
+            if ($occupancyRate > 85) {
+                $planningInsights[] = [
+                    'type' => 'infrastructure',
+                    'title' => 'Expansion Opportunity',
+                    'description' => "Market occupancy is at {$occupancyRate}%. Consider developing additional stalls or secondary market centers to accommodate growing trader demand.",
+                    'priority' => 'high'
+                ];
+            }
+
+            // Insight: Peak Hours Operational Planning
+            if ($topHourLabel !== 'N/A') {
+                $planningInsights[] = [
+                    'type' => 'operations',
+                    'title' => 'Peak Staffing Strategy',
+                    'description' => "Activity peaks at {$topHourLabel}. Ensure maximum security presence and waste management operations are scheduled during this window.",
+                    'priority' => 'medium'
+                ];
+            }
+
+            // Insight: Top Category Growth
+            if ($topCategoryName !== 'N/A') {
+                $planningInsights[] = [
+                    'type' => 'category',
+                    'title' => 'Sector Specialization',
+                    'description' => "The '{$topCategoryName}' category dominates trade volume. Evaluate physical zoning to provide specialized amenities (e.g., cold storage) for this sector.",
+                    'priority' => 'medium'
+                ];
+            }
+        }
         
         return response()->json([
             'success' => true,
             'message' => 'Admin analytics retrieved successfully.',
             'data' => [
-                'levy_collection' => [
-                    ['date' => 'Mon', 'amount' => 1200], ['date' => 'Tue', 'amount' => 1500],
-                    ['date' => 'Wed', 'amount' => 1100], ['date' => 'Thu', 'amount' => 2400],
-                    ['date' => 'Fri', 'amount' => 3200], ['date' => 'Sat', 'amount' => 2800],
-                    ['date' => 'Sun', 'amount' => 1800]
-                ],
-                'reservation_volume' => [
-                    ['date' => 'Mon', 'count' => 45], ['date' => 'Tue', 'count' => 52],
-                    ['date' => 'Wed', 'count' => 38], ['date' => 'Thu', 'count' => 65],
-                    ['date' => 'Fri', 'count' => 89], ['date' => 'Sat', 'count' => 104],
-                    ['date' => 'Sun', 'count' => 76]
-                ],
-                'trader_growth' => [
-                    ['month' => 'Jan', 'count' => 120], ['month' => 'Feb', 'count' => 135],
-                    ['month' => 'Mar', 'count' => 148], ['month' => 'Apr', 'count' => 162]
-                ],
-                'category_demand' => [
-                    ['name' => 'Vegetables', 'value' => 450],
-                    ['name' => 'Grains', 'value' => 320],
-                    ['name' => 'Fish', 'value' => 210],
-                    ['name' => 'Fruits', 'value' => 180],
-                    ['name' => 'Clothing', 'value' => 90]
-                ],
-                'peak_hours' => [
-                    ['hour' => '6am', 'count' => 12], ['hour' => '8am', 'count' => 85],
-                    ['hour' => '10am', 'count' => 42], ['hour' => '12pm', 'count' => 64],
-                    ['hour' => '2pm', 'count' => 38], ['hour' => '4pm', 'count' => 92],
-                    ['hour' => '6pm', 'count' => 115], ['hour' => '8pm', 'count' => 24]
-                ],
-                'occupancy_rate' => 82
+                'levy_collection' => $levyCollection,
+                'reservation_volume' => $reservationVolume,
+                'category_demand' => $categoryDemand,
+                'peak_hours' => $peakHours,
+                'occupancy_rate' => $occupancyRate,
+                'top_products' => $topProducts,
+                'planning_insights' => $planningInsights
             ]
         ]);
     }

@@ -12,13 +12,41 @@ class SearchService
     /**
      * Conduct a global weighted search across the marketplace.
      */
-    public function globalSearch(string $query): array
+    public function globalSearch(?string $query = null, ?int $categoryId = null, ?float $lat = null, ?float $lng = null, float $radius = 50.0): array
     {
-        $products = Product::with(['trader', 'category'])
-            ->where('name', 'LIKE', "%{$query}%")
-            ->orWhere('name_sw', 'LIKE', "%{$query}%")
-            ->orWhere('description', 'LIKE', "%{$query}%")
-            ->where('is_active', true)
+        // 1. PRODUCTS
+        $productsQuery = Product::with(['trader.market', 'category']);
+
+        if ($query) {
+            // AI Query Expansion
+            $aiService = app(\App\Services\AiService::class);
+            $expandedQueries = $aiService->expandQuery($query);
+            
+            $productsQuery->where(function($q) use ($expandedQueries) {
+                foreach ($expandedQueries as $qTerm) {
+                    $q->orWhere('name', 'LIKE', "%{$qTerm}%")
+                      ->orWhere('name_sw', 'LIKE', "%{$qTerm}%")
+                      ->orWhere('description', 'LIKE', "%{$qTerm}%");
+                }
+            });
+        }
+
+        if ($categoryId) {
+            $productsQuery->where('category_id', $categoryId);
+        }
+
+        // Distance filtering for products (via trader's market location)
+        if ($lat !== null && $lng !== null) {
+            $productsQuery->selectRaw(
+                "products.*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( COALESCE(traders.latitude, markets.latitude) ) ) * cos( radians( COALESCE(traders.longitude, markets.longitude) ) - radians(?) ) + sin( radians(?) ) * sin( radians( COALESCE(traders.latitude, markets.latitude) ) ) ) ), 2) AS distance_km",
+                [$lat, $lng, $lat]
+            )
+            ->join('traders', 'products.trader_id', '=', 'traders.id')
+            ->join('markets', 'traders.market_id', '=', 'markets.id')
+            ->having('distance_km', '<=', $radius);
+        }
+
+        $products = $productsQuery->where('products.is_active', true)
             ->get()
             ->map(function ($product) {
                 $ratingWeight = $product->trader?->average_rating ?? 0;
@@ -26,16 +54,19 @@ class SearchService
                 
                 $score = ($ratingWeight * 0.7) + ($popularityWeight * 0.3);
                 
-                // MICRO-ADS: Massively boost products that paid for a spot
+                // Distance penalty: bias towards closer items
+                if (isset($product->distance_km)) {
+                    $score += (5 - min($product->distance_km, 5)) * 10; // Boost closer items
+                }
+
                 if ($product->is_boosted && $product->boosted_until && $product->boosted_until->isFuture()) {
                     $score += 100; 
                 }
 
-                // Stock Availability Intelligence
                 if ($product->stock_status === 'out_of_stock') {
-                    $score *= 0.1; // Sink to the bottom
+                    $score *= 0.1;
                 } elseif ($product->stock_status === 'low') {
-                    $score *= 0.8; // Slight penalty
+                    $score *= 0.8;
                 }
                 
                 $product->reliability_score = $score;
@@ -43,17 +74,40 @@ class SearchService
                 return $product;
             });
 
-        $traders = Trader::with(['market', 'stall'])
-            ->where('business_name', 'LIKE', "%{$query}%")
-            ->orWhere('description', 'LIKE', "%{$query}%")
-            ->get()
+        // 2. TRADERS
+        $tradersQuery = Trader::with(['market', 'stall']);
+        if ($query) {
+            $aiService = app(\App\Services\AiService::class);
+            $expandedQueries = $aiService->expandQuery($query);
+
+            $tradersQuery->where(function($q) use ($expandedQueries) {
+                foreach ($expandedQueries as $qTerm) {
+                    $q->orWhere('business_name', 'LIKE', "%{$qTerm}%")
+                      ->orWhere('description', 'LIKE', "%{$qTerm}%");
+                }
+            });
+        }
+
+        if ($lat !== null && $lng !== null) {
+            $tradersQuery->selectRaw(
+                "traders.*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( COALESCE(traders.latitude, markets.latitude) ) ) * cos( radians( COALESCE(traders.longitude, markets.longitude) ) - radians(?) ) + sin( radians(?) ) * sin( radians( COALESCE(traders.latitude, markets.latitude) ) ) ) ), 2) AS distance_km",
+                [$lat, $lng, $lat]
+            )
+            ->join('markets', 'traders.market_id', '=', 'markets.id')
+            ->having('distance_km', '<=', $radius);
+        }
+        
+        $traders = $tradersQuery->get()
             ->map(function ($trader) {
                 $popularityWeight = min($trader->profile_views / 100, 5);
                 $score = ($trader->average_rating * 0.8) + ($popularityWeight * 0.2);
                 
-                // Operational Intelligence
+                if (isset($trader->distance_km)) {
+                    $score += (5 - min($trader->distance_km, 5)) * 10;
+                }
+
                 if (!$trader->is_open) {
-                    $score *= 0.5; // Closed shops rank lower
+                    $score *= 0.5;
                 }
                 
                 $trader->reliability_score = $score;
@@ -61,17 +115,38 @@ class SearchService
                 return $trader;
             });
 
-        $markets = Market::where('name', 'LIKE', "%{$query}%")
-            ->orWhere('location', 'LIKE', "%{$query}%")
-            ->where('is_active', true)
-            ->get()
+        // 3. MARKETS
+        $marketsQuery = Market::where('is_active', true);
+        if ($query) {
+            $aiService = app(\App\Services\AiService::class);
+            $expandedQueries = $aiService->expandQuery($query);
+
+            $marketsQuery->where(function($q) use ($expandedQueries) {
+                foreach ($expandedQueries as $qTerm) {
+                    $q->orWhere('name', 'LIKE', "%{$qTerm}%")
+                      ->orWhere('location', 'LIKE', "%{$qTerm}%");
+                }
+            });
+        }
+
+        if ($lat !== null && $lng !== null) {
+            $marketsQuery->selectRaw(
+                "*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(?) ) + sin( radians(?) ) * sin( radians( latitude ) ) ) ), 2) AS distance_km",
+                [$lat, $lng, $lat]
+            )->having('distance_km', '<=', $radius);
+        }
+
+        $markets = $marketsQuery->get()
             ->map(function ($market) {
-                $market->reliability_score = 10; // Markets always rank high contextually
+                $score = 10;
+                if (isset($market->distance_km)) {
+                    $score += (5 - min($market->distance_km, 5)) * 10;
+                }
+                $market->reliability_score = $score;
                 $market->search_type = 'market';
                 return $market;
             });
 
-        // Combine and sort by our weighted reliability score
         $allResults = collect()
             ->concat($products)
             ->concat($traders)
@@ -80,7 +155,7 @@ class SearchService
             ->values();
 
         return [
-            'results' => $allResults->take(20), // Top 20 relevant results
+            'results' => $allResults->take(20),
             'total' => $allResults->count(),
             'breakdown' => [
                 'products' => $products->count(),
@@ -93,29 +168,58 @@ class SearchService
     /**
      * Get discovery segments for the Resident Home page.
      */
-    public function getDiscoverySegments(): array
+    public function getDiscoverySegments(?float $lat = null, ?float $lng = null, float $radius = 50.0): array
     {
-        $popularProducts = Product::with(['trader', 'category'])
-            ->where('is_active', true)
-            ->where('stock_status', 'available')
-            ->orderByDesc('total_reservations')
-            ->take(8)
-            ->get();
-
-        $topTraders = Trader::with(['market'])
-            ->where('is_open', true)
-            ->orderByDesc('average_rating')
-            ->take(6)
-            ->get();
-
-        $boostedProducts = Product::with(['trader', 'category'])
-            ->where('is_active', true)
+        // 1. Boosted Products (Global or Nearby)
+        $boostedQuery = Product::with(['trader.market', 'category'])
+            ->where('products.is_active', true)
             ->where('is_boosted', true)
             ->where('boosted_until', '>=', now())
-            ->where('stock_status', 'available')
-            ->inRandomOrder()
-            ->take(6)
-            ->get();
+            ->where('stock_status', 'available');
+
+        if ($lat !== null && $lng !== null) {
+            $boostedQuery->selectRaw(
+                "products.*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( COALESCE(traders.latitude, markets.latitude) ) ) * cos( radians( COALESCE(traders.longitude, markets.longitude) ) - radians(?) ) + sin( radians(?) ) * sin( radians( COALESCE(traders.latitude, markets.latitude) ) ) ) ), 2) AS distance_km",
+                [$lat, $lng, $lat]
+            )
+            ->join('traders', 'products.trader_id', '=', 'traders.id')
+            ->join('markets', 'traders.market_id', '=', 'markets.id')
+            ->having('distance_km', '<=', $radius);
+        }
+
+        $boostedProducts = $boostedQuery->inRandomOrder()->take(6)->get();
+
+        // 2. Popular Products (Bias towards nearby if coords available)
+        $popularQuery = Product::with(['trader.market', 'category'])
+            ->where('products.is_active', true)
+            ->where('stock_status', 'available');
+
+        if ($lat !== null && $lng !== null) {
+            $popularQuery->selectRaw(
+                "products.*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( COALESCE(traders.latitude, markets.latitude) ) ) * cos( radians( COALESCE(traders.longitude, markets.longitude) ) - radians(?) ) + sin( radians(?) ) * sin( radians( COALESCE(traders.latitude, markets.latitude) ) ) ) ), 2) AS distance_km",
+                [$lat, $lng, $lat]
+            )
+            ->join('traders', 'products.trader_id', '=', 'traders.id')
+            ->join('markets', 'traders.market_id', '=', 'markets.id')
+            ->having('distance_km', '<=', $radius);
+        }
+
+        $popularProducts = $popularQuery->orderByDesc('total_reservations')->take(8)->get();
+
+        // 3. Top Traders
+        $tradersQuery = Trader::with(['market'])
+            ->where('is_open', true);
+
+        if ($lat !== null && $lng !== null) {
+            $tradersQuery->selectRaw(
+                "traders.*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( COALESCE(traders.latitude, markets.latitude) ) ) * cos( radians( COALESCE(traders.longitude, markets.longitude) ) - radians(?) ) + sin( radians(?) ) * sin( radians( COALESCE(traders.latitude, markets.latitude) ) ) ) ), 2) AS distance_km",
+                [$lat, $lng, $lat]
+            )
+            ->join('markets', 'traders.market_id', '=', 'markets.id')
+            ->having('distance_km', '<=', $radius);
+        }
+
+        $topTraders = $tradersQuery->orderByDesc('average_rating')->take(6)->get();
 
         return [
             'boosted_products' => $boostedProducts,
@@ -124,3 +228,5 @@ class SearchService
         ];
     }
 }
+
+

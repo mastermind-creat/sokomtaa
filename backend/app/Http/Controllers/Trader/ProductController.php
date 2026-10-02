@@ -68,7 +68,20 @@ class ProductController extends Controller
 
         $data = $request->validated();
         $data['trader_id'] = $trader->id;
-        $data['stock_status'] = 'available';
+        
+        // Automatic Stock Status
+        if (isset($data['stock_quantity'])) {
+            $qty = (int) $data['stock_quantity'];
+            if ($qty === 0) {
+                $data['stock_status'] = 'out_of_stock';
+            } elseif ($qty <= 5) {
+                $data['stock_status'] = 'low';
+            } else {
+                $data['stock_status'] = 'available';
+            }
+        } else {
+            $data['stock_status'] = 'available';
+        }
 
         // Handle Image Upload
         if ($request->hasFile('image')) {
@@ -77,6 +90,10 @@ class ProductController extends Controller
                 return $this->error('Image upload failed.', 'UPLOAD_FAILED', 500);
             }
             $data['image_url'] = $imageUrl;
+        } else {
+            $category = \App\Models\Category::find($data['category_id']);
+            $catName = urlencode($category ? $category->name : 'Product');
+            $data['image_url'] = "https://placehold.co/600x400/1B6B3A/FFFFFF?text={$catName}";
         }
 
         $product = Product::create($data);
@@ -97,6 +114,18 @@ class ProductController extends Controller
 
         $data = $request->validated();
 
+        // Automatic Stock Status
+        if (isset($data['stock_quantity'])) {
+            $qty = (int) $data['stock_quantity'];
+            if ($qty === 0) {
+                $data['stock_status'] = 'out_of_stock';
+            } elseif ($qty <= 5) {
+                $data['stock_status'] = 'low';
+            } else {
+                $data['stock_status'] = 'available';
+            }
+        }
+
         // Handle Image Update
         if ($request->hasFile('image')) {
             // Delete old image if it exists
@@ -105,7 +134,9 @@ class ProductController extends Controller
             }
 
             $imageUrl = $this->cloudinary->uploadImage($request->file('image'), 'products');
-            $data['image_url'] = $imageUrl;
+            if ($imageUrl) {
+                $data['image_url'] = $imageUrl;
+            }
         }
 
         $product->update($data);
@@ -143,6 +174,28 @@ class ProductController extends Controller
         $product->update(['stock_status' => $request->stock_status]);
 
         return $this->success($product, 'Stock status updated.');
+    }
+
+    /**
+     * Generate an AI-powered product description.
+     */
+    public function generateAiDescription(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id'
+        ]);
+
+        $category = \App\Models\Category::find($request->category_id);
+        $aiService = new \App\Services\AiService();
+
+        $description = $aiService->suggestDescription($request->name, $category->name);
+
+        if (!$description) {
+            return $this->error('Failed to generate AI description.', 'AI_ERROR', 500);
+        }
+
+        return $this->success(['description' => $description], 'AI description generated.');
     }
 
     /**

@@ -5,13 +5,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Package, Clock, CheckCircle2, ShoppingBag,
-    Phone, ChevronRight, AlertCircle, RefreshCw
+    Phone, ChevronRight, AlertCircle, RefreshCw, Download, ScanFace
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useUIStore } from '@/store/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import Link from 'next/link';
+import ReceiptModal from '@/components/resident/ReceiptModal';
+import QRScannerModal from '@/components/trader/QRScannerModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +26,8 @@ interface ReservationItem {
     quantity: number;
     unit_price: string;
     total_amount: string;
+    service_fee: string;
+    trader_amount: number; // unit_price × quantity — excludes resident service fee
     pickup_deadline: string | null;
     notes: string | null;
     created_at: string;
@@ -81,11 +85,12 @@ function formatDeadline(deadline: string | null): string {
 
 // ─── Order Card ───────────────────────────────────────────────────────────────
 
-function OrderCard({ order, onMarkReady, onMarkComplete, isUpdating }: {
+function OrderCard({ order, onMarkReady, onMarkComplete, isUpdating, onDownloadReceipt }: {
     order: ReservationItem;
     onMarkReady: (id: number) => void;
     onMarkComplete: (id: number) => void;
     isUpdating: boolean;
+    onDownloadReceipt: (id: number) => void;
 }) {
     const cfg = STATUS_CONFIG[order.status];
     const deadlineStr = formatDeadline(order.pickup_deadline);
@@ -99,7 +104,21 @@ function OrderCard({ order, onMarkReady, onMarkComplete, isUpdating }: {
         >
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-4 pb-2">
-                <span className="font-mono text-xs font-bold text-text-secondary tracking-widest">{order.reservation_code}</span>
+                <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-text-secondary tracking-widest">{order.reservation_code}</span>
+                    {['paid', 'completed', 'ready'].includes(order.status) && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDownloadReceipt(order.id); // This will trigger View Receipt modal now
+                            }}
+                            className="w-6 h-6 bg-brand-50 text-brand-600 rounded-lg flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all shadow-sm"
+                            title="View Receipt"
+                        >
+                            <Download size={12} />
+                        </button>
+                    )}
+                </div>
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${cfg.bg} ${cfg.color}`}>
                     {cfg.label}
                 </span>
@@ -129,14 +148,21 @@ function OrderCard({ order, onMarkReady, onMarkComplete, isUpdating }: {
                             {order.quantity} {order.product.unit} × KES {parseFloat(order.unit_price).toFixed(0)}
                         </p>
                     </div>
-                    <p className="font-black text-primary text-lg">KES {parseFloat(order.total_amount).toFixed(0)}</p>
+                    <p className="font-black text-primary text-lg">KES {(order.trader_amount ?? parseFloat(order.unit_price) * order.quantity).toFixed(0)}</p>
                 </div>
 
                 {/* Deadline */}
-                {order.pickup_deadline && (
+                {order.status === 'completed' ? (
+                    <div className="flex items-center gap-2 text-xs font-medium text-green-600">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Delivered
+                    </div>
+                ) : order.pickup_deadline && (
                     <div className={`flex items-center gap-2 text-xs font-medium ${isUrgent ? 'text-red-600' : 'text-text-secondary'}`}>
                         <Clock className="w-3.5 h-3.5" />
-                        Pickup deadline: {deadlineStr}
+                        {deadlineStr === 'Expired' && (order.status === 'paid' || order.status === 'ready')
+                            ? 'Processing Overdue'
+                            : `Pickup deadline: ${deadlineStr}`}
                     </div>
                 )}
             </div>
@@ -211,6 +237,9 @@ export default function TraderOrdersPage() {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<ReservationStatus | 'all'>('paid');
 
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [selectedReceipt, setSelectedReceipt] = useState<ReservationItem | null>(null);
+
     // Fetch orders
     const { data: ordersData, isLoading } = useQuery({
         queryKey: ['trader-orders', activeTab],
@@ -245,12 +274,35 @@ export default function TraderOrdersPage() {
 
     const orders: ReservationItem[] = Array.isArray(ordersData) ? ordersData : ((ordersData as { data?: ReservationItem[] })?.data ?? []);
 
+    const handleDownloadReceipt = (id: number) => {
+        const order = orders.find(o => o.id === id);
+        if (order) setSelectedReceipt(order);
+    };
+
+    const handleScanSuccess = (code: string) => {
+        setIsScannerOpen(false);
+        // Find order locally or fetch from server. For now, try locally:
+        const matched = orders.find(o => o.reservation_code === code);
+        if (matched) {
+            setSelectedReceipt(matched);
+        } else {
+            alert('Receipt scanned: ' + code + ' but reservation not found in current view. Please search it manually.');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-transparent">
             {/* Page Header */}
             <div className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-10 -mx-4 md:-mx-8 -mt-6 mb-6 px-4 md:px-8 py-4">
                 <div className="max-w-3xl mx-auto">
-                    <div className="flex items-center justify-end mb-2">
+                    <div className="flex items-center justify-between mb-2">
+                        <button
+                            onClick={() => setIsScannerOpen(true)}
+                            className="px-4 py-2 rounded-xl bg-green-950 text-white hover:bg-green-900 transition-colors shadow-sm flex items-center gap-2 text-xs font-black uppercase tracking-widest"
+                        >
+                            <ScanFace className="w-4 h-4" />
+                            Scan Receipt
+                        </button>
                         <button
                             onClick={() => queryClient.invalidateQueries({ queryKey: ['trader-orders'] })}
                             className="p-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200 shadow-sm"
@@ -331,12 +383,29 @@ export default function TraderOrdersPage() {
                                     onMarkReady={(id) => updateStatus({ id, status: 'ready' })}
                                     onMarkComplete={(id) => updateStatus({ id, status: 'completed' })}
                                     isUpdating={isUpdating}
+                                    onDownloadReceipt={handleDownloadReceipt}
                                 />
                             ))}
                         </div>
                     </AnimatePresence>
                 )}
-            </div>
+        </div>
+            
+            <AnimatePresence>
+                {selectedReceipt && (
+                    <ReceiptModal 
+                        reservation={selectedReceipt} 
+                        onClose={() => setSelectedReceipt(null)} 
+                        userRole="trader"
+                    />
+                )}
+                {isScannerOpen && (
+                    <QRScannerModal 
+                        onClose={() => setIsScannerOpen(false)}
+                        onSuccess={handleScanSuccess}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 

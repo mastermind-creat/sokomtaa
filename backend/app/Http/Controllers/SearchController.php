@@ -23,16 +23,24 @@ class SearchController extends Controller
     public function index(Request $request)
     {
         $query = $request->input('q');
+        $categoryId = $request->input('category');
+        $lat = $request->filled('lat') ? (float) $request->lat : null;
+        $lng = $request->filled('lng') ? (float) $request->lng : null;
+        $radius = $request->filled('radius') ? (float) $request->radius : 50.0;
 
-        if (!$query || strlen($query) < 2) {
+        if ((!$query || strlen($query) < 2) && !$categoryId) {
             return $this->success([
                 'results' => [],
                 'total' => 0,
-                'breakdown' => []
+                'breakdown' => [
+                    'products' => 0,
+                    'traders' => 0,
+                    'markets' => 0
+                ]
             ], 'Search query too short.');
         }
 
-        $results = $this->searchService->globalSearch($query);
+        $results = $this->searchService->globalSearch($query, $categoryId, $lat, $lng, $radius);
 
         return $this->success($results, 'Search completed successfully.');
     }
@@ -40,10 +48,15 @@ class SearchController extends Controller
     /**
      * Retrieve trending marketplace segments for discovery.
      */
-    public function recommendations()
+    public function recommendations(Request $request)
     {
-        $segments = $this->searchService->getDiscoverySegments();
+        $lat = $request->filled('lat') ? (float) $request->lat : null;
+        $lng = $request->filled('lng') ? (float) $request->lng : null;
+        $radius = $request->filled('radius') ? (float) $request->radius : 50.0;
+
+        $segments = $this->searchService->getDiscoverySegments($lat, $lng, $radius);
 
         return $this->success($segments, 'Recommendations retrieved successfully.');
     }
 }
+

@@ -10,14 +10,33 @@ import {
     MapPin,
     Heart,
     HelpCircle,
-    LogOut
+    LogOut,
+    FileText,
+    Loader2
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
 import { Logo } from '../shared/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { ApiResponse } from '@/types';
+
+interface MenuCounts {
+    active_reservations: number;
+    watchlist: number;
+    unread_notifications: number;
+}
+
+interface MenuItem {
+    icon: any;
+    label: string;
+    path: string;
+    badge?: number | string | null;
+}
 
 interface ResidentMobileSidebarProps {
     isOpen: boolean;
@@ -28,19 +47,50 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
     const router = useRouter();
     const pathname = usePathname();
     const { t } = useTranslation();
-    const { logout } = useAuthStore();
+    const { logout } = useLogout();
+    const { user } = useAuthStore();
+    const [isNavigating, setIsNavigating] = React.useState<string | null>(null);
 
-    const menuItems = [
+    React.useEffect(() => {
+        setIsNavigating(null);
+    }, [pathname]);
+
+    // Fetch dynamic menu counts
+    const { data: menuCountsRaw } = useQuery({
+        queryKey: ['resident-menu-counts-mobile'],
+        queryFn: async () => {
+            const res = await api.get<never, ApiResponse<MenuCounts>>('/resident/menu-counts');
+            return res.data;
+        },
+        enabled: !!user && user.role === 'resident',
+        refetchInterval: 60000 // Refetch every minute
+    });
+    const counts = menuCountsRaw;
+
+    const menuItems: MenuItem[] = [
         { icon: Home, label: t('common.dashboard'), path: '/resident/dashboard', badge: null },
-        { icon: Search, label: t('nav.discover'), path: '/search', badge: null },
-        { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: 2 },
-        { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: null },
+        { icon: Search, label: t('nav.discover'), path: '/resident', badge: null },
+        { icon: Ticket, label: t('nav.reservations'), path: '/reservations', badge: counts?.active_reservations || null },
+        { icon: Heart, label: t('common.watchlist'), path: '/watchlist', badge: counts?.watchlist || null },
         { icon: MapPin, label: t('common.markets'), path: '/market/map', badge: null },
+        { icon: FileText, label: 'Reports & Archive', path: '/resident/reports', badge: null },
     ];
 
     const handleNavigate = (path: string) => {
+        if (pathname === path) {
+            onClose();
+            return;
+        }
+        setIsNavigating(path);
         router.push(path);
-        onClose();
+        // Do not onClose() immediately to show loader, or just let it be.
+        // Actually, it's a mobile sidebar, we can close it right away or let it stay until route changes.
+        // We'll close it right away for better UX on mobile, or maybe not close it so they see the loader?
+        // Let's not close it immediately so the loader is visible. It will close on unmount/re-render if handled higher up, 
+        // or we can let the new page load and user closes it. Usually we close it.
+        // But since we want to show progress, let's keep it open until navigation finishes.
+        // The mobile sidebar is usually controlled by a state in the layout.
+        // But let's just show loader.
     };
 
     return (
@@ -88,13 +138,18 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
                                         <button
                                             key={item.path}
                                             onClick={() => handleNavigate(item.path)}
+                                            disabled={isNavigating !== null}
                                             className={`w-full flex items-center gap-4 p-3.5 rounded-2xl transition-all ${
                                                 isActive 
                                                     ? 'bg-white text-green-950 shadow-lg border border-gray-100' 
                                                     : 'text-text-secondary active:bg-white'
-                                            }`}
+                                            } ${isNavigating === item.path ? 'opacity-70 cursor-not-allowed' : ''}`}
                                         >
-                                            <item.icon size={18} className={isActive ? 'text-brand-600' : 'text-gray-400'} />
+                                            {isNavigating === item.path ? (
+                                                <Loader2 size={18} className="animate-spin text-brand-600" />
+                                            ) : (
+                                                <item.icon size={18} className={isActive ? 'text-brand-600' : 'text-gray-400'} />
+                                            )}
                                             <span className={`text-sm font-bold tracking-tight ${isActive ? 'text-green-950 font-black' : ''}`}>
                                                 {item.label}
                                             </span>
@@ -108,13 +163,18 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
                                 })}
                                 <button
                                     onClick={() => handleNavigate('/profile')}
+                                    disabled={isNavigating !== null}
                                     className={`w-full flex items-center gap-4 p-3.5 rounded-2xl transition-all mt-4 ${
                                         pathname === '/profile' 
                                             ? 'bg-white text-green-950 shadow-lg border border-gray-100' 
                                             : 'text-text-secondary active:bg-white'
-                                    }`}
+                                    } ${isNavigating === '/profile' ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
-                                    <User size={18} className={pathname === '/profile' ? 'text-brand-600' : 'text-gray-400'} />
+                                    {isNavigating === '/profile' ? (
+                                        <Loader2 size={18} className="animate-spin text-brand-600" />
+                                    ) : (
+                                        <User size={18} className={pathname === '/profile' ? 'text-brand-600' : 'text-gray-400'} />
+                                    )}
                                     <span className={`text-sm font-bold tracking-tight ${pathname === '/profile' ? 'text-green-950 font-black' : ''}`}>
                                         {t('common.profile')}
                                     </span>
@@ -130,8 +190,10 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
                                 <p className="text-xs font-bold leading-tight mb-3">Having trouble with your reservation?</p>
                                 <button 
                                     onClick={() => handleNavigate('/help')}
-                                    className="w-full py-2.5 bg-white text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform"
+                                    disabled={isNavigating !== null}
+                                    className="relative z-10 w-full py-2.5 bg-white text-brand-700 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform cursor-pointer flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                                 >
+                                    {isNavigating === '/help' ? <Loader2 size={14} className="animate-spin" /> : null}
                                     Visit Help Center
                                 </button>
                             </div>
@@ -139,10 +201,7 @@ export default function ResidentMobileSidebar({ isOpen, onClose }: ResidentMobil
 
                         <div className="p-4 border-t border-gray-100 bg-white">
                              <button 
-                                onClick={() => {
-                                    logout();
-                                    router.push('/login');
-                                }}
+                                onClick={logout}
                                 className="w-full h-12 flex items-center justify-center gap-3 p-3 rounded-2xl text-rose-600 bg-rose-50 border border-rose-100 shadow-sm font-black text-[10px] uppercase tracking-[0.2em] transition-all active:scale-95"
                              >
                                 <LogOut size={16} /> Sign Out

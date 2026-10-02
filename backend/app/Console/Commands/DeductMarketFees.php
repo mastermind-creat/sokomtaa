@@ -1,5 +1,7 @@
 <?php
 
+// v2.1.0 — Flexible fee support: respects market is_fee_enabled toggle and explicit daily/weekly rates
+
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
@@ -43,20 +45,32 @@ class DeductMarketFees extends Command
     {
         $this->info('Starting Market Fee Automated Deductions...');
 
-        // 1. Fetch all traders with active stall allocations
+        // 1. Fetch all traders with active stall allocations in markets where fees are enabled
         $traders = Trader::whereHas('stall')
-            ->with(['stall', 'user', 'wallet'])
+            ->whereHas('market', function($q) {
+                $q->where('is_fee_enabled', true);
+            })
+            ->with(['stall', 'user', 'wallet', 'market'])
             ->get();
 
         $processedCount = 0;
         $failureCount = 0;
 
         foreach ($traders as $trader) {
+            // Extra check for market enablement just in case
+            if (!$trader->market->is_fee_enabled) {
+                continue;
+            }
+
             if (!$this->isDueForDeduction($trader)) {
                 continue;
             }
 
             $amount = $this->calculateDeductionAmount($trader);
+            
+            // If amount is 0, skip
+            if ($amount <= 0) continue;
+
             $period = Carbon::now()->format('Y-m-d'); // Track deduction per day
 
             try {
@@ -78,7 +92,7 @@ class DeductMarketFees extends Command
                     'amount' => $amount,
                     'period' => $period,
                     'status' => 'paid',
-                    'payment_id' => null, // Not a direct Mpesa payment, but a wallet transaction
+                    'payment_id' => null,
                     'due_date' => Carbon::now(),
                     'paid_at' => Carbon::now(),
                     'notes' => "Wallet transaction ID: {$transaction->id}"
@@ -119,26 +133,33 @@ class DeductMarketFees extends Command
             return $last->diffInWeeks($now) >= 1;
         }
 
+        // Default to monthly if not specified (though monthly isn't in frequency enum yet)
+        if ($trader->fee_payment_frequency === 'monthly') {
+            return $last->diffInMonths($now) >= 1;
+        }
+
         return false;
     }
 
     /**
-     * Calculate deduction based on Monthly Fee and Frequency.
-     * Option A logic: Monthly / 30 or Monthly / 4.
+     * Calculate deduction based on Fees and Frequency.
+     * Prioritizes explicit daily/weekly/monthly fees over calculation.
      */
     protected function calculateDeductionAmount(Trader $trader): float
     {
-        $monthly = $trader->stall->monthly_fee;
+        $stall = $trader->stall;
 
         if ($trader->fee_payment_frequency === 'daily') {
-            return round($monthly / 30, 2);
+            if ($stall->daily_fee > 0) return (float) $stall->daily_fee;
+            return round($stall->monthly_fee / 30, 2);
         }
 
         if ($trader->fee_payment_frequency === 'weekly') {
-            return round($monthly / 4, 2);
+            if ($stall->weekly_fee > 0) return (float) $stall->weekly_fee;
+            return round($stall->monthly_fee / 4, 2);
         }
 
-        return $monthly;
+        return (float) $stall->monthly_fee;
     }
 
     /**
@@ -162,8 +183,8 @@ class DeductMarketFees extends Command
         // Notify Trader
         $this->notificationService->send(
             $trader->user,
-            'Salio la Wallet Halitoshi (Insufficient Wallet Balance)',
-            "Hatujaweza kukata ada yako ya soko ya KES {$amount}. Tafadhali lipa kupitia M-Pesa ili kuzuia faini.",
+            'Insufficient Wallet Balance',
+            "We were unable to deduct your market fee of KES {$amount}. Please top up your wallet via M-Pesa to avoid a penalty.",
             'payment',
             ['amount' => $amount],
             true // SMS Notification

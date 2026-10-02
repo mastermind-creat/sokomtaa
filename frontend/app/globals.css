@@ -150,18 +150,20 @@
 }
 
 
-body {
-  font-family: var(--font-body), system-ui, sans-serif;
-  background-color: var(--surface-base);
-  color: var(--text-primary);
-  line-height: 1.6;
-}
+@layer base {
+  body {
+    font-family: var(--font-body), system-ui, sans-serif;
+    background-color: var(--surface-base);
+    color: var(--text-primary);
+    line-height: 1.6;
+  }
 
-h1, h2, h3 {
-  font-family: var(--font-display), system-ui, sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--green-950);
+  h1, h2, h3 {
+    font-family: var(--font-display), system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--green-950);
+  }
 }
 
 /* ── COMPONENT CLASSES ── */

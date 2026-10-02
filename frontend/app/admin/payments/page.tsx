@@ -29,29 +29,26 @@ export default function AdminPaymentsPage() {
     const { setPageTitle } = useUIStore();
     const [activeTab, setActiveTab] = useState<'fees' | 'reservations'>('fees');
     const [searchQuery, setSearchQuery] = useState('');
+    const [page, setPage] = useState(1);
 
     React.useEffect(() => {
         setPageTitle('Financial Registry');
     }, [setPageTitle]);
 
     const { data: paymentsDataRaw, isLoading } = useQuery({
-        queryKey: ['admin-payments', activeTab],
-        queryFn: () => api.get('/admin/payments', { params: { type: activeTab } }).catch(() => ({ data: [] })),
+        queryKey: ['admin-payments', activeTab, page],
+        queryFn: () => api.get('/admin/payments', { params: { type: activeTab, page } }),
     });
 
-    // Fallback data for demonstration
-    const payments = (paymentsDataRaw as any)?.data || (activeTab === 'fees' ? [
-        { id: 1, ref: 'TXN-001', mpesa_id: 'QWE123RTY', trader_name: 'Mama Wanjiru', stall: 'A1', period: 'Jan 2025', amount: 1500, paid_at: '2025-01-14T09:30:00Z', status: 'completed' },
-        { id: 2, ref: 'TXN-002', mpesa_id: 'ASD456FGH', trader_name: 'Tech Safi Store', stall: 'B4', period: 'Jan 2025', amount: 3000, paid_at: '2025-01-15T11:20:00Z', status: 'completed' },
-        { id: 3, ref: 'TXN-003', mpesa_id: 'PENDING_ID', trader_name: 'Amani Drapery', stall: 'C12', period: 'Jan 2025', amount: 1200, paid_at: '2025-01-16T08:45:00Z', status: 'pending' }
-    ] : [
-        { id: 101, ref: 'RES-K7B', code: '#K7B', resident: 'John Doe', trader: 'Mama Wanjiru', product: 'Sukuma Wiki', amount: 150, paid_at: '2025-01-14T14:10:00Z', status: 'completed', mpesa_id: 'ZXC789VBN' }
-    ]);
+    const paymentsResponse = (paymentsDataRaw as any)?.data;
+    const payments = paymentsResponse?.data || [];
+    const meta = paymentsResponse?.meta;
+    const summary = paymentsResponse?.summary;
 
     const stats = [
-        { label: 'Volume', value: `KES ${payments.reduce((acc: number, p: any) => acc + Number(p.amount), 0).toLocaleString()}`, color: 'text-brand-600', icon: CreditCard },
-        { label: 'Efficiency', value: '94%', color: 'text-blue-600', icon: Repeat },
-        { label: 'Pending', value: payments.filter((p: any) => p.status === 'pending').length, color: 'text-orange-600', icon: Clock },
+        { label: 'Volume', value: `KES ${Number(summary?.total_volume || 0).toLocaleString()}`, color: 'text-brand-600', icon: CreditCard },
+        { label: 'Total Logs', value: meta?.total || 0, color: 'text-blue-600', icon: Repeat },
+        { label: 'Pending', value: summary?.pending_count || 0, color: 'text-orange-600', icon: Clock },
     ];
 
     const getStatusStyles = (status: string) => {
@@ -199,6 +196,29 @@ export default function AdminPaymentsPage() {
                             </motion.div>
                         ))}
                     </AnimatePresence>
+                )}
+
+                {/* Pagination Controls */}
+                {meta && meta.last_page > 1 && (
+                    <div className="flex items-center justify-between mt-8 mb-4">
+                        <button 
+                            disabled={page === 1}
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            className="h-10 px-4 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                        >
+                            Previous
+                        </button>
+                        <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">
+                            Page {page} of {meta.last_page}
+                        </span>
+                        <button 
+                            disabled={page === meta.last_page}
+                            onClick={() => setPage(p => Math.min(meta.last_page, p + 1))}
+                            className="h-10 px-4 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                        >
+                            Next
+                        </button>
+                    </div>
                 )}
             </div>
 

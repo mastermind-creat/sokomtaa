@@ -26,23 +26,73 @@ class TraderAnalyticsController extends Controller
         $user = Auth::user();
         $traderId = $user->trader->id;
 
-        $stats = [
-            'total_revenue' => Payment::whereHas('reservation', function($q) use ($traderId) {
-                $q->where('trader_id', $traderId);
-            })->where('status', 'completed')->sum('amount'),
-            
-            'pending_reservations' => Reservation::where('trader_id', $traderId)->where('status', 'pending')->count(),
-            
-            'completed_reservations' => Reservation::where('trader_id', $traderId)->where('status', 'completed')->count(),
-            
-            'low_stock_items' => Product::where('trader_id', $traderId)->where('stock_status', 'low')->count(),
-            
-            'out_of_stock_items' => Product::where('trader_id', $traderId)->where('stock_status', 'out_of_stock')->count(),
+        $thisMonth = Carbon::now()->startOfMonth();
+        $lastMonth = Carbon::now()->subMonth()->startOfMonth();
 
-            'profile_views' => $user->trader->profile_views,
+        // Revenue = sum of product earnings (unit_price * quantity) for paid/ready/completed reservations
+        // This works in dev without M-Pesa callbacks completing the Payment records
+        $totalRevenue = Reservation::where('trader_id', $traderId)
+            ->whereIn('status', ['paid', 'ready', 'completed'])
+            ->selectRaw('SUM(unit_price * quantity) as total')
+            ->value('total') ?? 0;
+
+        $thisMonthRevenue = Reservation::where('trader_id', $traderId)
+            ->whereIn('status', ['paid', 'ready', 'completed'])
+            ->where('created_at', '>=', $thisMonth)
+            ->selectRaw('SUM(unit_price * quantity) as total')
+            ->value('total') ?? 0;
+
+        $lastMonthRevenue = Reservation::where('trader_id', $traderId)
+            ->whereIn('status', ['paid', 'ready', 'completed'])
+            ->where('created_at', '>=', $lastMonth)
+            ->where('created_at', '<', $thisMonth)
+            ->selectRaw('SUM(unit_price * quantity) as total')
+            ->value('total') ?? 0;
+
+        $growth = 0;
+        if ($lastMonthRevenue > 0) {
+            $growth = round((($thisMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100, 1);
+        } elseif ($thisMonthRevenue > 0) {
+            $growth = 100;
+        }
+
+        // Active reservations = all statuses that need trader attention
+        $activeReservations = Reservation::where('trader_id', $traderId)
+            ->whereIn('status', ['pending', 'paid', 'ready'])
+            ->count();
+
+        $stats = [
+            'total_revenue'           => (float) $totalRevenue,
+            'active_reservations'     => $activeReservations,
+            'pending_reservations'    => Reservation::where('trader_id', $traderId)->where('status', 'pending')->count(),
+            'completed_reservations'  => Reservation::where('trader_id', $traderId)->where('status', 'completed')->count(),
+            'low_stock_items'         => Product::where('trader_id', $traderId)->where('stock_status', 'low')->count(),
+            'out_of_stock_items'      => Product::where('trader_id', $traderId)->where('stock_status', 'out_of_stock')->count(),
+            'profile_views'           => (int) $user->trader->profile_views,
+            'growth'                  => ($growth >= 0 ? '+' : '') . $growth . '%',
+            'has_overdue_fees'        => \App\Models\MarketFee::where('trader_id', $traderId)
+                                            ->where('status', 'unpaid')
+                                            ->where('due_date', '<', now())
+                                            ->exists(),
         ];
 
         return $this->success($stats);
+    }
+
+    /**
+     * Get menu counts for trader sidebar.
+     */
+    public function menuCounts(): JsonResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $traderId = $user->trader->id;
+
+        return $this->success([
+            'reservations' => Reservation::where('trader_id', $traderId)->where('status', 'pending')->count(),
+            'low_stock' => Product::where('trader_id', $traderId)->whereIn('stock_status', ['low', 'out_of_stock'])->count(),
+            'unread_notifications' => $user->notifications()->where('is_read', false)->count(),
+        ]);
     }
 
     /**
@@ -55,20 +105,41 @@ class TraderAnalyticsController extends Controller
         $traderId = $user->trader->id;
 
         $days = 30;
-        $trends = Payment::whereHas('reservation', function($q) use ($traderId) {
-                $q->where('trader_id', $traderId);
-            })
-            ->where('payments.status', 'completed')
-            ->where('paid_at', '>=', now()->subDays($days))
+
+        // Use reservation amounts (product earnings only) grouped by date
+        $trends = Reservation::where('trader_id', $traderId)
+            ->whereIn('status', ['paid', 'ready', 'completed'])
+            ->where('created_at', '>=', now()->subDays($days))
             ->select([
-                DB::raw('DATE(paid_at) as date'),
-                DB::raw('SUM(amount) as total')
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('SUM(unit_price * quantity) as total')
             ])
             ->groupBy('date')
             ->orderBy('date')
             ->get();
 
-        return $this->success($trends);
+        $summary = [
+            'peak_revenue'      => $trends->max('total') ?: 0,
+            'average_daily'     => $trends->count() > 0 ? $trends->avg('total') : 0,
+            'total_period'      => $trends->sum('total'),
+            'forecasted_growth' => 0,
+        ];
+
+        // Fill in missing dates with zero for a continuous graph
+        $filledTrends = [];
+        for ($i = $days; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $match = $trends->firstWhere('date', $date);
+            $filledTrends[] = [
+                'date'  => $date,
+                'total' => $match ? (float) $match->total : 0,
+            ];
+        }
+
+        return $this->success([
+            'trends'  => $filledTrends,
+            'summary' => $summary,
+        ]);
     }
 
     /**

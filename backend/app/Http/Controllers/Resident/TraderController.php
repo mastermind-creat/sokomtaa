@@ -22,10 +22,11 @@ class TraderController extends Controller
 
         $trader->load(['stall', 'market']);
 
-        // Get trader's active products
+        // Get trader's active products, prioritized by active boost
         $products = Product::where('trader_id', $trader->id)
             ->where('is_active', true)
             ->with('category')
+            ->orderByRaw('CASE WHEN is_boosted = 1 AND boosted_until >= ? THEN 0 ELSE 1 END', [now()])
             ->latest()
             ->paginate(12);
 
@@ -36,15 +37,48 @@ class TraderController extends Controller
     }
 
     /**
+     * Get a trader's products (paginated).
+     */
+    public function products(Trader $trader): JsonResponse
+    {
+        $products = Product::where('trader_id', $trader->id)
+            ->where('is_active', true)
+            ->with('category')
+            ->orderByRaw('CASE WHEN is_boosted = 1 AND boosted_until >= ? THEN 0 ELSE 1 END', [now()])
+            ->latest()
+            ->paginate(15);
+
+        return $this->success($products);
+    }
+
+    /**
+     * Get a trader's reviews.
+     */
+    public function reviews(Trader $trader): JsonResponse
+    {
+        $reviews = \App\Models\Review::where('trader_id', $trader->id)
+            ->where('is_visible', true)
+            ->with('resident:id,name,avatar_url')
+            ->latest()
+            ->paginate(10);
+
+        return $this->success($reviews);
+    }
+
+    /**
      * Search for traders / discovery.
+     * Supports distance-based biasing if lat/lng are provided.
      */
     public function search(Request $request): JsonResponse
     {
-        $query = $request->input('q');
+        $query      = $request->input('q');
         $categoryId = $request->input('category_id');
-        $marketId = $request->input('market_id');
+        $marketId   = $request->input('market_id');
+        $lat        = $request->filled('lat')    ? (float) $request->lat    : null;
+        $lng        = $request->filled('lng')    ? (float) $request->lng    : null;
+        $radius     = $request->filled('radius') ? (float) $request->radius : 5.0;
 
-        $traders = Trader::query()
+        $tradersQuery = Trader::query()
             ->when($query, function ($q) use ($query) {
                 $q->where('business_name', 'like', "%{$query}%")
                   ->orWhere('business_name_sw', 'like', "%{$query}%");
@@ -56,10 +90,51 @@ class TraderController extends Controller
                 $q->whereHas('products', function ($p) use ($categoryId) {
                     $p->where('category_id', $categoryId);
                 });
-            })
-            ->with(['market', 'stall'])
+            });
+
+        // Distance filtering logic
+        if ($lat !== null && $lng !== null) {
+            $tradersQuery->selectRaw(
+                "*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( COALESCE(traders.latitude, markets.latitude) ) ) * cos( radians( COALESCE(traders.longitude, markets.longitude) ) - radians(?) ) + sin( radians(?) ) * sin( radians( COALESCE(traders.latitude, markets.latitude) ) ) ) ), 2) AS distance_km",
+                [$lat, $lng, $lat]
+            )
+            ->join('markets', 'traders.market_id', '=', 'markets.id')
+            ->having('distance_km', '<=', $radius)
+            ->orderBy('distance_km');
+        }
+
+        $traders = $tradersQuery->with(['market', 'stall'])
             ->paginate(15);
 
         return $this->success($traders);
     }
+
+    /**
+     * Find traders near a specific location (independent stalls).
+     */
+    public function nearby(Request $request): JsonResponse
+    {
+        $request->validate([
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
+            'radius' => 'nullable|numeric|min:1|max:100' // km
+        ]);
+
+        $lat = $request->lat;
+        $lng = $request->lng;
+        $radius = $request->radius ?? 5.0; // Default 5km
+
+        // Haversine formula to find independent traders within radius
+        // Uses Trader lat/lng first, falls back to Market lat/lng
+        $traders = Trader::where('verification_status', 'verified')
+            ->selectRaw("traders.*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( COALESCE(traders.latitude, markets.latitude) ) ) * cos( radians( COALESCE(traders.longitude, markets.longitude) ) - radians(?) ) + sin( radians(?) ) * sin( radians( COALESCE(traders.latitude, markets.latitude) ) ) ) ), 2) AS distance_km", [$lat, $lng, $lat])
+            ->join('markets', 'traders.market_id', '=', 'markets.id')
+            ->having('distance_km', '<=', $radius)
+            ->orderBy('distance_km')
+            ->with(['market', 'stall'])
+            ->get();
+
+        return $this->success($traders);
+    }
+
 }

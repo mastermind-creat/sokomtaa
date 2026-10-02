@@ -9,7 +9,7 @@ interface ReviewCardProps {
         id: number;
         resident_id: number;
         rating: number;
-        comment: string;
+        comment?: string | null;
         created_at: string;
         resident?: {
             name: string;

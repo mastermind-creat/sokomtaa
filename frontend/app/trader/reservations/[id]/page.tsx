@@ -4,8 +4,8 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import {
-    ArrowLeft, Phone, Package, Clock,
-    Copy, User, MessageSquare
+    ArrowLeft, Phone, Package, Clock, CheckCircle2,
+    Copy, User, MessageSquare, Truck, Info, AlertCircle
 } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
@@ -17,9 +17,13 @@ interface ReservationDetail {
     id: number;
     reservation_code: string;
     status: 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled' | 'expired';
+    delivery_option: boolean;
+    delivery_status: string | null; // 'pending_assignment' | 'assigned' | 'picked_up' | 'in_transit' | 'delivered' | null
     quantity: number;
     unit_price: string;
     total_amount: string;
+    service_fee: string;
+    trader_amount?: number; // unit_price × quantity — excludes resident service fee
     notes: string | null;
     pickup_deadline: string | null;
     picked_up_at: string | null;
@@ -63,13 +67,13 @@ export default function OrderDetailPage() {
     const { setPageTitle } = useUIStore();
     const [copied, setCopied] = React.useState(false);
 
-    const { data: order, isLoading } = useQuery({
+    const { data: orderRes, isLoading, isError, error } = useQuery<ApiResponse<ReservationDetail>>({
         queryKey: ['trader-order', params.id],
-        queryFn: async () => {
-            const res = await api.get<never, ApiResponse<ReservationDetail>>(`/reservations/${params.id}`);
-            return res.data;
-        },
+        queryFn: () => api.get(`/reservations/${params.id}`),
+        retry: 1,
     });
+
+    const order = orderRes?.data;
 
     const { mutate: updateStatus, isPending } = useMutation({
         mutationFn: async (status: string) => {
@@ -83,11 +87,11 @@ export default function OrderDetailPage() {
 
     React.useEffect(() => {
         if (order) {
-            setPageTitle(`${t('common.order')} #${order.reservation_code}`);
+            setPageTitle(`Order #${order.reservation_code}`);
         } else {
-            setPageTitle(t('common.order_detail') || 'Order Detail');
+            setPageTitle('Order Detail');
         }
-    }, [order, setPageTitle, t]);
+    }, [order, setPageTitle]);
 
     const copyCode = () => {
         if (!order?.reservation_code) return;
@@ -96,12 +100,36 @@ export default function OrderDetailPage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    if (isLoading || !order) {
+    if (isLoading) {
         return (
             <div className="max-w-2xl mx-auto px-4 py-8 animate-pulse space-y-4">
                 <div className="h-8 w-40 bg-gray-200 rounded-xl" />
                 <div className="h-48 bg-gray-100 rounded-2xl" />
                 <div className="h-32 bg-gray-100 rounded-2xl" />
+            </div>
+        );
+    }
+
+    if (isError || !order) {
+        const errMsg = (error as any)?.message || (error as any)?.error || 'Could not load order details.';
+        return (
+            <div className="max-w-2xl mx-auto px-4 py-8">
+                <button onClick={() => router.back()} className="flex items-center gap-2 text-text-secondary mb-6 hover:text-text-primary transition-colors">
+                    <ArrowLeft className="w-4 h-4" /> Back
+                </button>
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex items-start gap-4">
+                    <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-black text-red-800 mb-1">Failed to load order</p>
+                        <p className="text-xs text-red-600">{errMsg}</p>
+                        <button
+                            onClick={() => router.back()}
+                            className="mt-3 text-xs font-bold text-brand-600 underline underline-offset-2"
+                        >
+                            Go back to orders list
+                        </button>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -144,46 +172,104 @@ export default function OrderDetailPage() {
                     <DetailRow icon={<User className="w-4 h-4" />} label="Resident" value={order.resident.name} />
                     <DetailRow icon={<Phone className="w-4 h-4" />} label="Phone" value={order.resident.phone} />
                     <DetailRow icon={<Package className="w-4 h-4" />} label="Product" value={`${order.quantity}x ${order.product.name}`} />
-                    <DetailRow icon={<Clock className="w-4 h-4" />} label="Pickup Deadline" value={deadline ? deadline.toLocaleString() : 'No deadline'} />
+                    {order.status === 'completed' ? (
+                        <DetailRow icon={<CheckCircle2 className="w-4 h-4 text-green-600" />} label="Delivery Status" value="Delivered" />
+                    ) : (
+                        <DetailRow icon={<Clock className="w-4 h-4" />} label="Pickup Deadline" value={deadline ? deadline.toLocaleString() : 'No deadline'} />
+                    )}
                     <DetailRow icon={<MessageSquare className="w-4 h-4" />} label="Notes" value={order.notes || 'No notes provided'} />
                     
                     <div className="pt-4 mt-4 border-t border-gray-50 flex items-center justify-between">
-                        <p className="text-sm font-bold text-text-secondary">Summary</p>
-                        <p className="text-2xl font-black text-green-950">KES {parseFloat(order.total_amount).toLocaleString()}</p>
+                        <div>
+                            <p className="text-sm font-bold text-text-secondary">Amount Received</p>
+                            <p className="text-[10px] text-text-muted font-medium">{order.quantity} × KES {parseFloat(order.unit_price).toFixed(2)}</p>
+                        </div>
+                        <p className="text-2xl font-black text-green-950">
+                            KES {(order.trader_amount ?? parseFloat(order.unit_price) * order.quantity).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
                     </div>
                 </div>
             </div>
 
             {/* Actions */}
-            <div className="grid grid-cols-1 gap-3">
-                {order.status === 'paid' && (
-                    <button
-                        onClick={() => updateStatus('ready')}
-                        disabled={isPending}
-                        className="w-full py-4 bg-brand-600 text-white rounded-2xl font-black text-base shadow-lg shadow-brand-900/10 hover:bg-brand-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        {isPending ? 'Updating...' : 'Mark as Ready for Pickup'}
-                    </button>
-                )}
-                {order.status === 'ready' && (
-                    <button
-                        onClick={() => updateStatus('completed')}
-                        disabled={isPending}
-                        className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-base shadow-lg shadow-green-900/10 hover:bg-green-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        {isPending ? 'Updating...' : 'Confirm Handover / Completed'}
-                    </button>
-                )}
-                {['pending', 'paid', 'ready'].includes(order.status) && (
-                    <button
-                        onClick={() => updateStatus('cancelled')}
-                        disabled={isPending}
-                        className="w-full py-4 border border-red-200 text-red-600 rounded-2xl font-bold text-sm hover:bg-red-50 transition-colors"
-                    >
-                        Cancel Order
-                    </button>
-                )}
-            </div>
+            {(() => {
+                // A delivery order that a rider has actively accepted — trader hands off control
+                const riderHasControl = order.delivery_option &&
+                    order.delivery_status &&
+                    ['assigned', 'picked_up', 'in_transit'].includes(order.delivery_status);
+
+                const riderDelivered = order.delivery_option &&
+                    order.delivery_status === 'delivered';
+
+                if (riderHasControl) {
+                    return (
+                        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
+                            <Truck className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-sm font-black text-blue-800">Rider In Control</p>
+                                <p className="text-xs text-blue-600 mt-0.5 leading-relaxed">
+                                    A delivery rider has accepted and is handling this order. You will be notified automatically once the delivery is completed.
+                                </p>
+                            </div>
+                        </div>
+                    );
+                }
+
+                if (riderDelivered) {
+                    return (
+                        <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start gap-3">
+                            <Info className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-sm font-black text-green-800">Delivered by Rider</p>
+                                <p className="text-xs text-green-600 mt-0.5">This order was successfully delivered by a rider.</p>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="grid grid-cols-1 gap-3">
+                        {order.status === 'paid' && (
+                            <button
+                                onClick={() => updateStatus('ready')}
+                                disabled={isPending}
+                                className="w-full py-4 bg-brand-600 text-white rounded-2xl font-black text-base shadow-lg shadow-brand-900/10 hover:bg-brand-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                {isPending ? 'Updating...' : 'Mark as Ready for Pickup'}
+                            </button>
+                        )}
+                        {order.status === 'ready' && !order.delivery_option && (
+                            <button
+                                onClick={() => updateStatus('completed')}
+                                disabled={isPending}
+                                className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-base shadow-lg shadow-green-900/10 hover:bg-green-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                {isPending ? 'Updating...' : 'Confirm Handover / Completed'}
+                            </button>
+                        )}
+                        {order.status === 'ready' && order.delivery_option && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                                <Truck className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="text-sm font-black text-amber-800">Awaiting Rider</p>
+                                    <p className="text-xs text-amber-600 mt-0.5 leading-relaxed">
+                                        This order is in the delivery pool. A rider will accept it shortly.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                        {['pending', 'paid', 'ready'].includes(order.status) && (
+                            <button
+                                onClick={() => updateStatus('cancelled')}
+                                disabled={isPending}
+                                className="w-full py-4 border border-red-200 text-red-600 rounded-2xl font-bold text-sm hover:bg-red-50 transition-colors"
+                            >
+                                Cancel Order
+                            </button>
+                        )}
+                    </div>
+                );
+            })()}
         </div>
     );
 }

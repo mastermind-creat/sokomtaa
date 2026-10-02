@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Market extends Model
 {
@@ -20,6 +22,13 @@ class Market extends Model
         'longitude',
         'is_active',
         'building_config',
+        'banner_url',
+        'icon_url',
+        'default_monthly_fee',
+        'default_daily_fee',
+        'default_weekly_fee',
+        'is_fee_enabled',
+        'center_id',
     ];
 
     protected $casts = [
@@ -27,11 +36,17 @@ class Market extends Model
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
         'building_config' => 'json',
+        'is_fee_enabled' => 'boolean',
     ];
 
     public function stalls(): HasMany
     {
         return $this->hasMany(Stall::class);
+    }
+
+    public function occupiedStalls(): HasMany
+    {
+        return $this->hasMany(Stall::class)->where('status', 'occupied');
     }
 
     public function traders(): HasMany
@@ -47,5 +62,15 @@ class Market extends Model
     public function complaints(): HasMany
     {
         return $this->hasMany(Complaint::class);
+    }
+
+    public function center(): BelongsTo
+    {
+        return $this->belongsTo(Center::class);
+    }
+
+    public function region(): HasOneThrough
+    {
+        return $this->hasOneThrough(Region::class, Center::class, 'id', 'id', 'center_id', 'region_id');
     }
 }

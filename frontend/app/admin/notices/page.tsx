@@ -25,11 +25,13 @@ import { useUIStore } from '@/store/uiStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import NoticeSheet from '@/components/admin/NoticeSheet';
 
 export default function AdminNoticesPage() {
     const { setPageTitle } = useUIStore();
     const [typeFilter, setTypeFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
 
     React.useEffect(() => {
         setPageTitle('Broadcast Center');
@@ -185,9 +187,14 @@ export default function AdminNoticesPage() {
             </div>
 
             {/* ── Fast Broadcast Adder ── */}
-            <button className="fixed bottom-24 right-4 w-14 h-14 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all z-40 border-4 border-white">
+            <button 
+                onClick={() => setIsSheetOpen(true)}
+                className="fixed bottom-24 right-4 w-14 h-14 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all z-40 border-4 border-white"
+            >
                 <Plus size={24} />
             </button>
+
+            <NoticeSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} />
         </div>
     );
 }

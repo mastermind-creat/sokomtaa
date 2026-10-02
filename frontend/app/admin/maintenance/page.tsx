@@ -50,26 +50,31 @@ export default function MaintenancePage() {
     const { data: status, isLoading } = useQuery({
         queryKey: ['system-status'],
         queryFn: async () => {
-            const res = await api.get<never, SystemStatus>('/admin/maintenance/status');
-            return res.data;
+            const res = await api.get<SystemStatus>('/admin/maintenance/status');
+            return res; // api.get already returns response.data
         }
     });
 
     // Mutations for actions
     const runAction = useMutation({
-        mutationFn: async (endpoint: string) => {
+        mutationFn: async (item: { action: string, method?: string }) => {
             setCommandOutput(null);
-            const res = await api.post<never, { message: string; output?: string }>(`/admin/maintenance/${endpoint}`);
-            return res.data;
+            const res = item.method === 'get' 
+                ? await api.get<{ message?: string; output?: string; logs?: string }>(`/admin/maintenance/${item.action}`)
+                : await api.post<{ message?: string; output?: string; logs?: string }>(`/admin/maintenance/${item.action}`);
+            return res;
         },
-        onSuccess: (data) => {
-            toast.success(data.message);
-            if (data.output) setCommandOutput(data.output);
+        onSuccess: (data, variables) => {
+            toast.success(data?.message || 'Action completed');
+            if (data?.output) setCommandOutput(data.output);
+            if (data?.logs) setCommandOutput(data.logs);
             queryClient.invalidateQueries({ queryKey: ['system-status'] });
         },
         onError: (error: any) => {
-            toast.error(error.response?.data?.message || 'Action failed');
-            if (error.response?.data?.message) setCommandOutput(error.response.data.message);
+            // error is response.data because of the interceptor in api.ts
+            const message = error?.message || error?.error || 'Action failed';
+            toast.error(message);
+            setCommandOutput(`ERROR: ${message}`);
         }
     });
 
@@ -120,6 +125,16 @@ export default function MaintenancePage() {
             bgColor: 'bg-rose-50',
             action: 'seed',
             danger: true
+        },
+        {
+            id: 'logs',
+            title: 'System Logs',
+            description: 'View the last 100 lines of the production error log.',
+            icon: Terminal,
+            color: 'text-text-primary',
+            bgColor: 'bg-gray-100',
+            action: 'logs',
+            method: 'get'
         }
     ];
 
@@ -171,7 +186,7 @@ export default function MaintenancePage() {
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => {
                                     if (item.danger && !confirm('Are you sure? This action modifies the database.')) return;
-                                    runAction.mutate(item.action);
+                                    runAction.mutate({ action: item.action, method: item.method });
                                 }}
                                 disabled={runAction.isPending}
                                 className="group text-left bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-brand-900/5 transition-all flex flex-col justify-between h-48 relative overflow-hidden"
@@ -190,9 +205,9 @@ export default function MaintenancePage() {
 
                                 <div className="flex items-center justify-between mt-4">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                                        {runAction.isPending && runAction.variables === item.action ? 'Executing...' : 'Click to execute'}
+                                        {runAction.isPending && (runAction.variables as any)?.action === item.action ? 'Executing...' : 'Click to execute'}
                                     </span>
-                                    {runAction.isPending && runAction.variables === item.action && (
+                                    {runAction.isPending && (runAction.variables as any)?.action === item.action && (
                                         <Loader2 className="w-4 h-4 text-brand-600 animate-spin" />
                                     )}
                                 </div>
@@ -231,17 +246,17 @@ export default function MaintenancePage() {
                         )}
                     </div>
 
-                    <div className="bg-brand-950 text-brand-50 p-6 rounded-[2.5rem] h-[540px] font-mono text-[11px] overflow-y-auto border-4 border-brand-900 shadow-2xl relative">
+                    <div className="bg-[#0A0A0A] text-white p-6 rounded-[2.5rem] h-[540px] font-mono text-[11px] overflow-y-auto border-4 border-gray-900 shadow-2xl relative">
                         {!commandOutput && !runAction.isPending && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-brand-900/40 select-none">
-                                <Terminal size={48} className="mb-4 opacity-10" />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-800 select-none">
+                                <Terminal size={48} className="mb-4 opacity-20" />
                                 <p className="font-black uppercase tracking-widest">Waiting for command...</p>
                             </div>
                         )}
-
+ 
                         {runAction.isPending && (
-                            <div className="flex items-center gap-2 text-brand-400 animate-pulse">
-                                <span className="w-2 h-2 bg-brand-400 rounded-full" />
+                            <div className="flex items-center gap-2 text-green-400 animate-pulse">
+                                <span className="w-2 h-2 bg-green-400 rounded-full" />
                                 <p>Executing command on server...</p>
                             </div>
                         )}
@@ -251,11 +266,12 @@ export default function MaintenancePage() {
                                 <motion.div
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className="whitespace-pre-wrap break-words leading-relaxed"
+                                    className="whitespace-pre-wrap break-words leading-relaxed text-gray-100"
                                 >
-                                    <div className="flex items-center gap-2 mb-4 text-green-400 font-bold border-b border-brand-900 pb-2">
+                                    <div className="flex items-center gap-2 mb-4 text-green-400 font-bold border-b border-gray-800 pb-2">
                                         <CheckCircle2 size={14} /> Output received at {new Date().toLocaleTimeString()}
                                     </div>
+                                    <span className="text-green-500 mr-2">$</span>
                                     {commandOutput}
                                 </motion.div>
                             )}

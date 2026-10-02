@@ -1,186 +1,120 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { motion, Variants } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { useAuthStore } from '@/store/authStore';
-
-interface Market {
-  id: number;
-  name: string;
-  location: string;
-  estate: string;
-  description: string;
-  banner_url: string;
-  icon_url: string;
-  traders_count: number;
-  is_active: boolean;
-}
+import { Market, ApiResponse } from '@/types';
+import { MapPin, ArrowRight, Store, Users, ExternalLink } from 'lucide-react';
 
 export const MarketPreview = () => {
-  const [activeTab, setActiveTab] = useState('all');
-  const [hasHydrated, setHasHydrated] = useState(false);
-  const { isAuthenticated, user } = useAuthStore();
-
-  useEffect(() => {
-    setHasHydrated(true);
-  }, []);
-
-  const { data: response, isLoading, error } = useQuery({
-    queryKey: ['markets'],
+  const { data: response, isLoading } = useQuery<ApiResponse<Market[]>>({
+    queryKey: ['markets-public'],
     queryFn: () => api.get('/markets'),
   });
 
-  const markets = (response as any)?.data || [];
+  const markets = (response?.data || []).slice(0, 3); // Just show top 3 for landing
 
-  const CATEGORIES = [
-    { id: 'all', label: 'All Markets' },
-    { id: 'nairobi', label: 'Nairobi' },
-    { id: 'mombasa', label: 'Mombasa' },
-    { id: 'kisumu', label: 'Kisumu' },
-  ];
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { x: -20, opacity: 0 },
+    visible: { x: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
+  };
+
+  // Don't return null early, so the section header and "Explore All Markets" button are always visible
 
   return (
-    <section id="market-preview" className="py-24 px-6 bg-white">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <p className="text-brand-600 font-black uppercase tracking-widest text-sm mb-4">Discovery</p>
-          <h2 className="font-display text-4xl md:text-5xl font-[1000] text-green-950 tracking-tighter">
-            Available Markets
-          </h2>
-          <p className="mt-4 text-gray-500 font-medium max-w-2xl mx-auto">
-            Explore and enter your neighbourhood market to start shopping from local traders.
-          </p>
-        </div>
+    <section id="markets" className="py-24 px-6 bg-surface-base relative overflow-hidden">
+      {/* Abstract Background Element */}
+      <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-brand-500/5 blur-[100px] rounded-full pointer-events-none" />
 
-        <div className="bg-gray-50 rounded-[40px] border border-gray-100 p-4 md:p-8 shadow-2xl shadow-gray-200/50">
-          <div className="flex flex-col lg:flex-row gap-12">
-            {/* Sidebar / Filters */}
-            <div className="lg:w-64 flex-shrink-0">
-              <div className="sticky top-24 space-y-8">
-                <div>
-                  <h4 className="font-black text-green-950 uppercase tracking-widest text-xs mb-6">Region</h4>
-                  <div className="flex flex-col gap-2">
-                    {CATEGORIES.map(cat => (
-                      <button 
-                        key={cat.id}
-                        onClick={() => setActiveTab(cat.id)}
-                        className={`text-left px-5 py-3 rounded-xl font-bold text-sm transition-all duration-200 ${
-                          activeTab === cat.id 
-                            ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/20 translate-x-1' 
-                            : 'text-gray-500 hover:bg-gray-100'
-                        }`}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+      <div className="max-w-7xl mx-auto relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center mb-16">
+          <div className="lg:col-span-5">
+            <p className="text-brand-600 font-black uppercase tracking-widest text-xs mb-4">Local Neighborhoods</p>
+            <h2 className="font-display text-4xl md:text-5xl font-[1000] text-green-950 tracking-tighter leading-none mb-6">
+              Markets in your <br />
+              <span className="text-brand-600 italic">community</span>
+            </h2>
+            <p className="text-gray-500 font-medium text-lg leading-relaxed mb-8">
+              We&apos;re starting with the heart of our neighborhoods. Find your local market and support traders you know.
+            </p>
+            <Link
+              href="/resident/markets"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-green-950 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-brand-600 transition-all shadow-xl shadow-green-950/20"
+            >
+              Explore All Markets <ArrowRight size={16} />
+            </Link>
+          </div>
 
-                <div className="p-6 bg-brand-50 rounded-2xl border border-brand-100/50">
-                  <div className="font-black text-brand-700 text-xs uppercase tracking-wider mb-2">Platform Stats</div>
-                  <div className="text-2xl font-black text-green-950">{markets?.length || 0} Markets</div>
-                  <div className="text-xs font-bold text-brand-600/60 mt-1">Live and active</div>
-                </div>
+          <div className="lg:col-span-7">
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2].map(i => (
+                  <div key={i} className="h-40 bg-white/50 animate-pulse rounded-[32px] border border-gray-100" />
+                ))}
               </div>
-            </div>
-
-            {/* Markets Grid */}
-            <div className="flex-1">
-              {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="h-80 bg-gray-100 animate-pulse rounded-[32px]" />
-                  ))}
-                </div>
-              ) : error ? (
-                <div className="p-12 text-center bg-red-50 rounded-[32px] border border-red-100">
-                  <p className="font-bold text-red-600">Failed to load markets. Please check if the API is running.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-8">
-                  {markets?.map((market: Market) => (
-                    <div key={market.id} className="group flex flex-col bg-white border border-gray-100 rounded-[40px] overflow-hidden hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500 relative">
-                      <div className="h-56 bg-gray-200 relative overflow-hidden">
-                        {market.banner_url ? (
-                          <div className="relative w-full h-full">
-                            <Image 
-                              src={market.banner_url} 
-                              alt={market.name} 
-                              fill
-                              className="object-cover transition-transform duration-700 group-hover:scale-110" 
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-green-900 to-green-700 flex items-center justify-center">
-                            <span className="text-white font-black text-4xl opacity-20">{market.name.charAt(0)}</span>
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
-                          <div>
-                            <div className="px-3 py-1 bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full mb-2 inline-block">
-                              {market.estate}
-                            </div>
-                            <h3 className="font-display text-2xl font-black text-white tracking-tighter">
-                              {market.name}
-                            </h3>
-                          </div>
-                          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-xl">
-                            {market.icon_url ? (
-                                <div className="relative w-6 h-6">
-                                <Image src={market.icon_url} alt="" fill className="object-contain" />
-                              </div>
-                            ) : (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="p-8">
-                        <p className="text-gray-500 font-medium text-sm leading-relaxed mb-8 h-10 overflow-hidden line-clamp-2">
-                          {market.description}
-                        </p>
-                        
-                        <div className="flex items-center justify-between pt-6 border-t border-gray-50">
-                          <div className="flex items-center gap-2 font-black text-green-950 text-sm italic">
-                            <span className="text-brand-600">{market.traders_count || 0}</span> Verified Traders
-                          </div>
-                          <Link 
-                            href={hasHydrated && isAuthenticated ? `/market/${market.id}` : "/login"} 
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-brand-600 text-white font-black text-sm rounded-xl shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition-all"
-                          >
-                            Enter Market
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* "View All" placeholder card as requested */}
-                  <Link 
-                    href={
-                      hasHydrated && isAuthenticated 
-                        ? (user?.role === 'admin' ? '/admin/dashboard' : user?.role === 'trader' ? '/trader/dashboard' : '/resident/dashboard')
-                        : "/login"
-                    } 
-                    className="group p-8 border-4 border-dashed border-gray-200 rounded-[40px] flex flex-col items-center justify-center text-center hover:border-brand-600 transition-all gap-4 min-h-[400px]"
+            ) : (
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                className="space-y-4"
+              >
+                {markets.length === 0 ? (
+                  <div className="py-12 px-8 bg-white border border-dashed border-gray-200 rounded-[32px] text-center">
+                    <MapPin size={32} className="mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-400 font-bold text-sm uppercase tracking-widest">No preview markets available</p>
+                    <p className="text-gray-300 text-xs mt-1">Check back soon for new community hubs</p>
+                  </div>
+                ) : markets.map((market) => (
+                  <motion.div
+                    key={market.id}
+                    variants={itemVariants}
+                    className="group relative bg-white border border-gray-100 rounded-[32px] p-6 md:p-8 hover:shadow-2xl hover:shadow-brand-500/10 transition-all duration-500"
                   >
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center text-brand-600 shrink-0 group-hover:scale-110 transition-transform">
+                          <Store size={28} />
+                        </div>
+                        <div>
+                          <h3 className="font-display text-2xl font-black text-green-950 tracking-tight group-hover:text-brand-600 transition-colors">
+                            {market.name}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-1 text-gray-500 font-medium">
+                            <MapPin size={14} className="text-brand-400" />
+                            <span className="text-sm">{market.estate}, {market.county}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="hidden md:flex flex-col items-end mr-4">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Status</span>
+                          <span className="flex items-center gap-1.5 text-xs font-bold text-green-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                            Active Market
+                          </span>
+                        </div>
+                        <Link
+                          href={`/market/${market.id}`}
+                          className="flex items-center justify-center w-12 h-12 bg-surface-base rounded-xl text-green-950 hover:bg-brand-600 hover:text-white transition-all group-hover:bg-brand-600 group-hover:text-white"
+                        >
+                          <ExternalLink size={20} />
+                        </Link>
+                      </div>
                     </div>
-                    <div className="font-black text-xl text-green-950">View all {markets?.length || 'available'} markets</div>
-                    <p className="text-sm font-medium text-gray-400">
-                      {isAuthenticated ? "Go to your dashboard to see more" : "Login to browse the full directory of Kenyan markets"}
-                    </p>
-                  </Link>
-                </div>
-              )}
-            </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
           </div>
         </div>
       </div>

@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Reservation;
 use App\Models\Product;
 use App\Services\NotificationService;
+use App\Services\DeliveryService;
 use App\Traits\ApiResponse;
+use App\Models\SystemSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,10 +20,14 @@ class ReservationController extends Controller
     use ApiResponse;
 
     protected $notificationService;
+    protected $deliveryService;
 
-    public function __construct(NotificationService $notificationService)
-    {
+    public function __construct(
+        NotificationService $notificationService,
+        DeliveryService $deliveryService
+    ) {
         $this->notificationService = $notificationService;
+        $this->deliveryService = $deliveryService;
     }
 
     /**
@@ -38,7 +44,7 @@ class ReservationController extends Controller
 
         // Security check: Only the trader who owns the product can update status
         if ($reservation->trader_id !== $user->trader?->id) {
-            return $this->error('Unauthorized. (Huruhusiwi kubadilisha hali ya uhifadhi huu.)', 'UNAUTHORIZED', 403);
+            return $this->error('Unauthorized. You cannot update this reservation.', 'UNAUTHORIZED', 403);
         }
 
         $reservation->update(['status' => $request->status]);
@@ -50,21 +56,166 @@ class ReservationController extends Controller
             $request->status
         );
 
-        return $this->success($reservation, 'Status updated. (Hali ya uhifadhi imesasishwa.)');
+        return $this->success($reservation, 'Reservation status updated successfully.');
     }
 
     /**
-     * List all reservations for the authenticated resident.
+     * List reservations for the authenticated resident, with optional status filter.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = Auth::user();
-        $reservations = Reservation::where('resident_id', $user->id)
+
+        $query = Reservation::where('resident_id', $user->id)
             ->with(['trader', 'product'])
-            ->latest()
-            ->paginate(15);
+            ->latest();
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        $reservations = $query->paginate(15);
 
         return $this->success($reservations);
+    }
+
+    /**
+     * Create multiple reservations at once (Global Cart checkout).
+     * Now supports items from different traders.
+     */
+    public function bulkStore(Request $request): JsonResponse
+    {
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'delivery_option'    => 'nullable|boolean',
+            'delivery_address'   => 'required_if:delivery_option,true|string|max:500',
+            'delivery_mtaa'      => 'required_if:delivery_option,true|string|max:100',
+            'delivery_latitude'  => 'required_if:delivery_option,true|numeric|between:-90,90',
+            'delivery_longitude' => 'required_if:delivery_option,true|numeric|between:-180,180',
+        ]);
+
+        return DB::transaction(function () use ($request) {
+            $user = Auth::user();
+            $totalCartAmount = 0;
+            $createdReservations = [];
+
+            // Preliminary check and total calculation
+            foreach ($request->items as $itemData) {
+                $product = Product::findOrFail($itemData['product_id']);
+                $totalCartAmount += $product->active_price * $itemData['quantity'];
+            }
+
+            $serviceFeeAmount = SystemSetting::get('resident_service_fee', 10.00);
+            $serviceFeeThreshold = SystemSetting::get('service_fee_threshold', 200.00);
+            $applyFee = $totalCartAmount > $serviceFeeThreshold;
+            
+            foreach ($request->items as $index => $itemData) {
+                $product = Product::with('trader')->findOrFail($itemData['product_id']);
+
+                // Availability check
+                if (!$product->is_active || $product->stock_status === 'out_of_stock') {
+                    throw new \Exception("Product {$product->name} is not available.");
+                }
+
+                if ($product->stock_quantity !== null && $product->stock_quantity < $itemData['quantity']) {
+                    throw new \Exception("Insufficient stock for {$product->name}.");
+                }
+
+                // Generate Unique Reservation Code
+                $code = 'SM-' . strtoupper(Str::random(6));
+                while (Reservation::where('reservation_code', $code)->exists()) {
+                    $code = 'SM-' . strtoupper(Str::random(6));
+                }
+
+                // Apply service fee only once to the first item in the whole cart if total > threshold
+                $currentServiceFee = ($index === 0 && $applyFee) ? $serviceFeeAmount : 0.00;
+                $subtotal = $product->active_price * $itemData['quantity'];
+                
+                // Calculate dynamic delivery fee if requested
+                $deliveryFee = 0.00;
+                if ($request->delivery_option) {
+                    $pickupLat = $product->trader->market?->latitude ?? $product->trader->latitude;
+                    $pickupLng = $product->trader->market?->longitude ?? $product->trader->longitude;
+                    
+                    if ($pickupLat && $pickupLng) {
+                        $distance = $this->deliveryService->calculateDistance(
+                            (float) $pickupLat,
+                            (float) $pickupLng,
+                            (float) $request->delivery_latitude,
+                            (float) $request->delivery_longitude
+                        );
+                        $deliveryFee = $this->deliveryService->calculateDeliveryFee($distance, $subtotal);
+                    } else {
+                        // Base default fee if no coordinates, capped by subtotal
+                        $deliveryFee = $this->deliveryService->calculateDeliveryFee(3.0, $subtotal);
+                    }
+                }
+                
+                $totalAmount = $subtotal + $currentServiceFee + $deliveryFee;
+
+                $riderFee = 0;
+                $systemDeliveryFee = 0;
+                if ($deliveryFee > 0) {
+                    $payouts = $this->deliveryService->calculatePayouts($deliveryFee);
+                    $riderFee = $payouts['riderShare'];
+                    $systemDeliveryFee = $payouts['platformCommission'];
+                }
+
+                $reservation = Reservation::create([
+                    'reservation_code' => $code,
+                    'resident_id' => $user->id,
+                    'trader_id' => $product->trader_id,
+                    'product_id' => $product->id,
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $product->active_price,
+                    'service_fee' => $currentServiceFee,
+                    'delivery_option' => (bool) $request->delivery_option,
+                    'delivery_status' => $request->delivery_option ? 'pending_assignment' : null,
+                    'delivery_fee' => $deliveryFee,
+                    'rider_fee' => $riderFee,
+                    'system_delivery_fee' => $systemDeliveryFee,
+                    'delivery_address'    => $request->delivery_option ? $request->delivery_address : null,
+                    'delivery_mtaa'       => $request->delivery_option ? $request->delivery_mtaa : null,
+                    'delivery_latitude'   => $request->delivery_option ? $request->delivery_latitude : null,
+                    'delivery_longitude' => $request->delivery_option ? $request->delivery_longitude : null,
+                    'delivery_image_url' => $request->delivery_option ? $user->default_delivery_image_url : null,
+                    'total_amount' => $totalAmount,
+                    'status' => 'pending',
+                    'pickup_deadline' => now()->addHours(24),
+                ]);
+
+                // Update Stock
+                if ($product->stock_quantity !== null) {
+                    $product->stock_quantity -= $itemData['quantity'];
+                    if ($product->stock_quantity <= 0) {
+                        $product->stock_status = 'out_of_stock';
+                        $product->stock_quantity = 0;
+                    } elseif ($product->stock_quantity <= 5) {
+                        $product->stock_status = 'low';
+                    }
+                    $product->save();
+                }
+
+                $product->increment('total_reservations');
+                
+                // Notify Trader
+                if ($product->trader && $product->trader->user) {
+                    $this->notificationService->send(
+                        $product->trader->user,
+                        'New Reservation',
+                        "New reservation for {$product->name} (Qty: {$itemData['quantity']})",
+                        'reservation',
+                        ['reservation_id' => $reservation->id]
+                    );
+                }
+
+                $createdReservations[] = $reservation->load('product', 'trader');
+            }
+
+            return $this->success($createdReservations, 'Global cart reservations created successfully.', 201);
+        });
     }
 
     /**
@@ -76,17 +227,22 @@ class ReservationController extends Controller
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer|min:1',
             'notes' => 'nullable|string|max:500',
+            'delivery_option'    => 'nullable|boolean',
+            'delivery_address'   => 'required_if:delivery_option,true|string|max:500',
+            'delivery_mtaa'      => 'required_if:delivery_option,true|string|max:100',
+            'delivery_latitude'  => 'required_if:delivery_option,true|numeric|between:-90,90',
+            'delivery_longitude' => 'required_if:delivery_option,true|numeric|between:-180,180',
         ]);
 
         $product = Product::findOrFail($request->product_id);
 
         // 1. Check Product availability
         if (!$product->is_active || $product->stock_status === 'out_of_stock') {
-            return $this->error('Product not currently available. (Bidhaa hii haipatikani kwa sasa.)', 'NOT_AVAILABLE', 422);
+            return $this->error('Product not currently available.', 'NOT_AVAILABLE', 422);
         }
 
         if ($product->stock_quantity !== null && $product->stock_quantity < $request->quantity) {
-            return $this->error('Insufficient stock available. (Bidhaa haitoshi.)', 'INSUFFICIENT_STOCK', 422);
+            return $this->error('Insufficient stock available.', 'INSUFFICIENT_STOCK', 422);
         }
 
         return DB::transaction(function () use ($request, $product) {
@@ -98,9 +254,41 @@ class ReservationController extends Controller
                 $code = 'SM-' . strtoupper(Str::random(6));
             }
 
-            $serviceFee = 10.00; // Resident Convenience Fee
-            $subtotal = $product->price * $request->quantity;
-            $totalAmount = $subtotal + $serviceFee;
+            $serviceFeeAmount = SystemSetting::get('resident_service_fee', 10.00);
+            $serviceFeeThreshold = SystemSetting::get('service_fee_threshold', 200.00);
+            $subtotal = $product->active_price * $request->quantity;
+            
+            $serviceFee = ($subtotal > $serviceFeeThreshold) ? $serviceFeeAmount : 0.00;
+            
+            // Calculate dynamic delivery fee if requested
+            $deliveryFee = 0.00;
+            if ($request->delivery_option) {
+                $product->load('trader.market');
+                $pickupLat = $product->trader->market?->latitude ?? $product->trader->latitude;
+                $pickupLng = $product->trader->market?->longitude ?? $product->trader->longitude;
+                
+                if ($pickupLat && $pickupLng) {
+                    $distance = $this->deliveryService->calculateDistance(
+                        (float) $pickupLat,
+                        (float) $pickupLng,
+                        (float) $request->delivery_latitude,
+                        (float) $request->delivery_longitude
+                    );
+                    $deliveryFee = $this->deliveryService->calculateDeliveryFee($distance);
+                } else {
+                    $deliveryFee = 100.00; // Base default fee
+                }
+            }
+            
+            $totalAmount = $subtotal + $serviceFee + $deliveryFee;
+
+            $riderFee = 0;
+            $systemDeliveryFee = 0;
+            if ($deliveryFee > 0) {
+                $payouts = $this->deliveryService->calculatePayouts($deliveryFee);
+                $riderFee = $payouts['riderShare'];
+                $systemDeliveryFee = $payouts['platformCommission'];
+            }
 
             // 3. Create Reservation
             $reservation = Reservation::create([
@@ -109,8 +297,18 @@ class ReservationController extends Controller
                 'trader_id' => $product->trader_id,
                 'product_id' => $product->id,
                 'quantity' => $request->quantity,
-                'unit_price' => $product->price,
+                'unit_price' => $product->active_price,
                 'service_fee' => $serviceFee,
+                'delivery_option' => (bool) $request->delivery_option,
+                'delivery_status' => $request->delivery_option ? 'pending_assignment' : null,
+                'delivery_fee' => $deliveryFee,
+                'rider_fee' => $riderFee,
+                'system_delivery_fee' => $systemDeliveryFee,
+                'delivery_address'    => $request->delivery_option ? $request->delivery_address : null,
+                'delivery_mtaa'       => $request->delivery_option ? $request->delivery_mtaa : null,
+                'delivery_latitude'   => $request->delivery_option ? $request->delivery_latitude : null,
+                'delivery_longitude' => $request->delivery_option ? $request->delivery_longitude : null,
+                'delivery_image_url' => $request->delivery_option ? $user->default_delivery_image_url : null,
                 'total_amount' => $totalAmount,
                 'status' => 'pending',
                 'notes' => $request->notes,
@@ -134,7 +332,7 @@ class ReservationController extends Controller
             // 5. Update Product Lifetime Reservations
             $product->increment('total_reservations');
 
-            return $this->success($reservation, 'Reservation created successfully. (Bidhaa imehifadhiwa.)', 201);
+            return $this->success($reservation, 'Reservation created successfully.', 201);
         });
     }
 
@@ -146,10 +344,10 @@ class ReservationController extends Controller
         $user = Auth::user();
         
         if ($reservation->resident_id !== $user->id && $reservation->trader_id !== $user->trader?->id) {
-            return $this->error('Unauthorized access. (Huruhusiwi kuona hii.)', 'UNAUTHORIZED', 403);
+            return $this->error('Unauthorized access.', 'UNAUTHORIZED', 403);
         }
 
-        $reservation->load(['trader', 'product', 'resident']);
+        $reservation->load(['trader', 'product', 'resident', 'review', 'rider.riderProfile']);
 
         return $this->success($reservation);
     }
@@ -190,15 +388,40 @@ class ReservationController extends Controller
             return $this->error('Only pending or paid reservations can be cancelled.', 'CANNOT_CANCEL', 422);
         }
 
-        $reservation->update(['status' => 'cancelled']);
+        DB::transaction(function () use ($reservation, $user) {
+            if ($reservation->status === 'paid') {
+                /** @var \App\Models\User $user */
+                $wallet = $user->wallet()->firstOrCreate(
+                    ['user_id' => $user->id],
+                    ['balance' => 0, 'currency' => 'KES']
+                );
 
-        // Restore stock if quantity was tracked
-        if ($reservation->product && $reservation->product->stock_quantity !== null) {
-            $reservation->product->increment('stock_quantity', $reservation->quantity);
-            if ($reservation->product->stock_status === 'out_of_stock') {
-                $reservation->product->update(['stock_status' => 'low']);
+                $refundAmount = $reservation->total_amount;
+                $wallet->balance += $refundAmount;
+                $wallet->save();
+
+                \App\Models\WalletTransaction::create([
+                    'wallet_id' => $wallet->id,
+                    'amount' => $refundAmount,
+                    'type' => 'refund',
+                    'description' => "Refund for cancelled reservation {$reservation->reservation_code}",
+                    'reference_type' => 'reservation',
+                    'reference_id' => $reservation->id,
+                    'status' => 'completed',
+                    'balance_after' => $wallet->balance,
+                ]);
             }
-        }
+
+            $reservation->update(['status' => 'cancelled']);
+
+            // Restore stock if quantity was tracked
+            if ($reservation->product && $reservation->product->stock_quantity !== null) {
+                $reservation->product->increment('stock_quantity', $reservation->quantity);
+                if ($reservation->product->stock_status === 'out_of_stock') {
+                    $reservation->product->update(['stock_status' => 'low']);
+                }
+            }
+        });
 
         return $this->success($reservation, 'Reservation cancelled successfully.');
     }

@@ -19,17 +19,11 @@ import { useMpesa } from '@/hooks/useMpesa';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { ApiResponse, Reservation } from '@/types';
+import { ApiResponse, Reservation, Product } from '@/types';
 import api from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { SystemSetting } from '@/types';
 
-interface Product {
-    id: number;
-    name: string;
-    price: string;
-    unit: string;
-    image_url?: string;
-    category?: { name: string };
-}
 
 interface ReservationFlowProps {
     product: Product;
@@ -59,6 +53,24 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
             setPhoneNumber(user.phone);
         }
     }, [user]);
+
+    // Fetch Settings for Fee Logic (public endpoint — no auth needed)
+    const { data: settings } = useQuery<Record<string, SystemSetting[]>>({
+        queryKey: ['system-settings-public'],
+        queryFn: async () => {
+            const res = await api.get('/settings/public');
+            return res.data.data ?? {};
+        },
+        staleTime: 5 * 60 * 1000, // cache 5 min
+    });
+
+    const feeAmount = parseFloat(settings?.fees?.find(s => s.key === 'resident_service_fee')?.value || '10');
+    const threshold = parseFloat(settings?.fees?.find(s => s.key === 'service_fee_threshold')?.value || '200');
+    
+    const activePrice = Number(product.active_price ?? product.price);
+    const subtotal = activePrice * quantity;
+    const activeFee = subtotal > threshold ? feeAmount : 0;
+    const totalWithFee = subtotal + activeFee;
 
     // Timer for processing step
     useEffect(() => {
@@ -90,7 +102,11 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                 trader_id: traderId
             });
             
-            const reservation = response.data;
+            // The axios interceptor returns response.data, so response IS {success, data, message}
+            const reservation = (response as any).data as Reservation;
+            if (!reservation?.id) {
+                throw new Error('Reservation could not be created. Please try again.');
+            }
             setReservationId(reservation.id);
             setReservationCode(reservation.reservation_code);
             
@@ -161,9 +177,12 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     <h3 className="text-xl font-black text-green-950 leading-tight">{product.name}</h3>
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-xs font-bold text-text-muted">KES</span>
-                                        <span className="text-2xl font-black text-green-950 font-mono">{product.price}</span>
+                                        <span className="text-2xl font-black text-green-950 font-mono">{activePrice}</span>
                                         <span className="text-xs text-text-muted">/{product.unit}</span>
                                     </div>
+                                    {activePrice < Number(product.price) && (
+                                        <p className="text-xs text-gray-400 line-through font-mono">KES {Number(product.price)} original</p>
+                                    )}
                                     <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 rounded-lg w-fit mt-2">
                                         <TrendingUp size={12} className="text-green-600" />
                                         <span className="text-[9px] font-black text-green-700 uppercase">Best Price</span>
@@ -196,7 +215,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                             <div className="space-y-4 pt-4 border-t border-neutral-100">
                                 <div className="flex items-center justify-between px-4">
                                     <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Subtotal</span>
-                                    <span className="text-sm font-black text-green-950 font-mono">KES {parseFloat(product.price) * quantity}</span>
+                                    <span className="text-sm font-black text-green-950 font-mono">KES {activePrice * quantity}</span>
                                 </div>
                                 <div className="flex items-center justify-between px-4">
                                     <div className="flex items-center gap-1.5">
@@ -208,11 +227,13 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                             </div>
                                         </div>
                                     </div>
-                                    <span className="text-sm font-black text-brand-600 font-mono">KES 10.00</span>
+                                    <span className="text-sm font-black text-brand-600 font-mono">
+                                        {activeFee > 0 ? `KES ${activeFee.toFixed(2)}` : 'FREE'}
+                                    </span>
                                 </div>
                                 <div className="flex items-center justify-between px-4 pt-2">
                                     <span className="text-sm font-black text-green-950 uppercase tracking-widest">Total Amount</span>
-                                    <span className="text-2xl font-black text-green-950 font-mono">KES {parseFloat(product.price) * quantity + 10}</span>
+                                    <span className="text-2xl font-black text-green-950 font-mono">KES {totalWithFee.toFixed(2)}</span>
                                 </div>
                                 <button 
                                     onClick={handleNextToPayment}
@@ -250,7 +271,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                         value={phoneNumber}
                                         onChange={(e) => setPhoneNumber(e.target.value)}
                                         className="w-full h-16 pl-14 pr-4 bg-neutral-50 rounded-2xl border-2 border-transparent focus:border-brand-500 focus:bg-white transition-all outline-none font-mono text-lg font-black"
-                                        placeholder="2547XXXXXXXX"
+                                        placeholder="07XXXXXXXX or +254..."
                                     />
                                 </div>
  
@@ -276,7 +297,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 active:scale-95 transition-all"
                                 >
                                     {isPolling ? <Loader2 className="animate-spin" /> : <ShieldCheck size={20} />}
-                                    Confirm Order (Pay KES {parseFloat(product.price) * quantity + 10})
+                                    Confirm Order (Pay KES {totalWithFee.toFixed(2)})
                                 </button>
                                 <button 
                                     onClick={() => setStep('review')}

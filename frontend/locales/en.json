@@ -28,11 +28,15 @@
     "verification": "Verification",
     "available": "Available",
     "low_stock": "Low Stock",
+    "out_of_stock": "Out of Stock",
+    "sold_out": "Sold Out",
     "orders": "Orders",
     "product": "Product",
     "trader": "Trader",
     "market": "Market",
-    "reserve": "Reserve"
+    "reserve": "Reserve",
+    "add_to_cart": "Add to Cart",
+    "watchlist": "Watchlist"
   },
   "home": {
     "greeting": "Hello",
@@ -81,7 +85,7 @@
     "leave_review": "Leave a Review"
   },
   "admin": {
-    "dashboard_title": "County Overview",
+    "dashboard_title": "Dashboard",
     "live_analytics": "Live System Analytics",
     "subtitle": "Real-time performance across all managed markets.",
     "export_report": "Export Report",
@@ -112,6 +116,7 @@
     "fees_payments": "Fees & Payments",
     "store_analytics": "Store Analytics",
     "reviews": "Customer Reviews",
+    "stall_application": "Stall Application",
     "store_mgmt": "Store Management",
     "takwimu_uhifadhi": "Statistics & Storage",
     "discovery": "Discovery",
@@ -153,6 +158,24 @@
     "trader": "Trader",
     "market": "Market"
   },
+  "help": {
+    "title": "Help Center",
+    "how_can_we_help": "How can we help you?",
+    "search_placeholder": "Search for answers...",
+    "categories": {
+      "all": "All",
+      "getting_started": "Getting Started",
+      "orders": "Orders",
+      "payments": "Payments",
+      "rules": "Rules"
+    },
+    "faqs_title": "Frequently Asked Questions",
+    "no_results": "Sorry, we couldn't find an answer to your question.",
+    "show_all": "Show all questions",
+    "contact_title": "Still need help?",
+    "contact_subtitle": "Our support team is ready to assist you.",
+    "contact_button": "CONTACT US NOW"
+  },
   "storefront": {
     "products": "Products",
     "about": "About",
@@ -173,6 +196,28 @@
     "reserve_item": "Reserve Item",
     "call": "Call",
     "default_description": "Welcome to our neighborhood stall. We provide the freshest local produce and high-quality market goods to our community.",
-    "no_products": "No products available at the moment. Please check back later!"
+    "no_products": "No products available at the moment. Please check back later!",
+    "cart_empty": "Cart is Empty",
+    "view_cart": "View Cart"
+  },
+  "dashboard": {
+    "profile_incomplete": "Profile Incomplete",
+    "profile_incomplete_desc": "Please complete your trader profile setup to start selling.",
+    "setup_now": "Setup Now",
+    "stall_pending": "Stall App Pending",
+    "stall_pending_desc": "Your market stall application is currently being reviewed by the county.",
+    "view_status": "View Status",
+    "awaiting_assignment": "Awaiting Assignment",
+    "awaiting_assignment_desc": "Your application is approved! The admin is now assigning your physical stall.",
+    "phone_not_verified": "Phone Not Verified",
+    "phone_not_verified_desc": "Please verify your phone number to access all features.",
+    "verify_now": "Verify Now",
+    "kyc_pending": "KYC Under Audit",
+    "kyc_pending_desc": "Your identity documents are being reviewed by our compliance team.",
+    "kyc_rejected": "KYC Rejected",
+    "kyc_rejected_desc": "Reason: {reason}. Please re-upload.",
+    "fee_overdue": "Market Fee Overdue",
+    "fee_overdue_desc": "Please settle your arrears to avoid penalties.",
+    "pay_now": "Pay Now"
   }
 }

@@ -3,13 +3,13 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { 
-    ShoppingBag, 
-    Clock, 
-    CheckCircle2, 
-    XCircle, 
-    QrCode, 
-    ChevronRight, 
+import {
+    ShoppingBag,
+    Clock,
+    CheckCircle2,
+    XCircle,
+    QrCode,
+    ChevronRight,
     Search,
     Filter,
     ArrowUpRight,
@@ -18,6 +18,7 @@ import {
     Wallet,
     ArrowLeft,
     ChevronDown,
+    Download,
     History as HistoryIcon
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -25,6 +26,7 @@ import DashboardLayout from '@/components/shared/DashboardLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ApiResponse, Reservation } from '@/types';
 import Image from 'next/image';
+import ReceiptModal from '@/components/resident/ReceiptModal';
 
 type StatusFilter = 'all' | 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled';
 
@@ -38,15 +40,45 @@ export default function ResidentReservationsPage() {
         queryFn: () => api.get('/reservations', { params: { status: activeTab !== 'all' ? activeTab : undefined } }).then(res => res.data),
     });
 
+    const [selectedReceipt, setSelectedReceipt] = useState<Reservation | null>(null);
+
+    const handleViewReceipt = (res: Reservation) => {
+        setSelectedReceipt(res);
+    };
+
     const reservations = reservationsData?.data || [];
 
     const filteredReservations = useMemo(() => {
-        let filtered = reservations;
+        let filtered = [...reservations];
+
+        // Sort by professional order: urgent status first, then by date (newest first)
+        const statusPriority: Record<string, number> = {
+            'ready': 1,
+            'paid': 2,
+            'pending': 3,
+            'completed': 4,
+            'cancelled': 5,
+            'expired': 6
+        };
+
+        filtered.sort((a, b) => {
+            const priorityA = statusPriority[a.status] || 99;
+            const priorityB = statusPriority[b.status] || 99;
+
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+
+            const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return timeB - timeA;
+        });
+
         if (searchQuery) {
-            filtered = filtered.filter(r => 
-                r.reservation_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                r.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                r.trader.business_name.toLowerCase().includes(searchQuery.toLowerCase())
+            filtered = filtered.filter(r =>
+                r.reservation_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                r.product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                r.trader?.business_name?.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }
         return filtered;
@@ -56,7 +88,7 @@ export default function ResidentReservationsPage() {
         const active = reservations.filter(r => ['pending', 'paid', 'ready'].includes(r.status)).length;
         const totalSpent = reservations
             .filter(r => ['paid', 'ready', 'completed'].includes(r.status))
-            .reduce((sum, r) => sum + parseFloat(r.total_amount), 0);
+            .reduce((sum, r: any) => sum + parseFloat(String(r.total_amount || 0)), 0);
         return { active, totalSpent };
     }, [reservations]);
 
@@ -84,15 +116,29 @@ export default function ResidentReservationsPage() {
         }
     };
 
+    const groupedReservations = useMemo(() => {
+        const groups: { date: string, items: typeof filteredReservations }[] = [];
+        filteredReservations.forEach(res => {
+            const dateStr = new Date(res.created_at || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            const existingGroup = groups.find(g => g.date === dateStr);
+            if (existingGroup) {
+                existingGroup.items.push(res);
+            } else {
+                groups.push({ date: dateStr, items: [res] });
+            }
+        });
+        return groups;
+    }, [filteredReservations]);
+
     return (
         <DashboardLayout title="My Reservations">
             <div className="max-w-5xl mx-auto space-y-10 pb-32">
-                
+
                 {/* Header Section */}
                 <section className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                            <button 
+                            <button
                                 onClick={() => router.back()}
                                 className="w-10 h-10 bg-white rounded-xl border border-gray-100 flex items-center justify-center text-text-muted hover:text-brand-600 hover:border-brand-100 transition-all shadow-sm"
                             >
@@ -138,9 +184,8 @@ export default function ResidentReservationsPage() {
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
-                                        activeTab === tab ? 'bg-white text-brand-700 shadow-md' : 'text-text-muted hover:text-text-primary'
-                                    }`}
+                                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === tab ? 'bg-white text-brand-700 shadow-md' : 'text-text-muted hover:text-text-primary'
+                                        }`}
                                 >
                                     {tab}
                                 </button>
@@ -149,7 +194,7 @@ export default function ResidentReservationsPage() {
 
                         <div className="relative flex-1 group">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-600 transition-colors" size={20} />
-                            <input 
+                            <input
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full h-14 pl-12 pr-4 bg-neutral-50 rounded-2xl border-2 border-transparent focus:border-brand-500 focus:bg-white transition-all outline-none font-bold text-sm placeholder:text-text-muted shadow-inner focus:shadow-none"
@@ -169,41 +214,65 @@ export default function ResidentReservationsPage() {
                             </div>
                             <p className="text-[10px] font-black text-brand-700 uppercase tracking-[0.4em] animate-pulse">Syncing with Market...</p>
                         </div>
-                    ) : filteredReservations.length > 0 ? (
-                        <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 md:gap-6">
-                            {filteredReservations.map((res, index) => (
-                                <motion.div 
-                                    key={res.id}
-                                    initial={{ y: 20, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    className="bg-white p-2.5 rounded-2xl border border-gray-100 shadow-brand-sm group hover:shadow-lg transition-all cursor-pointer relative overflow-hidden flex flex-col gap-2"
-                                    onClick={() => router.push(`/reservations/${res.id}`)}
-                                >
-                                    <div className="relative">
-                                        <div className="w-full aspect-square bg-neutral-50 rounded-xl overflow-hidden border border-gray-50 relative shadow-inner">
-                                            {res.product?.image_url ? (
-                                                <Image src={res.product.image_url} alt={res.product.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-neutral-200"><ShoppingBag size={20} /></div>
-                                            )}
-                                        </div>
-                                        <div className="absolute top-1.5 left-1.5">
-                                            <span className={`px-2 py-0.5 rounded-md text-[6px] font-black uppercase tracking-wider border shadow-sm ${getStatusStyles(res.status)}`}>
-                                                {getStatusLabel(res.status)}
-                                            </span>
-                                        </div>
+                    ) : groupedReservations.length > 0 ? (
+                        <div className="space-y-10">
+                            {groupedReservations.map(({ date, items }, groupIndex) => (
+                                <div key={date} className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="text-xs font-black text-text-muted uppercase tracking-widest">{date}</h3>
+                                        <div className="h-px bg-gray-100 flex-1" />
                                     </div>
-                                    
-                                    <div className="flex-1 min-w-0 space-y-0.5 px-0.5">
-                                        <div className="flex items-center justify-between gap-1">
-                                            <p className="text-[6px] font-mono font-black text-text-muted">#{res.reservation_code}</p>
-                                            <p className="text-[8px] font-black text-green-950">KES {Math.round(parseFloat(res.total_amount))}</p>
-                                        </div>
-                                        <h4 className="font-black text-green-950 text-[9px] truncate group-hover:text-brand-700 transition-colors uppercase leading-tight">{res.product?.name}</h4>
-                                        <p className="text-[7px] font-bold text-text-secondary truncate">{res.trader?.business_name}</p>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                                        {items.map((res, index) => (
+                                            <motion.div
+                                                key={res.id}
+                                                initial={{ y: 20, opacity: 0 }}
+                                                animate={{ y: 0, opacity: 1 }}
+                                                transition={{ delay: index * 0.05 }}
+                                                className="bg-white p-2.5 rounded-2xl border border-gray-100 shadow-brand-sm group hover:shadow-lg transition-all cursor-pointer relative overflow-hidden flex flex-col gap-2"
+                                                onClick={() => router.push(`/reservations/${res.id}`)}
+                                            >
+                                                <div className="relative">
+                                                    <div className="w-full aspect-square bg-neutral-50 rounded-xl overflow-hidden border border-gray-50 relative shadow-inner">
+                                                        {res.product?.image_url ? (
+                                                            <Image src={res.product.image_url} alt={res.product?.name ?? 'Product'} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-neutral-200"><ShoppingBag size={20} /></div>
+                                                        )}
+                                                    </div>
+                                                    <div className="absolute top-1.5 left-1.5">
+                                                        <span className={`px-2 py-0.5 rounded-md text-[6px] font-black uppercase tracking-wider border shadow-sm ${getStatusStyles(res.status)}`}>
+                                                            {getStatusLabel(res.status)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex-1 min-w-0 space-y-0.5 px-0.5">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <p className="text-[6px] font-mono font-black text-text-muted">#{res.reservation_code}</p>
+                                                        <div className="flex items-center gap-1">
+                                                            {['paid', 'completed', 'ready'].includes(res.status) && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleViewReceipt(res);
+                                                                    }}
+                                                                    className="w-5 h-5 bg-brand-50 text-brand-600 rounded-md flex items-center justify-center hover:bg-brand-600 hover:text-white transition-all shadow-sm"
+                                                                    title="View Receipt"
+                                                                >
+                                                                    <QrCode size={10} />
+                                                                </button>
+                                                            )}
+                                                            <p className="text-[8px] font-black text-green-950">KES {Math.round(typeof res.total_amount === 'number' ? res.total_amount : parseFloat(res.total_amount || '0'))}</p>
+                                                        </div>
+                                                    </div>
+                                                    <h4 className="font-black text-green-950 text-[9px] truncate group-hover:text-brand-700 transition-colors uppercase leading-tight">{res.product?.name}</h4>
+                                                    <p className="text-[7px] font-bold text-text-secondary truncate">{res.trader?.business_name}</p>
+                                                </div>
+                                            </motion.div>
+                                        ))}
                                     </div>
-                                </motion.div>
+                                </div>
                             ))}
                         </div>
                     ) : (
@@ -220,16 +289,25 @@ export default function ResidentReservationsPage() {
                                 <h3 className="text-2xl font-black text-green-950 tracking-tight">No matching reservations</h3>
                                 <p className="text-sm text-text-secondary font-medium px-10 max-w-md mx-auto">Try adjusting your filters or start exploring the market for fresh deals.</p>
                             </div>
-                            <button 
-                                onClick={() => router.push('/')}
-                                className="h-16 px-12 bg-brand-600 text-white rounded-[2rem] text-xs font-black uppercase tracking-[0.25em] shadow-2xl shadow-brand-200 hover:bg-brand-700 active:scale-95 transition-all"
+                            <button
+                                onClick={() => router.push('/resident')}
+                                className="px-10 py-5 bg-brand-600 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-brand-100 flex items-center gap-3 mx-auto"
                             >
-                                Start Shopping
+                                <ShoppingBag size={18} /> Discover Products
                             </button>
                         </div>
                     )}
                 </div>
             </div>
+
+            <AnimatePresence>
+                {selectedReceipt && (
+                    <ReceiptModal
+                        reservation={selectedReceipt}
+                        onClose={() => setSelectedReceipt(null)}
+                    />
+                )}
+            </AnimatePresence>
         </DashboardLayout>
     );
 }

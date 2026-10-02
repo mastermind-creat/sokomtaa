@@ -16,8 +16,8 @@ export const Footer = () => {
   return (
     <footer className="pt-24 pb-12 px-6 bg-white border-t border-gray-100">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-16 mb-20">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-y-10 md:gap-y-16 gap-x-8 mb-20">
+          <div className="col-span-2 lg:col-span-2">
             <Link href="/" className="flex items-center gap-3 mb-8">
               <Logo variant="icon" width={24} height={24} />
               <span className="font-display font-black text-2xl tracking-tighter text-green-950 shrink-0">
@@ -25,7 +25,7 @@ export const Footer = () => {
               </span>
             </Link>
             <p className="max-w-xs text-gray-500 font-medium leading-relaxed mb-8">
-              Connecting traders, residents, and administrators in Kenya&apos;s urban markets. Built with ❤️ for Kisumu County.
+              Connecting traders, residents, and administrators in Kenya&apos;s urban markets. Built with ❤️ for Kenyan Economy and Beyond.
             </p>
             <div className="flex gap-4">
               <span className="px-3 py-1 bg-brand-50 text-brand-700 text-[10px] font-black uppercase tracking-widest rounded-md border border-brand-100/50">M-Pesa API</span>
@@ -34,34 +34,33 @@ export const Footer = () => {
           </div>
 
           {[
-            { 
-              title: "Product", 
+            {
+              title: "Product",
               links: [
                 { label: "How it works", id: "#how-it-works" },
-                { label: "Features", id: "#features" },
                 { label: "Market Preview", id: "#market-preview" }
-              ] 
+              ]
             },
-            { 
-              title: "For Traders", 
+            {
+              title: "For Traders",
               links: [
                 { label: "Register Stall", id: "/register?role=trader" },
                 { label: "Trader Portal", id: "/login" },
                 { label: "Stall Map", id: "#" }
-              ] 
+              ]
             },
-            { 
-              title: "County", 
+            {
+              title: "County",
               links: [
-                { label: "Kolenyo Market", id: "#" },
-                { label: "Kombewa Market", id: "#" },
-                { label: "Akala Market", id: "#" }
-              ] 
+                { label: "Nairobi", id: "#" },
+                { label: "Mombasa", id: "#" },
+                { label: "Kisumu", id: "#" }
+              ]
             }
           ].map((col) => (
-            <div key={col.title}>
-              <h4 className="font-black text-xs uppercase tracking-[0.2em] text-gray-400 mb-8">{col.title}</h4>
-              <ul className="space-y-5">
+            <div key={col.title} className="col-span-1">
+              <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-6">{col.title}</h4>
+              <ul className="space-y-4">
                 {col.links.map(link => (
                   <li key={link.label}>
                     {link.id.startsWith('#') ? (

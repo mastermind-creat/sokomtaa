@@ -11,13 +11,26 @@ import {
     Store,
     RefreshCw,
     MessageSquare,
-    LucideIcon
+    MapPin,
+    FileText,
+    LucideIcon,
+    Loader2
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Logo } from '../shared/Logo';
 import { LanguageToggle } from '../shared/LanguageToggle';
+import { ApiResponse } from '@/types';
+
+interface MenuCounts {
+    reservations: number;
+    low_stock: number;
+    unread_notifications: number;
+}
 
 interface SidebarLinkProps {
     href: string;
@@ -27,23 +40,28 @@ interface SidebarLinkProps {
     count?: number | string;
 }
 
-const SidebarLink = ({ href, icon: Icon, label, active, count }: SidebarLinkProps) => {
+const SidebarLink = ({ href, icon: Icon, label, active, count, isNavigating, onNavigate }: SidebarLinkProps & { isNavigating: boolean; onNavigate: () => void }) => {
     const router = useRouter();
     return (
         <button
-            onClick={() => router.push(href)}
+            onClick={onNavigate}
+            disabled={isNavigating}
             className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group active:scale-[0.98] ${
                 active 
                     ? 'bg-brand-600 text-white shadow-xl shadow-brand-900/20' 
                     : 'text-text-secondary hover:bg-gray-50'
-            }`}
+            } ${isNavigating ? 'opacity-70 cursor-not-allowed' : ''}`}
         >
             <div className="flex items-center gap-4">
-                <Icon 
-                    size={20} 
-                    className={active ? 'text-brand-200' : 'text-gray-400 group-hover:text-brand-600 transition-colors'} 
-                    strokeWidth={active ? 2.5 : 2}
-                />
+                {isNavigating ? (
+                    <Loader2 size={20} className={`animate-spin ${active ? 'text-brand-200' : 'text-brand-600'}`} />
+                ) : (
+                    <Icon 
+                        size={20} 
+                        className={active ? 'text-brand-200' : 'text-gray-400 group-hover:text-brand-600 transition-colors'} 
+                        strokeWidth={active ? 2.5 : 2}
+                    />
+                )}
                 <span className={`text-sm font-bold tracking-tight ${active ? 'text-white' : ''}`}>
                     {label}
                 </span>
@@ -62,14 +80,70 @@ const SidebarLink = ({ href, icon: Icon, label, active, count }: SidebarLinkProp
 export default function TraderSidebar() {
     const router = useRouter();
     const pathname = usePathname();
+    const { logout } = useLogout();
     const { t } = useTranslation();
+    const { user } = useAuthStore();
     const [isOpen, setIsOpen] = React.useState(true);
+    const [mounted, setMounted] = React.useState(false);
+    const [navigatingPath, setNavigatingPath] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    React.useEffect(() => {
+        setNavigatingPath(null);
+    }, [pathname]);
+
+    const handleNavigate = (path: string) => {
+        if (pathname === path) return;
+        setNavigatingPath(path);
+        router.push(path);
+    };
+
+    // Fetch stall application status for badge
+    const { data: stallApp } = useQuery({
+        queryKey: ['stall-application-sidebar'],
+        queryFn: async () => {
+            try {
+                const res = await api.get<never, { data: { status: string } }>('/trader/stall-application');
+                return res.data;
+            } catch { return null; }
+        },
+        enabled: !!user && user.role === 'trader',
+        staleTime: 60_000,
+    });
+
+    // Fetch dynamic menu counts
+    const { data: menuCountsRaw } = useQuery({
+        queryKey: ['trader-menu-counts'],
+        queryFn: async () => {
+            const res = await api.get<never, ApiResponse<MenuCounts>>('/trader/analytics/menu-counts');
+            return res.data;
+        },
+        enabled: !!user && user.role === 'trader',
+        refetchInterval: 60000 // Refetch every minute
+    });
+    const counts = menuCountsRaw;
+
+    const stallBadge = stallApp ? ({
+        pending:    'Pending',
+        approved:   'Approved',
+        waitlisted: 'Waitlisted',
+        rejected:   'Rejected',
+    } as Record<string, string>)[stallApp.status] ?? undefined : undefined;
+
+    const getActiveState = (href: string) => {
+        if (!mounted) return false;
+        if (href === '/trader/products') return pathname.startsWith('/trader/products');
+        return pathname === href;
+    };
 
     return (
         <aside className="hidden lg:flex flex-col w-[280px] h-screen bg-white border-r border-gray-100 sticky top-0 left-0 overflow-y-auto no-scrollbar">
             {/* Logo Area */}
             <div className="p-8 pb-2">
-                <div onClick={() => router.push('/')} className="cursor-pointer">
+                <div onClick={() => handleNavigate('/')} className="cursor-pointer">
                     <Logo variant="light" width={140} />
                 </div>
             </div>
@@ -111,11 +185,11 @@ export default function TraderSidebar() {
             <div className="flex-1 space-y-8 py-6 px-3">
                 {/* Core Dash */}
                 <div>
-                    <p className="px-3 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">Takwimu na Uhifadhi</p>
+                    <p className="px-3 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">{t('sidebar.takwimu_uhifadhi') || 'Statistics & Storage'}</p>
                     <div className="space-y-1">
-                        <SidebarLink href="/trader/dashboard" icon={LayoutDashboard} label={t('nav.dawati')} active={pathname === '/trader/dashboard'} />
-                        <SidebarLink href="/trader/products" icon={Package} label={t('sidebar.products_stock')} active={pathname.startsWith('/trader/products')} />
-                        <SidebarLink href="/trader/reservations" icon={Ticket} label={t('sidebar.order_history')} active={pathname === '/trader/reservations'} count={3} />
+                        <SidebarLink href="/trader/dashboard" icon={LayoutDashboard} label={t('nav.dawati')} active={getActiveState('/trader/dashboard')} isNavigating={navigatingPath === '/trader/dashboard'} onNavigate={() => handleNavigate('/trader/dashboard')} />
+                        <SidebarLink href="/trader/products" icon={Package} label={t('sidebar.products_stock')} active={getActiveState('/trader/products')} count={counts?.low_stock || undefined} isNavigating={navigatingPath === '/trader/products'} onNavigate={() => handleNavigate('/trader/products')} />
+                        <SidebarLink href="/trader/reservations" icon={Ticket} label={t('sidebar.order_history')} active={getActiveState('/trader/reservations')} count={counts?.reservations || undefined} isNavigating={navigatingPath === '/trader/reservations'} onNavigate={() => handleNavigate('/trader/reservations')} />
                     </div>
                 </div>
 
@@ -123,9 +197,11 @@ export default function TraderSidebar() {
                 <div>
                     <p className="px-3 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4">{t('sidebar.store_mgmt')}</p>
                     <div className="space-y-1">
-                        <SidebarLink href="/trader/wallet" icon={CreditCard} label={t('sidebar.my_wallet') || 'Wallet Yangu'} active={pathname === '/trader/wallet'} />
-                        <SidebarLink href="/trader/analytics" icon={BarChart3} label={t('sidebar.store_analytics')} active={pathname === '/trader/analytics'} />
-                        <SidebarLink href="/trader/reviews" icon={MessageSquare} label={t('sidebar.reviews')} active={pathname === '/trader/reviews'} />
+                        <SidebarLink href="/trader/wallet" icon={CreditCard} label={t('sidebar.my_wallet') || 'Wallet Yangu'} active={getActiveState('/trader/wallet')} isNavigating={navigatingPath === '/trader/wallet'} onNavigate={() => handleNavigate('/trader/wallet')} />
+                        <SidebarLink href="/trader/analytics" icon={BarChart3} label={t('sidebar.store_analytics')} active={getActiveState('/trader/analytics')} isNavigating={navigatingPath === '/trader/analytics'} onNavigate={() => handleNavigate('/trader/analytics')} />
+                        <SidebarLink href="/trader/reviews" icon={MessageSquare} label={t('sidebar.reviews')} active={getActiveState('/trader/reviews')} isNavigating={navigatingPath === '/trader/reviews'} onNavigate={() => handleNavigate('/trader/reviews')} />
+                        <SidebarLink href="/trader/reports" icon={FileText} label="Business Reports" active={getActiveState('/trader/reports')} isNavigating={navigatingPath === '/trader/reports'} onNavigate={() => handleNavigate('/trader/reports')} />
+                        <SidebarLink href="/trader/apply-stall" icon={MapPin} label={t('sidebar.stall_application') || 'Stall Application'} active={getActiveState('/trader/apply-stall')} count={stallBadge} isNavigating={navigatingPath === '/trader/apply-stall'} onNavigate={() => handleNavigate('/trader/apply-stall')} />
                     </div>
                 </div>
             </div>
@@ -133,10 +209,15 @@ export default function TraderSidebar() {
             {/* Footer Area */}
             <div className="p-6 space-y-4 border-t border-gray-100">
                 <button 
-                    onClick={() => router.push('/profile')}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl text-text-secondary hover:bg-gray-50 transition-all font-bold text-sm"
+                    onClick={() => handleNavigate('/trader/settings')}
+                    disabled={navigatingPath !== null}
+                    className="w-full flex items-center justify-center gap-4 p-4 rounded-2xl text-text-secondary hover:bg-gray-50 transition-all font-bold text-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                    <Settings size={20} className="text-gray-400" />
+                    {navigatingPath === '/trader/settings' ? (
+                        <Loader2 size={20} className="animate-spin text-brand-600" />
+                    ) : (
+                        <Settings size={20} className="text-gray-400" />
+                    )}
                     {t('common.settings')}
                 </button>
                 
@@ -147,11 +228,7 @@ export default function TraderSidebar() {
                     </div>
                     
                     <button 
-                        onClick={() => {
-                            const { logout } = useAuthStore.getState();
-                            logout();
-                            router.push('/login');
-                        }}
+                        onClick={logout}
                         className="w-full h-12 flex items-center justify-center p-3 rounded-2xl bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-100 active:scale-95 transition-all"
                     >
                         Sign Out

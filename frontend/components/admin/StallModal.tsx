@@ -12,7 +12,8 @@ import {
     Coins, 
     Info, 
     Save, 
-    Loader2 
+    Loader2,
+    AlertCircle 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Stall, Market } from '@/types';
@@ -67,6 +68,8 @@ export const StallModal: React.FC<StallModalProps> = ({
             notes: '',
         }
     });
+
+    const [serverError, setServerError] = React.useState<string | null>(null);
 
     const watchedBlock = watch('block');
     const watchedZone = watch('zone');
@@ -143,9 +146,9 @@ export const StallModal: React.FC<StallModalProps> = ({
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+                    className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[90vh]"
                 >
-                    <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+                    <div className="p-8 border-b border-gray-100 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
                                 <LayoutGrid size={24} />
@@ -167,118 +170,144 @@ export const StallModal: React.FC<StallModalProps> = ({
                         </button>
                     </div>
 
-                    <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* Stall Number */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        Stall Number
-                                    </label>
-                                    <div className="relative">
-                                        <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                        <input 
-                                            {...register('stall_number')}
-                                            placeholder="e.g. A10"
-                                            className={cn(
-                                                "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
-                                                errors.stall_number && "border-red-200 bg-red-50"
-                                            )}
-                                        />
-                                    </div>
-                                    {errors.stall_number && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.stall_number.message}</p>}
+                    <form onSubmit={handleSubmit((data) => {
+                        setServerError(null);
+                        onSubmit(data);
+                    })} className="flex flex-col flex-1 overflow-hidden">
+                        <div className="p-8 space-y-6 overflow-y-auto no-scrollbar flex-1">
+                            {serverError && (
+                                <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 animate-shake">
+                                    <AlertCircle className="text-red-600 shrink-0 mt-0.5" size={16} />
+                                    <p className="text-[10px] font-bold text-red-600 uppercase tracking-tight leading-normal">
+                                        {serverError}
+                                    </p>
                                 </div>
-
-                                {/* Block */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        Building Block
-                                    </label>
-                                    <div className="relative">
-                                        <Map className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                        <input 
-                                            {...register('block')}
-                                            placeholder="e.g. Block C"
-                                            className={cn(
-                                                "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
-                                                errors.block && "border-red-200 bg-red-50"
-                                            )}
-                                        />
-                                    </div>
-                                    {errors.block && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.block.message}</p>}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* Zone Selection */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        Physical Zone
-                                    </label>
-                                    <select 
-                                        {...register('zone')}
-                                        className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none appearance-none cursor-pointer"
-                                    >
-                                        <option value="A">Zone A (Left Wall)</option>
-                                        <option value="B">Zone B (Centre)</option>
-                                        <option value="C">Zone C (Right Wall)</option>
-                                    </select>
-                                </div>
-
-                                {/* Size */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                        Size (SQM)
-                                    </label>
-                                    <input 
-                                        {...register('size_sqm')}
-                                        type="number"
-                                        placeholder="15.5"
-                                        className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Monthly Fee */}
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                    Monthly Rent/Levy (KES)
-                                </label>
-                                <div className="relative">
-                                    <Coins className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                    <input 
-                                        {...register('monthly_fee')}
-                                        type="number"
-                                        placeholder="1500"
-                                        className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Status */}
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
-                                    Operational Status
-                                </label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {['available', 'occupied', 'maintenance'].map((s) => (
-                                        <label key={s} className="relative group cursor-pointer">
-                                            <input 
-                                                type="radio" 
-                                                value={s}
-                                                {...register('status')}
-                                                className="sr-only peer"
-                                            />
-                                            <div className="h-10 flex items-center justify-center bg-gray-50 text-[9px] font-black uppercase tracking-widest rounded-xl border border-transparent peer-checked:bg-white peer-checked:border-brand-300 peer-checked:text-brand-700 transition-all">
-                                                {s}
-                                            </div>
+                            )}
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Stall Number */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                            Stall Number
                                         </label>
-                                    ))}
+                                        <div className="relative">
+                                            <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                            <input 
+                                                {...register('stall_number')}
+                                                placeholder="e.g. A10"
+                                                className={cn(
+                                                    "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
+                                                    errors.stall_number && "border-red-200 bg-red-50"
+                                                )}
+                                            />
+                                        </div>
+                                        {errors.stall_number && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.stall_number.message}</p>}
+                                    </div>
+
+                                    {/* Block */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                            Building Block
+                                        </label>
+                                        <div className="relative">
+                                            <Map className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                            <input 
+                                                {...register('block')}
+                                                placeholder="e.g. Block C"
+                                                className={cn(
+                                                    "w-full h-12 pl-11 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none",
+                                                    errors.block && "border-red-200 bg-red-50"
+                                                )}
+                                            />
+                                        </div>
+                                        {errors.block && <p className="text-[10px] font-bold text-red-600 ml-1">{errors.block.message}</p>}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Zone Selection */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                            Physical Zone
+                                        </label>
+                                        <select 
+                                            {...register('zone')}
+                                            className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none appearance-none cursor-pointer"
+                                        >
+                                            <option value="A">Zone A (Left Wall)</option>
+                                            <option value="B">Zone B (Centre)</option>
+                                            <option value="C">Zone C (Right Wall)</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Size */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                            Size (SQM)
+                                        </label>
+                                        <input 
+                                            {...register('size_sqm')}
+                                            type="number"
+                                            placeholder="15.5"
+                                            className="w-full h-12 px-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Monthly Rent */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                        Monthly Rent/Levy (KES)
+                                    </label>
+                                    <div className="relative">
+                                        <Coins className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                        <input 
+                                            {...register('monthly_fee')}
+                                            type="number"
+                                            placeholder="1500"
+                                            className="w-full h-12 pl-12 pr-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Status */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                        Operational Status
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['available', 'occupied', 'maintenance'].map((s) => (
+                                            <label key={s} className="relative group cursor-pointer">
+                                                <input 
+                                                    type="radio" 
+                                                    value={s}
+                                                    {...register('status')}
+                                                    className="sr-only peer"
+                                                />
+                                                <div className="h-10 flex items-center justify-center bg-gray-50 text-[9px] font-black uppercase tracking-widest rounded-xl border border-transparent peer-checked:bg-white peer-checked:border-brand-300 peer-checked:text-brand-700 transition-all">
+                                                    {s}
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Notes */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-green-950 uppercase tracking-widest ml-1">
+                                        Notes / Maintenance Details
+                                    </label>
+                                    <textarea 
+                                        {...register('notes')}
+                                        placeholder="Add any specific details about this unit..."
+                                        rows={3}
+                                        className="w-full p-4 bg-gray-50 border border-transparent rounded-xl text-sm font-bold focus:bg-white focus:border-brand-200 transition-all outline-none resize-none"
+                                    />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex gap-3 pt-4">
+                        <div className="p-8 border-t border-gray-100 flex gap-3 shrink-0">
                             <button
                                 type="button"
                                 onClick={onClose}
@@ -301,6 +330,7 @@ export const StallModal: React.FC<StallModalProps> = ({
                         </div>
                     </form>
                 </motion.div>
+
             </div>
         </AnimatePresence>
     );

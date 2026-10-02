@@ -14,6 +14,8 @@ class WalletTransaction extends Model
         'wallet_id',
         'amount',
         'type',
+        'status',
+        'balance_after',
         'description',
         'reference_type',
         'reference_id',
@@ -21,8 +23,9 @@ class WalletTransaction extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
-        'metadata' => 'json',
+        'amount'        => 'decimal:2',
+        'balance_after' => 'decimal:2',
+        'metadata'      => 'json',
     ];
 
     public function wallet(): BelongsTo

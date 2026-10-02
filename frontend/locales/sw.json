@@ -28,10 +28,13 @@
     "verification": "Uhakiki",
     "available": "Inapatikana",
     "low_stock": "Iko Kidogo",
+    "out_of_stock": "Imeisha",
+    "sold_out": "Imeuzwa Yote",
     "orders": "Oda",
     "product": "Bidhaa",
     "trader": "Mfanyabiashara",
-    "market": "Soko"
+    "market": "Soko",
+    "add_to_cart": "Weka Kikapuni"
   },
   "home": {
     "greeting": "Hujambo",
@@ -51,7 +54,7 @@
     "dawati": "Dawati"
   },
   "trader": {
-    "dashboard_title": "Dawati la Biashara",
+    "dashboard_title": "Dashibodi",
     "dashboard_subtitle": "Takwimu za Biashara",
     "my_stall": "Kibanda Changu",
     "manage_products": "Dhibiti Bidhaa",
@@ -110,6 +113,7 @@
     "fees_payments": "Ada na Malipo",
     "store_analytics": "Takwimu za Duka",
     "reviews": "Maoni ya Wateja",
+    "stall_application": "Maombi ya Kibanda",
     "discovery": "Gundua",
     "find_traders": "Tafuta Wafanyabiashara",
     "explore_markets": "Chunguza Masoko",
@@ -185,6 +189,28 @@
     "customer_reviews": "Maoni ya Wateja",
     "no_reviews": "Hakuna maoni bado",
     "reserve_item": "Hifadhi Bidhaa",
-    "call": "Piga Simu"
+    "call": "Piga Simu",
+    "cart_empty": "Kikapu Kiko Wazi",
+    "view_cart": "Fungua Kikapu"
+  },
+  "dashboard": {
+    "profile_incomplete": "Wasifu Haijakamilika",
+    "profile_incomplete_desc": "Tafadhali kamilisha wasifu wako ili kuanza kuuza.",
+    "setup_now": "Kamilisha Sasa",
+    "stall_pending": "Ombi la Kibanda Linasubiri",
+    "stall_pending_desc": "Ombi lako la kibanda linapitiwa na uongozi wa kaunti.",
+    "view_status": "Angalia Hali",
+    "awaiting_assignment": "Inasubiri Ugawaji",
+    "awaiting_assignment_desc": "Ombi lako limekubaliwa! Uongozi sasa unakugawia kibanda chako.",
+    "phone_not_verified": "Simu Haijahakikiwa",
+    "phone_not_verified_desc": "Tafadhali hakiki namba yako ya simu.",
+    "verify_now": "Hakiki Sasa",
+    "kyc_pending": "Uhakiki wa Nyaraka",
+    "kyc_pending_desc": "Nyaraka zako zinapitiwa na timu ya uhakiki.",
+    "kyc_rejected": "Uhakiki Umekataliwa",
+    "kyc_rejected_desc": "Sababu: {reason}. Tafadhali pakia tena.",
+    "fee_overdue": "Ada ya Soko Imechelewa",
+    "fee_overdue_desc": "Tafadhali lipa malimbikizo ili kuepuka faini.",
+    "pay_now": "Lipa Sasa"
   }
 }

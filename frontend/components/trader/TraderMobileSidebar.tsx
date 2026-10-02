@@ -13,11 +13,17 @@ import {
     Store,
     RefreshCw,
     MessageSquare,
-    LogOut
+    MapPin,
+    LogOut,
+    FileText,
+    Loader2
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Logo } from '../shared/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -31,12 +37,38 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
     const router = useRouter();
     const pathname = usePathname();
     const { t } = useTranslation();
-    const { logout } = useAuthStore();
+    const { logout } = useLogout();
+    const { user } = useAuthStore();
     const [isStoreOpen, setIsStoreOpen] = React.useState(true);
+    const [isNavigating, setIsNavigating] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        setIsNavigating(null);
+    }, [pathname]);
+
+    // Fetch stall application status for badge
+    const { data: stallApp } = useQuery({
+        queryKey: ['stall-application-sidebar'],
+        queryFn: async () => {
+            try {
+                const res = await api.get<never, { data: { status: string } }>('/trader/stall-application');
+                return res.data;
+            } catch { return null; }
+        },
+        enabled: !!user && user.role === 'trader',
+        staleTime: 60_000,
+    });
+
+    const stallBadge: Record<string, string> = {
+        pending:    'Pending',
+        approved:   'Approved',
+        waitlisted: 'Waitlisted',
+        rejected:   'Rejected',
+    };
 
     const menuSections = [
         {
-            title: 'Takwimu na Uhifadhi',
+            title: t('sidebar.takwimu_uhifadhi') || 'Statistics & Storage',
             items: [
                 { icon: LayoutDashboard, label: t('nav.dawati'), path: '/trader/dashboard' },
                 { icon: Package, label: t('sidebar.products_stock'), path: '/trader/products' },
@@ -49,14 +81,20 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
                 { icon: CreditCard, label: t('sidebar.my_wallet') || 'Wallet Yangu', path: '/trader/wallet' },
                 { icon: BarChart3, label: t('sidebar.store_analytics'), path: '/trader/analytics' },
                 { icon: MessageSquare, label: t('sidebar.reviews'), path: '/trader/reviews' },
-                { icon: Settings, label: t('common.settings'), path: '/profile' },
+                { icon: FileText, label: 'Business Reports', path: '/trader/reports' },
+                { icon: MapPin, label: stallApp ? `${t('sidebar.stall_application') || 'Stall App'} (${stallBadge[stallApp.status] ?? ''})` : (t('sidebar.stall_application') || 'Stall Application'), path: '/trader/apply-stall' },
+                { icon: Settings, label: t('common.settings'), path: '/trader/settings' },
             ]
         }
     ];
 
     const handleNavigate = (path: string) => {
+        if (pathname === path) {
+            onClose();
+            return;
+        }
+        setIsNavigating(path);
         router.push(path);
-        onClose();
     };
 
     return (
@@ -130,7 +168,7 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
                                     <div className="space-y-1">
                                         {section.items.map((item) => {
                                             // Handle exact match for dashboard, startsWith for others
-                                            const isActive = item.path === '/trader/dashboard' || item.path === '/profile' 
+                                            const isActive = item.path === '/trader/dashboard' || item.path === '/trader/settings' 
                                                 ? pathname === item.path 
                                                 : pathname.startsWith(item.path);
                                             
@@ -138,13 +176,18 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
                                                 <button
                                                     key={item.path}
                                                     onClick={() => handleNavigate(item.path)}
+                                                    disabled={isNavigating !== null}
                                                     className={`w-full flex items-center gap-4 p-3.5 rounded-2xl transition-all ${
                                                         isActive 
                                                             ? 'bg-brand-600 text-white shadow-lg shadow-brand-900/20' 
                                                             : 'text-text-secondary active:bg-gray-50'
-                                                    }`}
+                                                    } ${isNavigating === item.path ? 'opacity-70 cursor-not-allowed' : ''}`}
                                                 >
-                                                    <item.icon size={18} className={isActive ? 'text-brand-200' : 'text-gray-400'} />
+                                                    {isNavigating === item.path ? (
+                                                        <Loader2 size={18} className={`animate-spin ${isActive ? 'text-brand-200' : 'text-brand-600'}`} />
+                                                    ) : (
+                                                        <item.icon size={18} className={isActive ? 'text-brand-200' : 'text-gray-400'} />
+                                                    )}
                                                     <span className={`text-sm font-bold tracking-tight ${isActive ? 'text-white' : ''}`}>
                                                         {item.label}
                                                     </span>
@@ -159,10 +202,7 @@ export default function TraderMobileSidebar({ isOpen, onClose }: TraderMobileSid
 
                         <div className="p-4 border-t border-gray-100 bg-gray-50/50">
                              <button 
-                                onClick={() => {
-                                    logout();
-                                    router.push('/login');
-                                }}
+                                onClick={logout}
                                 className="w-full h-12 flex items-center justify-center gap-3 p-3 rounded-2xl text-rose-600 bg-white border border-rose-100 shadow-sm font-black text-[10px] uppercase tracking-[0.2em] transition-all active:scale-95 hover:bg-rose-50"
                              >
                                 <LogOut size={16} /> Sign Out

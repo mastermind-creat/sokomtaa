@@ -3,11 +3,16 @@ export interface User {
     name: string;
     phone: string;
     email?: string;
-    role: 'trader' | 'resident' | 'admin';
+    role: 'trader' | 'resident' | 'admin' | 'delivery';
     preferred_language: string;
     phone_verified: boolean;
     avatar_url?: string;
     national_id?: string;
+    default_delivery_address?: string;
+    default_delivery_mtaa?: string;
+    default_delivery_image_url?: string;
+    default_delivery_latitude?: number | string;
+    default_delivery_longitude?: number | string;
     trader?: Trader;
 }
 
@@ -37,11 +42,24 @@ export interface TraderDashboardStats {
     low_stock_items: number;
     out_of_stock_items: number;
     profile_views: number;
+    growth: string;
 }
 
 export interface RevenueTrend {
     date: string;
     total: number;
+}
+
+export interface RevenueSummary {
+    peak_revenue: number;
+    average_daily: number;
+    total_period: number;
+    forecasted_growth: number;
+}
+
+export interface RevenueTrendsResponse {
+    trends: RevenueTrend[];
+    summary: RevenueSummary;
 }
 
 export interface AnalyticsProduct {
@@ -69,6 +87,19 @@ export interface Market {
     latitude: string | null;
     longitude: string | null;
     is_active: boolean;
+    default_monthly_fee: number;
+    default_daily_fee: number;
+    default_weekly_fee: number;
+    is_fee_enabled: boolean;
+    banner_url?: string | null;
+    icon_url?: string | null;
+    stalls_count?: number;
+    occupied_stalls_count?: number;
+    active_stalls_count?: number;
+    traders_count?: number;
+    center_id?: number | null;
+    center?: Center;
+    region?: Region;
 }
 
 export interface Notice {
@@ -96,6 +127,8 @@ export interface Stall {
     map_y: number | null;
     status: 'available' | 'occupied' | 'maintenance';
     monthly_fee: number;
+    daily_fee: number;
+    weekly_fee: number;
     market?: Market;
     current_trader?: Trader;
 }
@@ -111,7 +144,14 @@ export interface Trader {
     mpesa_number?: string | null;
     permit_number?: string | null;
     permit_image_url?: string | null;
-    verification_status: 'pending' | 'verified' | 'rejected';
+    verification_status: 'unverified' | 'pending' | 'verified' | 'rejected';
+    rejection_reason?: string | null;
+    stall_type: 'managed' | 'independent';
+    latitude: number | null;
+    longitude: number | null;
+    id_front_url?: string | null;
+    id_back_url?: string | null;
+    selfie_url?: string | null;
     avatar_url?: string | null;
     banner_url?: string | null;
     is_open: boolean;
@@ -120,6 +160,8 @@ export interface Trader {
     average_rating: number;
     total_reviews: number;
     profile_views: number;
+    is_currently_open?: boolean;
+    products_count?: number;
     user?: User;
     stall?: Stall;
     market?: Market;
@@ -134,11 +176,16 @@ export interface Product {
     name_sw?: string | null;
     description?: string | null;
     price: number;
+    discount_price?: number | null;
+    discount_start_date?: string | null;
+    discount_end_date?: string | null;
+    active_price?: number | null;     // server-computed, always prefer this
     unit: string;
     stock_status: 'available' | 'low' | 'out_of_stock';
     stock_quantity: number | null;
     image_url?: string | null;
     is_active: boolean;
+    is_boosted?: boolean;
     total_reservations: number;
     category?: Category;
     trader?: Trader;
@@ -167,6 +214,15 @@ export interface Reservation {
     service_fee: string | number;
     total_amount: string | number;
     status: 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled' | 'expired';
+    delivery_option?: boolean;
+    delivery_status?: string | null;
+    delivery_mtaa?: string | null;
+    delivery_address?: string | null;
+    delivery_latitude?: number | string | null;
+    delivery_longitude?: number | string | null;
+    delivery_fee?: string | number | null;
+    rider_fee?: string | number | null;
+    delivery_rider_id?: number | null;
     notes?: string | null;
     pickup_deadline?: string | null;
     picked_up_at?: string | null;
@@ -225,3 +281,62 @@ export interface Allocation {
 
 
 
+export interface SystemSetting {
+    id: number;
+    key: string;
+    value: string;
+    group: string;
+    type: 'string' | 'integer' | 'decimal' | 'boolean';
+    label: string;
+    description: string;
+}
+export interface Region {
+    id: number;
+    name: string;
+    description?: string | null;
+    is_active: boolean;
+    counties_count?: number;
+    centers_count?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface County {
+    id: number;
+    region_id: number;
+    name: string;
+    description?: string | null;
+    is_active: boolean;
+    region?: Region;
+    centers_count?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Center {
+    id: number;
+    county_id: number;
+    region_id: number;
+    name: string;
+    description?: string | null;
+    is_active: boolean;
+    county?: County;
+    region?: Region;
+    markets_count?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Report {
+    id: number;
+    user_id: number;
+    title: string;
+    type: 'sales' | 'revenue' | 'receipt' | 'audit' | 'activity';
+    format: 'pdf' | 'xlsx' | 'csv';
+    file_path: string | null;
+    parameters: any;
+    status: 'pending' | 'completed' | 'failed';
+    metadata: any;
+    generated_at: string | null;
+    created_at: string;
+}

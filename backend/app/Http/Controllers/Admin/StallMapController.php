@@ -15,10 +15,16 @@ class StallMapController extends Controller
     public function getMapData(Request $request): JsonResponse
     {
         $block = $request->query('block', 'A');
+        $marketId = $request->query('market_id');
 
-        $stalls = Stall::with(['trader', 'trader.user'])
-            ->where('block', $block)
-            ->get();
+        $query = Stall::with(['trader', 'trader.user'])
+            ->where('block', $block);
+
+        if ($marketId) {
+            $query->where('market_id', $marketId);
+        }
+
+        $stalls = $query->get();
 
         return response()->json([
             'success' => true,

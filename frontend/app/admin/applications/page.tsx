@@ -35,6 +35,7 @@ export default function AdminApplicationsPage() {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [filterStatus, setFilterStatus] = useState<string>('pending');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedStallId, setSelectedStallId] = useState<number | null>(null);
 
     const { data: stats } = useQuery<ApiResponse<any>>({
         queryKey: ['admin-applications-stats'],
@@ -49,6 +50,21 @@ export default function AdminApplicationsPage() {
     const applications: any[] = appsData?.data?.data || [];
     const selectedApp = applications.find(a => a.id === selectedId);
 
+    // Reset selectedStallId when selectedId changes
+    React.useEffect(() => {
+        if (selectedApp) {
+            setSelectedStallId(selectedApp.preferred_stall_id || null);
+        }
+    }, [selectedId, selectedApp]);
+
+    const { data: stallsData } = useQuery<ApiResponse<any[]>>({
+        queryKey: ['available-stalls', selectedApp?.market_id],
+        queryFn: () => api.get('/admin/stalls', { params: { market_id: selectedApp?.market_id, status: 'available' } }),
+        enabled: !!selectedApp?.market_id,
+    });
+
+    const availableStalls = stallsData?.data || [];
+
     const reviewMutation = useMutation({
         mutationFn: ({ id, status, notes, stallId }: { id: number, status: string, notes: string, stallId?: number }) => 
             api.post(`/admin/applications/${id}/action`, { status, notes, stall_id: stallId }),
@@ -56,6 +72,7 @@ export default function AdminApplicationsPage() {
             queryClient.invalidateQueries({ queryKey: ['admin-applications'] });
             queryClient.invalidateQueries({ queryKey: ['admin-applications-stats'] });
             setSelectedId(null);
+            setSelectedStallId(null);
         }
     });
 
@@ -65,7 +82,7 @@ export default function AdminApplicationsPage() {
             id: selectedId,
             status,
             notes: status === 'approved' ? 'Stall allocated successfully.' : 'Does not meet requirements.',
-            stallId: selectedApp?.preferred_stall_id || undefined
+            stallId: status === 'approved' ? (selectedStallId || undefined) : undefined
         });
     };
 
@@ -137,16 +154,28 @@ export default function AdminApplicationsPage() {
                                             <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest">
                                                 By {app.trader.user.name}
                                             </p>
+                                            <div className="flex items-center gap-1 mt-1 text-text-secondary">
+                                                <MapPin size={10} />
+                                                <span className="text-[10px] font-bold uppercase tracking-widest">{app.market?.name}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex flex-col items-end">
-                                            {app.preferred_stall ? (
-                                                <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[9px] font-black uppercase tracking-widest">
-                                                    Stall {app.preferred_stall.stall_number}
-                                                </span>
-                                            ) : (
-                                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[9px] font-black uppercase tracking-widest">
-                                                    {app.preferred_zone || 'Any'}
-                                                </span>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest",
+                                                app.stall_type === 'managed' ? "bg-purple-50 text-purple-700" : "bg-blue-50 text-blue-700"
+                                            )}>
+                                                {app.stall_type}
+                                            </span>
+                                            {app.stall_type === 'managed' && (
+                                                app.preferred_stall ? (
+                                                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[9px] font-black uppercase tracking-widest">
+                                                        Stall {app.preferred_stall.stall_number}
+                                                    </span>
+                                                ) : (
+                                                    <span className="px-2 py-0.5 bg-gray-50 text-gray-700 rounded-full text-[9px] font-black uppercase tracking-widest">
+                                                        {app.preferred_zone || 'Any'} Zone
+                                                    </span>
+                                                )
                                             )}
                                         </div>
                                     </div>
@@ -212,6 +241,10 @@ export default function AdminApplicationsPage() {
                                                     <Phone size={14} className="text-brand-600" />
                                                     <span className="text-sm font-bold text-text-secondary">{selectedApp.trader.user.phone}</span>
                                                 </div>
+                                                <div className="flex items-center gap-3">
+                                                    <MapPin size={14} className="text-brand-600" />
+                                                    <span className="text-sm font-bold text-text-secondary">Applying at: {selectedApp.market?.name}</span>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -221,6 +254,46 @@ export default function AdminApplicationsPage() {
                                                 "{selectedApp.motivation}"
                                             </div>
                                         </div>
+
+                                        {/* Stall Selection - Only for Managed Stalls */}
+                                        {selectedApp.stall_type === 'managed' ? (
+                                            <div className="space-y-3">
+                                                <p className="text-[9px] font-black text-text-muted uppercase tracking-widest">Allocate Stall</p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {availableStalls.length > 0 ? (
+                                                        availableStalls.map((stall: any) => (
+                                                            <button
+                                                                key={stall.id}
+                                                                onClick={() => setSelectedStallId(stall.id)}
+                                                                className={cn(
+                                                                    "p-4 rounded-2xl border text-left transition-all",
+                                                                    selectedStallId === stall.id 
+                                                                        ? "border-brand-600 bg-brand-50 shadow-sm" 
+                                                                        : "border-gray-100 bg-white hover:border-gray-200"
+                                                                )}
+                                                            >
+                                                                <div className="text-xs font-black text-green-950 uppercase tracking-tight">Stall {stall.stall_number}</div>
+                                                                <div className="text-[9px] font-bold text-text-muted uppercase tracking-widest mt-1">Zone {stall.zone} • {stall.block}</div>
+                                                            </button>
+                                                        ))
+                                                    ) : (
+                                                        <div className="col-span-2 p-5 bg-amber-50 text-amber-700 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center border border-amber-100">
+                                                            No available stalls in this market.
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="p-5 bg-blue-50 border border-blue-100 rounded-3xl">
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    <Zap size={16} className="text-blue-600" />
+                                                    <span className="text-[10px] font-black text-blue-800 uppercase tracking-widest">Independent Trader</span>
+                                                </div>
+                                                <p className="text-[10px] font-medium text-blue-700 leading-relaxed">
+                                                    This trader operates outside the main building. No physical stall allocation is required. Approval will grant them system access as an independent trader.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -238,7 +311,7 @@ export default function AdminApplicationsPage() {
                                         className="flex-[2] h-14 bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-brand-900/10 flex items-center justify-center gap-2"
                                     >
                                         {reviewMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} />}
-                                        Approve & Allocate
+                                        {selectedApp.stall_type === 'managed' ? 'Approve & Allocate' : 'Approve Application'}
                                     </button>
                                 </div>
                             </motion.div>

@@ -12,9 +12,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('payments', function (Blueprint $table) {
-            DB::statement("ALTER TABLE payments MODIFY COLUMN type ENUM('reservation', 'market_fee', 'wallet_topup') NOT NULL");
-        });
+        if (DB::getDriverName() !== 'sqlite') {
+            Schema::table('payments', function (Blueprint $table) {
+                DB::statement("ALTER TABLE payments MODIFY COLUMN type ENUM('reservation', 'market_fee', 'wallet_topup') NOT NULL");
+            });
+        }
     }
 
     /**

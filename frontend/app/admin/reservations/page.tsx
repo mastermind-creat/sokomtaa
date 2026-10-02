@@ -4,13 +4,13 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    Search, 
-    Filter, 
-    ShoppingBag, 
-    Clock, 
-    CheckCircle2, 
-    AlertCircle, 
+import {
+    Search,
+    Filter,
+    ShoppingBag,
+    Clock,
+    CheckCircle2,
+    AlertCircle,
     User,
     Store,
     ArrowRight,
@@ -20,7 +20,8 @@ import {
     Activity,
     ShieldCheck,
     CreditCard,
-    MoreHorizontal
+    MoreHorizontal,
+    RefreshCcw
 } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
 import { cn } from '@/lib/utils';
@@ -37,16 +38,49 @@ export default function AdminReservationsPage() {
 
     const { data: reservationsRaw, isLoading } = useQuery({
         queryKey: ['admin-reservations', statusFilter],
-        queryFn: () => api.get('/admin/reservations', { params: { status: statusFilter } }).catch(() => ({ data: { data: [] } })),
+        queryFn: () => api.get('/admin/reservations', { params: { status: statusFilter } }).then(res => res.data),
     });
 
-    const reservations = (reservationsRaw as any)?.data?.data || [];
+    const { data: statsData, isLoading: statsLoading } = useQuery({
+        queryKey: ['admin-reservations-stats'],
+        queryFn: () => api.get('/admin/reservations/stats').then(res => res.data.data),
+    });
+
+    const reservations = (reservationsRaw as any)?.data || [];
 
     const stats = [
-        { label: 'Active Rev', value: 'KES 42.5K', color: 'text-brand-600', icon: Activity },
-        { label: 'Pickup Ready', value: '18 Orders', color: 'text-orange-600', icon: Package },
-        { label: 'Integrity', value: '98.5%', color: 'text-blue-600', icon: ShieldCheck },
+        {
+            label: 'Active Rev',
+            value: `KES ${(Number(statsData?.active_rev || 0) / 1000).toFixed(1)}K`,
+            color: 'text-brand-600',
+            icon: Activity
+        },
+        {
+            label: 'Pickup Ready',
+            value: `${statsData?.pickup_ready || 0} Orders`,
+            color: 'text-orange-600',
+            icon: Package
+        },
+        {
+            label: 'Integrity',
+            value: `${statsData?.integrity || 100}%`,
+            color: 'text-blue-600',
+            icon: ShieldCheck
+        },
     ];
+
+    const [isPropagating, setIsPropagating] = useState(false);
+    const handlePropagateReport = async () => {
+        setIsPropagating(true);
+        try {
+            await api.post('/admin/reservations/propagate-report');
+            alert('Revenue report propagated successfully to all stakeholders!');
+        } catch (error) {
+            console.error('Propagation failed', error);
+        } finally {
+            setIsPropagating(false);
+        }
+    };
 
     const getStatusStyles = (status: string) => {
         switch (status) {
@@ -54,7 +88,7 @@ export default function AdminReservationsPage() {
             case 'completed': return 'bg-green-50 text-green-700 border-green-100 shadow-green-500/10';
             case 'pending': return 'bg-amber-50 text-amber-700 border-amber-100 shadow-amber-500/10';
             case 'paid': return 'bg-blue-50 text-blue-700 border-blue-100 shadow-blue-500/10';
-            case 'cancelled': 
+            case 'cancelled':
             case 'expired': return 'bg-red-50 text-red-700 border-red-100 shadow-red-500/10';
             default: return 'bg-gray-50 text-gray-600 border-gray-100';
         }
@@ -86,8 +120,8 @@ export default function AdminReservationsPage() {
                             onClick={() => setStatusFilter(tab)}
                             className={cn(
                                 "flex-shrink-0 px-6 h-11 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95",
-                                statusFilter === tab 
-                                    ? 'bg-green-950 text-white shadow-xl shadow-green-950/20' 
+                                statusFilter === tab
+                                    ? 'bg-green-950 text-white shadow-xl shadow-green-950/20'
                                     : 'bg-white text-text-muted border border-gray-100'
                             )}
                         >
@@ -101,7 +135,7 @@ export default function AdminReservationsPage() {
             <div className="px-4 mb-10">
                 <div className="relative group">
                     <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-600 transition-colors" size={18} />
-                    <input 
+                    <input
                         type="text"
                         placeholder="Search order code or commercial entity..."
                         value={searchQuery}
@@ -123,7 +157,7 @@ export default function AdminReservationsPage() {
                 ) : (
                     <AnimatePresence mode="popLayout">
                         {reservations.map((res: any) => (
-                            <motion.div 
+                            <motion.div
                                 layout
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -195,7 +229,7 @@ export default function AdminReservationsPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Fulfillment Maturity Bar */}
                                         <div className="space-y-1.5 pt-1">
                                             <div className="flex justify-between text-[8px] font-black text-text-muted uppercase tracking-widest">
@@ -224,11 +258,31 @@ export default function AdminReservationsPage() {
             </div>
 
             {/* ── Sticky Operational Command Strip ── */}
-            <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex gap-3 z-50">
-                <button className="flex-1 h-14 bg-gray-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all shadow-2xl shadow-gray-950/20">
-                    Propagate Revenue Report <ChevronRight size={18} className="text-brand-400" />
+            <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex gap-3 z-50 items-center justify-between max-w-7xl mx-auto md:left-auto md:w-[calc(100%-16rem)]">
+                <button
+                    onClick={handlePropagateReport}
+                    disabled={isPropagating}
+                    className={cn(
+                        "flex-1 h-16 bg-green-950 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 active:scale-[0.98] transition-all shadow-2xl shadow-green-950/40 relative overflow-hidden group",
+                        isPropagating && "opacity-80 cursor-wait"
+                    )}
+                >
+                    {isPropagating ? (
+                        <>
+                            <RefreshCcw className="animate-spin text-brand-400" size={20} />
+                            Propagating Intelligence...
+                        </>
+                    ) : (
+                        <>
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                            Propagate Revenue Report
+                            <div className="w-8 h-8 bg-brand-400 rounded-full flex items-center justify-center text-green-950">
+                                <ChevronRight size={20} />
+                            </div>
+                        </>
+                    )}
                 </button>
-                <button className="h-14 w-14 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center active:scale-95 transition-all">
+                <button className="h-16 w-16 bg-white border-2 border-gray-100 text-green-950 rounded-[2rem] flex items-center justify-center active:scale-90 transition-all shadow-lg hover:border-brand-300">
                     <Filter size={24} />
                 </button>
             </div>

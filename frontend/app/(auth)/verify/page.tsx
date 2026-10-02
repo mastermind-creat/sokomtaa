@@ -14,6 +14,7 @@ interface VerifyFormData {
 }
 
 import { Logo } from '@/components/shared/Logo';
+import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
 
 export default function VerifyPage() {
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<VerifyFormData>();
@@ -70,7 +71,7 @@ export default function VerifyPage() {
             setError(null);
             setResendMessage(null);
             
-            const response = await api.post<ApiResponse<any>>('/auth/resend-otp');
+            const response = await api.post<never, ApiResponse<any>>('/auth/resend-otp');
             setResendMessage(response.message || 'Verification code resent successfully.');
             setCooldown(60); // 1 minute cooldown
         } catch (err: any) {
@@ -82,43 +83,12 @@ export default function VerifyPage() {
 
     return (
         <div className="min-h-screen w-full flex">
-            {/* Left Panel — Branding (desktop only) */}
-            <div className="hidden lg:flex flex-col justify-between w-[40%] bg-gradient-to-br from-green-900 via-brand-700 to-green-800 p-14 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10">
-                    <div className="absolute top-[-20%] right-[-20%] w-[600px] h-[600px] rounded-full bg-white" />
-                    <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-amber-400" />
-                </div>
-
-                <div className="relative z-10">
-                    <div className="mb-16 cursor-pointer" onClick={() => router.push('/')}>
-                        <Logo variant="green" width={180} />
-                    </div>
-                    <h2 className="text-4xl font-black text-white leading-tight mb-4">
-                        Secure Your Account
-                    </h2>
-                    <p className="text-green-200 text-lg leading-relaxed">
-                        We take your security seriously. Verify your phone number to access all features of the Soko Mtaa marketplace.
-                    </p>
-                </div>
-
-                <div className="relative z-10 space-y-4">
-                    {[
-                        'Prevent unauthorized access',
-                        'Get SMS notifications for reservations',
-                        'Enable M-Pesa payments',
-                        'Secure trader stall management',
-                    ].map((item) => (
-                        <div key={item} className="flex items-center gap-3">
-                            <CheckCircle2 size={18} className="text-amber-400 shrink-0" />
-                            <span className="text-green-100 text-sm font-medium">{item}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
+            {/* Left Panel — Cinematic Branding */}
+            <AuthCinematicSide />
 
             {/* Right Panel — Verification Form */}
             <motion.div 
-                className="flex-1 flex flex-col justify-center items-center px-6 py-12 lg:px-14 bg-[#FAFAF8]"
+                className="w-full lg:w-1/2 flex flex-col justify-center items-center px-6 py-12 lg:px-14 bg-[#FAFAF8]"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.4 }}

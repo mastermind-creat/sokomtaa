@@ -6,12 +6,16 @@ import { ApiResponse } from '@/types';
 
 export interface Wallet {
     id: number;
-    trader_id: number;
+    trader_id?: number;
     balance: number;
     currency: string;
     is_active: boolean;
-    frequency?: 'daily' | 'weekly';
+    frequency?: 'daily' | 'weekly' | 'monthly';
     last_deduction?: string;
+    total_credits?: number;
+    total_debits?: number;
+    pending_withdrawals?: number;
+    mpesa_number?: string;
 }
 
 export interface WalletTransaction {
@@ -19,6 +23,8 @@ export interface WalletTransaction {
     wallet_id: number;
     amount: number;
     type: 'credit' | 'debit';
+    status: 'completed' | 'pending' | 'failed';
+    balance_after?: number;
     description: string;
     reference_type: string | null;
     reference_id: string | null;
@@ -39,10 +45,19 @@ export function useWallet() {
     });
 
     const updateFrequency = useMutation({
-        mutationFn: (frequency: 'daily' | 'weekly') => 
+        mutationFn: (frequency: 'daily' | 'weekly' | 'monthly') =>
             api.post('/trader/wallet/frequency', { frequency }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['wallet'] });
+        }
+    });
+
+    const requestWithdrawal = useMutation({
+        mutationFn: (data: { amount: number; mpesa_number: string }) =>
+            api.post('/trader/wallet/withdraw', data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['wallet'] });
+            queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
         }
     });
 
@@ -51,6 +66,7 @@ export function useWallet() {
         transactions: transactionsData?.data?.data || [],
         walletLoading,
         transactionsLoading,
-        updateFrequency
+        updateFrequency,
+        requestWithdrawal,
     };
 }

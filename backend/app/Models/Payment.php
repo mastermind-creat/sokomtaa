@@ -17,6 +17,9 @@ class Payment extends Model
         'mpesa_transaction_id',
         'mpesa_checkout_request_id',
         'amount',
+        'wallet_deduction',
+        'platform_commission',
+        'routing',
         'phone_number',
         'type',
         'status',
@@ -25,9 +28,11 @@ class Payment extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
-        'mpesa_response' => 'json',
-        'paid_at' => 'datetime',
+        'amount'              => 'decimal:2',
+        'wallet_deduction'    => 'decimal:2',
+        'platform_commission' => 'decimal:2',
+        'mpesa_response'      => 'json',
+        'paid_at'             => 'datetime',
     ];
 
     public function user(): BelongsTo

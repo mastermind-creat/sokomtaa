@@ -17,19 +17,35 @@ use Illuminate\Support\Facades\Cache;
 
 class AuthController extends Controller
 {
-    use ApiResponse;
-
+    use ApiResponse, \App\Traits\PhoneNormalization;
+    
     public function register(RegisterRequest $request): JsonResponse
     {
+        $phone = $this->normalizePhone($request->phone);
+        
+        // Check if normalized phone already exists (redundant if FormRequest handles it, but safe)
+        if (User::where('phone', $phone)->exists()) {
+            return $this->error('The phone number has already been taken.', 'VALIDATION_FAILED', 422);
+        }
+
         $user = User::create([
             'name' => $request->name,
-            'phone' => $request->phone,
+            'phone' => $phone,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'national_id' => $request->national_id,
             'preferred_language' => $request->preferred_language ?? 'en',
         ]);
+
+        if ($user->role === 'delivery') {
+            $user->riderProfile()->create([
+                'vehicle_type' => 'motorcycle',
+                'verification_status' => 'not_submitted', // No docs yet — won't show KYC pending banner
+                'is_available' => false,
+                'earnings_balance' => 0.00,
+            ]);
+        }
 
         // Generate a 6-digit OTP
         $otp = rand(100000, 999999);
@@ -42,7 +58,7 @@ class AuthController extends Controller
         $message = "Soko Mtaa: Your verification code is {$otp}. Please do not share it with anyone.";
         $smsService->sendSms($user->phone, $message);
         
-        Log::info("OTP sent to {$user->phone}");
+        Log::info("OTP for {$user->phone}: {$otp}");
         
         // In a real scenario, we'd store this in cache or a verification table
         // For now, we'll return it in the response if APP_DEBUG is true for easy testing
@@ -60,12 +76,15 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::where('phone', $request->phone)->first();
+        $phone = $this->normalizePhone($request->phone);
+        $user = User::where('phone', $phone)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'phone' => ['Invalid credentials.'],
-            ]);
+        if (! $user) {
+            return $this->error('The phone number is not registered.', 'AUTH_FAILED', 422);
+        }
+
+        if (! Hash::check($request->password, $user->password)) {
+            return $this->error('Incorrect password. Please try again.', 'AUTH_FAILED', 422);
         }
 
         return $this->success([
@@ -86,6 +105,8 @@ class AuthController extends Controller
         $user = $request->user();
         if ($user->role === 'trader') {
             $user->load('trader');
+        } elseif ($user->role === 'delivery') {
+            $user->load('riderProfile');
         }
         return $this->success($user, 'User profile retrieved.');
     }
@@ -127,7 +148,7 @@ class AuthController extends Controller
         $message = "Soko Mtaa: Your verification code is {$otp}. Please do not share it with anyone.";
         $smsService->sendSms($user->phone, $message);
         
-        Log::info("OTP resent to {$user->phone}");
+        Log::info("OTP for {$user->phone} (resent): {$otp}");
 
         $data = [];
         if (config('app.debug')) {
@@ -135,5 +156,76 @@ class AuthController extends Controller
         }
 
         return $this->success($data, 'A new verification code has been sent to your phone.');
+    }
+
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $phone = $this->normalizePhone($request->phone);
+        $user = User::where('phone', $phone)->first();
+
+        if (!$user) {
+            return $this->error('The selected phone number is not registered.', 'VALIDATION_FAILED', 422);
+        }
+
+        // Generate a 6-digit OTP
+        $otp = rand(100000, 999999);
+        
+        // Store OTP in cache for 10 minutes (using phone as key)
+        Cache::put("pwd_reset_otp_{$user->phone}", $otp, now()->addMinutes(10));
+
+        // Send OTP via Talk Sasa
+        $smsService = app(TalkSasaService::class);
+        $message = "Soko Mtaa: Your password reset code is {$otp}. It expires in 10 minutes.";
+        $smsService->sendSms($user->phone, $message);
+        
+        Log::info("Password reset OTP sent to {$user->phone}");
+
+        $data = [];
+        if (config('app.debug')) {
+            $data['debug_otp'] = $otp;
+        }
+
+        return $this->success($data, 'Password reset code sent to your phone.');
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $phone = $this->normalizePhone($request->phone);
+        $request->merge(['phone' => $phone]);
+
+        $request->validate([
+            'phone' => 'required|string|exists:users,phone',
+            'otp' => 'required|string|size:6',
+            'password' => [
+                'required', 
+                'string', 
+                'confirmed', 
+                \Illuminate\Validation\Rules\Password::min(8)
+                    ->letters()
+                    ->numbers()
+                    ->symbols()
+                    ->mixedCase()
+            ],
+        ]);
+
+        $cachedOtp = Cache::get("pwd_reset_otp_{$request->phone}");
+
+        if (!$cachedOtp || $cachedOtp != $request->otp) {
+            return $this->error('The reset code is incorrect or has expired.', 'INVALID_OTP', 422);
+        }
+
+        $user = User::where('phone', $request->phone)->first();
+        
+        $user->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        // Clear OTP from cache
+        Cache::forget("pwd_reset_otp_{$request->phone}");
+        
+        // Revoke all existing tokens for security
+        $user->tokens()->delete();
+
+        return $this->success(null, 'Password has been reset successfully. You can now login.');
     }
 }

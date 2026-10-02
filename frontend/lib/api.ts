@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { useUIStore } from '@/store/uiStore';
+import { useAuthStore } from '@/store/authStore';
 
 const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL,
     headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
     },
 });
@@ -14,16 +14,27 @@ let requestCount = 0;
 // Request interceptor
 api.interceptors.request.use((config) => {
     if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('sokomtaa_token');
+        // Read token from Zustand persisted store (always in sync after page refresh)
+        let token: string | null = null;
+        try {
+            const authStorage = localStorage.getItem('sokomtaa-auth-storage');
+            if (authStorage) {
+                const parsed = JSON.parse(authStorage);
+                token = parsed?.state?.token ?? null;
+            }
+        } catch {
+            token = localStorage.getItem('sokomtaa_token');
+        }
+
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
         
-        // Only show global loader for mutations or non-GET requests if desired, 
-        // or for all to satisfy "all click functions" requirement. 
-        // For now, let's track all requests.
-        requestCount++;
-        useUIStore.getState().setIsGlobalLoading(true);
+        // Only show global loader for mutations (non-GET requests) unless silent is true
+        if (config.method && config.method.toUpperCase() !== 'GET' && !(config as any).silent) {
+            requestCount++;
+            useUIStore.getState().setIsGlobalLoading(true);
+        }
     }
     return config;
 });
@@ -32,20 +43,25 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => {
         if (typeof window !== 'undefined') {
-            requestCount = Math.max(0, requestCount - 1);
-            if (requestCount === 0) useUIStore.getState().setIsGlobalLoading(false);
+            if (response.config.method && response.config.method.toUpperCase() !== 'GET' && !(response.config as any).silent) {
+                requestCount = Math.max(0, requestCount - 1);
+                if (requestCount === 0) useUIStore.getState().setIsGlobalLoading(false);
+            }
         }
         return response.data;
     },
     (error) => {
         if (typeof window !== 'undefined') {
-            requestCount = Math.max(0, requestCount - 1);
-            if (requestCount === 0) useUIStore.getState().setIsGlobalLoading(false);
+            if (error.config?.method && error.config.method.toUpperCase() !== 'GET' && !(error.config as any).silent) {
+                requestCount = Math.max(0, requestCount - 1);
+                if (requestCount === 0) useUIStore.getState().setIsGlobalLoading(false);
+            }
         }
         
         if (error.response?.status === 401) {
             if (typeof window !== 'undefined') {
-                localStorage.removeItem('sokomtaa_token');
+                // Clear the Zustand store which also clears persisted storage
+                useAuthStore.getState().logout();
                 window.location.href = '/login';
             }
         }

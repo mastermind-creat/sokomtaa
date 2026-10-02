@@ -27,8 +27,8 @@ export const CallToAction = () => {
               Create Free Account
             </Link>
           )}
-          <a 
-            href="#market-preview" 
+          <Link 
+            href={isAuthenticated ? "/resident" : "/login"} 
             className={`w-full sm:w-auto px-12 py-5 font-display font-[1000] text-xl rounded-2xl transition-all duration-300 ${
               isAuthenticated 
                 ? 'bg-white text-green-950 shadow-2xl hover:bg-green-50 hover:scale-105' 
@@ -36,7 +36,7 @@ export const CallToAction = () => {
             }`}
           >
             Browse Market
-          </a>
+          </Link>
         </div>
       </div>
     </section>

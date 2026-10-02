@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUIStore } from '@/store/uiStore';
+import { useRouter } from 'next/navigation';
 import { 
     MapPin, 
     Plus, 
@@ -16,7 +17,9 @@ import {
     LayoutGrid,
     PieChart,
     AlertCircle,
-    Loader2
+    Loader2,
+    CreditCard,
+    RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ApiResponse, Market } from '@/types';
@@ -26,6 +29,7 @@ import { MarketModal } from '@/components/admin/MarketModal';
 export default function AdminMarketsPage() {
     const { setPageTitle } = useUIStore();
     const queryClient = useQueryClient();
+    const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     
     // Modal state
@@ -46,19 +50,31 @@ export default function AdminMarketsPage() {
 
     // ── Mutations ──
     const createMutation = useMutation({
-        mutationFn: (data: any) => api.post('/admin/markets', data),
+        mutationFn: (data: FormData) => api.post('/admin/markets', data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
             setIsModalOpen(false);
+        },
+        onError: (err: any) => {
+            const msg = err.response?.data?.message || err.message || 'Failed to create market.';
+            alert(`Error: ${msg}`);
         }
     });
 
     const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: number, data: any }) => api.put(`/admin/markets/${id}`, data),
+        mutationFn: ({ id, data }: { id: number, data: FormData }) => {
+            // Append _method=PUT for Laravel to handle FormData in a PUT request
+            data.append('_method', 'PUT');
+            return api.post(`/admin/markets/${id}`, data);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
             setIsModalOpen(false);
             setSelectedMarket(null);
+        },
+        onError: (err: any) => {
+            const msg = err.response?.data?.message || err.message || 'Failed to update market.';
+            alert(`Error: ${msg}`);
         }
     });
 
@@ -66,6 +82,10 @@ export default function AdminMarketsPage() {
         mutationFn: (id: number) => api.delete(`/admin/markets/${id}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+        },
+        onError: (err: any) => {
+            const msg = err.response?.data?.message || err.message || 'Failed to delete market.';
+            alert(`ACTION BLOCKED: ${msg}\n\nPlease ensure the market has no active traders or stalls before deleting.`);
         }
     });
 
@@ -73,10 +93,40 @@ export default function AdminMarketsPage() {
         mutationFn: (id: number) => api.patch(`/admin/markets/${id}/toggle`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
-        }
+        },
+        onError: () => alert('Failed to update market status.')
     });
 
-    const handleFormSubmit = (data: any) => {
+    const resetInfrastructureMutation = useMutation({
+        mutationFn: (id: number) => api.post(`/admin/markets/${id}/reset-stalls`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-markets'] });
+            alert('Market infrastructure has been reset to standard template.');
+        },
+        onError: () => alert('Failed to reset infrastructure.')
+    });
+
+    const syncFeesMutation = useMutation({
+        mutationFn: (marketId: number) => api.post<ApiResponse<any>>('/admin/stalls/bulk-update-fees', { market_id: marketId }),
+        onSuccess: (res) => {
+            alert(res.data.message || 'Stall fees updated successfully.');
+        },
+        onError: () => alert('Failed to sync fees.')
+    });
+
+    const handleSyncFees = (id: number) => {
+        if (window.confirm('This will update ALL stalls in this market to the current Global Market Fee. This action is irreversible. Proceed?')) {
+            syncFeesMutation.mutate(id);
+        }
+    };
+
+    const handleResetInfrastructure = (id: number) => {
+        if (window.confirm('WARNING: This will delete all existing stalls in this market and regenerate them from the standard template. Active allocations will be lost. Proceed?')) {
+            resetInfrastructureMutation.mutate(id);
+        }
+    };
+
+    const handleFormSubmit = (data: FormData) => {
         if (selectedMarket) {
             updateMutation.mutate({ id: selectedMarket.id, data });
         } else {
@@ -95,10 +145,18 @@ export default function AdminMarketsPage() {
         }
     };
 
+    const avgOccupancy = markets.length > 0
+        ? Math.round(markets.reduce((sum, m) => {
+            const total = m.stalls_count ?? 0;
+            const occupied = m.occupied_stalls_count ?? 0;
+            return sum + (total > 0 ? (occupied / total) * 100 : 0);
+        }, 0) / markets.length)
+        : 0;
+
     const stats = [
         { label: 'Market sites', value: markets.length, color: 'text-brand-600' },
         { label: 'Active Hubs', value: markets.filter(m => m.is_active).length, color: 'text-blue-600' },
-        { label: 'Capacity Avg', value: '74%', color: 'text-orange-600' },
+        { label: 'Avg Occupancy', value: isLoading ? '...' : `${avgOccupancy}%`, color: 'text-orange-600' },
     ];
 
     const filteredMarkets = markets.filter(m => 
@@ -160,11 +218,20 @@ export default function AdminMarketsPage() {
                                 key={market.id}
                                 className="bg-white rounded-[2.5rem] border border-gray-50 shadow-sm overflow-hidden flex flex-col"
                             >
+                                {market.banner_url && (
+                                     <div className="h-20 w-full overflow-hidden border-b border-gray-50">
+                                         <img src={market.banner_url} alt="" className="w-full h-full object-cover opacity-80" />
+                                     </div>
+                                 )}
                                 <div className="p-6 flex-1">
                                     <div className="flex items-start justify-between mb-6">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 bg-gray-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-gray-200 shrink-0">
-                                                <Store size={28} />
+                                            <div className="w-14 h-14 bg-gray-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-gray-200 shrink-0 overflow-hidden">
+                                                {market.icon_url ? (
+                                                     <img src={market.icon_url} alt="" className="w-full h-full object-cover" />
+                                                 ) : (
+                                                     <Store size={28} />
+                                                 )}
                                             </div>
                                             <div>
                                                 <h3 className="text-xl font-black text-green-950 uppercase tracking-tight leading-tight">{market.name}</h3>
@@ -185,19 +252,54 @@ export default function AdminMarketsPage() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <div className="flex justify-between items-end">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Estate Location</span>
-                                                <span className="text-xs font-bold text-text-secondary">{market.estate}, {market.location}</span>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1 block">Live Occupancy</span>
-                                                <span className="text-sm font-black text-green-950 tracking-tighter">74% Capacity</span>
-                                            </div>
-                                        </div>
+                                        {(() => {
+                                            const total = market.stalls_count ?? 0;
+                                            const occupied = market.occupied_stalls_count ?? 0;
+                                            const pct = total > 0 ? Math.round((occupied / total) * 100) : 0;
+                                            const barColor = pct >= 80 ? 'bg-rose-500' : pct >= 50 ? 'bg-amber-500' : 'bg-brand-500';
+                                            const textColor = pct >= 80 ? 'text-rose-700' : pct >= 50 ? 'text-amber-700' : 'text-green-700';
+                                            return (
+                                                <>
+                                                    <div className="flex justify-between items-end">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Estate Location</span>
+                                                            <span className="text-xs font-bold text-text-secondary">{market.estate}, {market.location}</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1 block">Live Occupancy</span>
+                                                            <span className={`text-sm font-black tracking-tighter ${textColor}`}>
+                                                                {total > 0 ? `${pct}% · ${occupied}/${total} stalls` : 'No stalls'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                                        <div 
+                                                            className={`h-full rounded-full shadow-sm transition-all duration-700 ${barColor}`}
+                                                            style={{ width: `${pct}%` }}
+                                                        />
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
 
-                                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                                            <div className="h-full bg-brand-500 w-[74%] rounded-full shadow-sm" />
+                                        <div className="pt-2 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
+                                                    <CreditCard size={14} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[8px] font-black text-text-muted uppercase tracking-widest">Global Fee</p>
+                                                    <p className="text-xs font-black text-amber-900">KES {(market.default_monthly_fee || 0).toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => handleSyncFees(market.id)}
+                                                disabled={syncFeesMutation.isPending}
+                                                className="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                                            >
+                                                {syncFeesMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                                                Sync Fees
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -209,7 +311,10 @@ export default function AdminMarketsPage() {
                                     >
                                         <Edit3 size={16} /> Edit
                                     </button>
-                                    <button className="flex items-center justify-center gap-2 bg-white text-text-muted border-r border-gray-50 active:bg-gray-50 transition-all font-black text-[10px] uppercase tracking-widest">
+                                    <button 
+                                        onClick={() => router.push(`/admin/stalls?market_id=${market.id}`)}
+                                        className="flex items-center justify-center gap-2 bg-white text-text-muted border-r border-gray-50 active:bg-gray-50 transition-all font-black text-[10px] uppercase tracking-widest hover:text-brand-600 hover:bg-brand-50 transition-all"
+                                    >
                                         <LayoutGrid size={16} /> Stalls
                                     </button>
                                     <button 
@@ -219,8 +324,14 @@ export default function AdminMarketsPage() {
                                         <Trash2 size={16} /> Delete
                                     </button>
                                 </div>
-                                <button className="w-full h-12 bg-gray-950 hover:bg-black flex items-center justify-between px-6 active:scale-[0.98] transition-all">
-                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Configure Infrastructure</span>
+                                <button 
+                                    onClick={() => handleResetInfrastructure(market.id)}
+                                    className="w-full h-12 bg-gray-950 hover:bg-black flex items-center justify-between px-6 active:scale-[0.98] transition-all disabled:opacity-50"
+                                    disabled={resetInfrastructureMutation.isPending}
+                                >
+                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                        {resetInfrastructureMutation.isPending && resetInfrastructureMutation.variables === market.id ? 'Regenerating...' : 'Configure Infrastructure'}
+                                    </span>
                                     <ChevronRight size={16} className="text-white/40" />
                                 </button>
                             </motion.div>

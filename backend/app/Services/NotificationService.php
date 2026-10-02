@@ -41,9 +41,21 @@ class NotificationService
         if ($sendSms && $user->phone) {
             $smsContent = "{$title}: {$body}";
             
-            // To prevent SMS spam or cost overflow, we log and send in background
-            // In a production app, this would be queued
-            $this->smsService->sendSms($user->phone, $smsContent);
+            // Log the attempt
+            Log::info("Attempting to send SMS to {$user->phone} for notification: {$title}");
+            
+            $result = $this->smsService->sendSms($user->phone, $smsContent);
+            
+            if ($result['status'] === 'success') {
+                Log::info("SMS successfully sent to {$user->phone}");
+            } else {
+                Log::error("SMS failed for {$user->phone}", ['reason' => $result['message'] ?? 'Unknown error']);
+            }
+        }
+
+        // 3. Send Web Push Notification
+        if (class_exists(\App\Notifications\WebPushNotification::class)) {
+            $user->notify(new \App\Notifications\WebPushNotification($title, $body, $data ?? []));
         }
 
         return $notification;
@@ -54,20 +66,22 @@ class NotificationService
      */
     public function notifyReservationUpdate(User $user, $reservation, string $status)
     {
+        $stallNumber = $reservation->trader->stall->stall_number ?? 'N/A';
+
         $messages = [
             'paid' => [
-                'title' => 'Malipo Yamethibitishwa',
-                'body'  => "Tumepokea malipo yako ya KES {$reservation->total_amount} kwa ajili ya bidhaa: {$reservation->product->name}. Namba yako ya kurejelea ni {$reservation->reservation_code}.",
+                'title' => 'Payment Confirmed',
+                'body'  => "We have received your payment of KES {$reservation->total_amount} for {$reservation->product->name}. Your reference code is {$reservation->reservation_code}.",
                 'sms'   => true
             ],
             'ready' => [
-                'title' => 'Bidhaa Ipo Tayari',
-                'body'  => "Bidhaa yako ({$reservation->product->name}) ipo tayari kuchukuliwa katika Stall {$reservation->trader->stall->stall_number}. Karibu!",
+                'title' => 'Your Order Is Ready',
+                'body'  => "Your order ({$reservation->product->name}) is packed and ready for collection at Stall {$stallNumber}. Please come to pick it up.",
                 'sms'   => true
             ],
             'cancelled' => [
-                'title' => 'Uhifadhi Umeghairiwa',
-                'body'  => "Uhifadhi wako {$reservation->reservation_code} umeghairiwa. Tafadhali wasiliana nasi kwa usaidizi zaidi.",
+                'title' => 'Order Cancelled',
+                'body'  => "Your reservation {$reservation->reservation_code} has been cancelled. Please contact us if you need further assistance.",
                 'sms'   => false
             ],
         ];

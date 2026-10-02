@@ -45,10 +45,19 @@ class CloudinaryService
      */
     public function uploadImage(UploadedFile $file, string $folder = 'products'): ?string
     {
+        Log::info('CloudinaryService: Starting upload.', [
+            'original_name' => $file->getClientOriginalName(),
+            'size' => $file->getSize(),
+            'mime' => $file->getMimeType(),
+            'folder' => $folder,
+            'fallback_mode' => $this->useLocalFallback
+        ]);
+
         if ($this->useLocalFallback) {
             try {
                 // Store in public/uploads/{folder}
                 $path = $file->store('uploads/' . $folder, 'public');
+                Log::info('CloudinaryService: Local storage successful.', ['path' => $path]);
                 // Return URL relative to base (e.g. /storage/uploads/products/xyz.jpg)
                 return '/storage/' . $path;
             } catch (\Exception $e) {
@@ -58,20 +67,18 @@ class CloudinaryService
         }
 
         try {
+            Log::info('CloudinaryService: Attempting Cloudinary API upload.');
             $uploadedFile = $this->cloudinary->uploadApi()->upload($file->getRealPath(), [
                 'folder' => 'sokomtaa/' . $folder,
-                'transformation' => [
-                    'width' => 800,
-                    'crop' => 'limit',
-                    'quality' => 'auto',
-                    'fetch_format' => 'auto'
-                ]
+                // Removed inline transformations to speed up upload processing
             ]);
 
+            Log::info('CloudinaryService: Cloudinary upload successful.', ['url' => $uploadedFile['secure_url']]);
             return $uploadedFile['secure_url'];
         } catch (\Exception $e) {
-            Log::error('Cloudinary Upload Error: ' . $e->getMessage());
+            Log::error('Cloudinary Upload Error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             // Attempt local fallback if Cloudinary fails during runtime
+            Log::info('CloudinaryService: Attempting local fallback due to API failure.');
             return $this->uploadImageLocalFallback($file, $folder);
         }
     }
@@ -83,11 +90,47 @@ class CloudinaryService
     {
         try {
             $path = $file->store('uploads/' . $folder, 'public');
+            Log::info('CloudinaryService: Secondary local fallback successful.', ['path' => $path]);
             return '/storage/' . $path;
         } catch (\Exception $e) {
             Log::error('Secondary Local Fallback Error: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Generate a signature for direct client-side upload.
+     *
+     * @param array $params
+     * @return array
+     */
+    public function generateSignature(array $params = []): array
+    {
+        if ($this->useLocalFallback) {
+            return ['error' => 'Local fallback active. Direct upload not supported.'];
+        }
+
+        $timestamp = time();
+        $params['timestamp'] = $timestamp;
+        
+        // Add default folder if not provided
+        if (!isset($params['folder'])) {
+            $params['folder'] = 'sokomtaa/general';
+        }
+
+        // Generate signature
+        $signature = \Cloudinary\Api\ApiUtils::signParameters(
+            $params,
+            config('cloudinary.api_secret')
+        );
+
+        return [
+            'signature' => $signature,
+            'timestamp' => $timestamp,
+            'api_key'   => config('cloudinary.api_key'),
+            'cloud_name'=> config('cloudinary.cloud_name'),
+            'folder'    => $params['folder'],
+        ];
     }
 
     /**

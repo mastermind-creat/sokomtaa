@@ -4,14 +4,23 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/shared/Logo';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useLogout';
 import { LogOut } from 'lucide-react';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
+  const { logout } = useLogout();
   const [hasHydrated, setHasHydrated] = useState(false);
+
+  const getDashboardUrl = (role?: string) => {
+    if (role === 'admin') return '/admin/dashboard';
+    if (role === 'trader') return '/trader/dashboard';
+    if (role === 'delivery') return '/delivery/dashboard';
+    return '/resident';
+  };
 
   useEffect(() => {
     setHasHydrated(true);
@@ -48,7 +57,7 @@ export const Navbar = () => {
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
-            {['How it works', 'Features', 'For traders'].map((item) => (
+            {['Categories', 'Products', 'Markets', 'How it works'].map((item) => (
               <a
                 key={item}
                 href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
@@ -62,7 +71,7 @@ export const Navbar = () => {
 
             {isAuthenticated && user ? (
               <div className="flex items-center gap-4">
-                <Link href={user.role === 'admin' ? '/admin/dashboard' : user.role === 'trader' ? '/trader/dashboard' : '/profile'} className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors">
+                <Link href={getDashboardUrl(user.role)} className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-black">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
@@ -107,7 +116,7 @@ export const Navbar = () => {
       {/* Mobile Menu */}
       <div className={`fixed inset-0 z-[90] md:hidden transition-all duration-500 ${menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <div className="absolute inset-0 bg-white/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 gap-8">
-          {['How it works', 'Features', 'For traders'].map((item) => (
+          {['Categories', 'Products', 'Markets', 'How it works'].map((item) => (
             <a
               key={item}
               href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
@@ -119,8 +128,21 @@ export const Navbar = () => {
           ))}
           {isAuthenticated && user ? (
             <>
-              <Link href={user.role === 'admin' ? '/admin/dashboard' : user.role === 'trader' ? '/trader/dashboard' : '/profile'} className="text-2xl font-black text-green-950" onClick={() => setMenuOpen(false)}>My Profile</Link>
-              <button onClick={() => { logout(); setMenuOpen(false); }} className="text-2xl font-black text-red-500">Logout</button>
+              <div className="flex flex-col items-center gap-2 mb-2">
+                <div className="w-16 h-16 rounded-full bg-brand-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-brand-600/30">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-lg font-black text-green-950">{user.name.split(' ')[0]}</span>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-3 py-1 bg-gray-100 rounded-full">{user.role}</span>
+              </div>
+              <Link
+                href={getDashboardUrl(user.role)}
+                className="w-full text-center py-4 bg-brand-600 text-white font-black text-lg rounded-2xl"
+                onClick={() => setMenuOpen(false)}
+              >
+                Go to Dashboard
+              </Link>
+              <button onClick={() => { logout(); setMenuOpen(false); }} className="text-xl font-black text-red-500">Logout</button>
             </>
           ) : (
             <>

@@ -29,4 +29,27 @@ class GlobalStatsController extends Controller
 
         return $this->success($stats);
     }
+
+    /**
+     * Return a small list of verified traders for the auth page social proof section.
+     */
+    public function featuredTraders(): JsonResponse
+    {
+        $traders = Trader::where('verification_status', 'verified')
+            ->orderByDesc('total_reviews')
+            ->limit(10)
+            ->get([
+                'id',
+                'business_name',
+                'avatar_url',
+                'average_rating',
+                'total_reviews',
+                'is_open',
+                'opening_time',
+                'closing_time',
+                'description'
+            ]);
+
+        return $this->success($traders);
+    }
 }

@@ -6,6 +6,8 @@ import { Phone, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
 import api from '@/lib/api';
 import { ApiResponse } from '@/types';
 
+import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
+
 interface MpesaPaymentSheetProps {
     isOpen: boolean;
     onClose: () => void;
@@ -17,11 +19,35 @@ interface MpesaPaymentSheetProps {
     description?: string;
 }
 export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amount, onSuccess, title, description }: MpesaPaymentSheetProps) {
-    const [phone, setPhone] = React.useState('2547');
+    const [phone, setPhone] = React.useState('07');
     const [inputAmount, setInputAmount] = React.useState(amount?.toString() || '');
     const [status, setStatus] = React.useState<'idle' | 'pending' | 'success' | 'error'>('idle');
     const [message, setMessage] = React.useState('');
     const [isProcessing, setIsProcessing] = React.useState(false);
+    
+    const [walletBalance, setWalletBalance] = React.useState<number>(0);
+    const [useWallet, setUseWallet] = React.useState(false);
+    const [loadingWallet, setLoadingWallet] = React.useState(false);
+
+    React.useEffect(() => {
+        if (isOpen && type === 'reservation') {
+            fetchWalletBalance();
+        } else {
+            setUseWallet(false);
+        }
+    }, [isOpen, type]);
+
+    const fetchWalletBalance = async () => {
+        setLoadingWallet(true);
+        try {
+            const res = await api.get('/resident/wallet');
+            setWalletBalance(Number(res.data.data.balance) || 0);
+        } catch (e) {
+            console.error("Failed to fetch wallet", e);
+        } finally {
+            setLoadingWallet(false);
+        }
+    };
 
     interface MpesaStkResponse {
         CheckoutRequestID: string;
@@ -29,8 +55,10 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
     }
 
     const handlePayment = async () => {
-        if (!phone.match(/^2547[0-9]{8}$/)) {
-            setMessage('Invalid phone number. Use 2547XXXXXXXX');
+        const normalizedPhone = normalizePhoneNumber(phone);
+        
+        if (!normalizedPhone || normalizedPhone.length < 10) {
+            setMessage('Invalid phone number. Use 07XXXXXXXX, 254... or +254...');
             setStatus('error');
             return;
         }
@@ -41,10 +69,12 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
 
         try {
             await api.post<ApiResponse<MpesaStkResponse>>('/payments/mpesa/stkpush', {
-                phone_number: phone,
+                phone_number: normalizedPhone,
                 type,
                 target_id: targetId || 0,
-                amount: type === 'wallet_topup' ? parseFloat(inputAmount) : amount
+                target_ids: type === 'reservation' ? [targetId] : undefined,
+                amount: type === 'wallet_topup' ? parseFloat(inputAmount) : amount,
+                use_wallet: useWallet
             });
             
             setStatus('success');
@@ -56,18 +86,12 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
             }, 3000);
         } catch (err: unknown) {
             setStatus('error');
-            let errorMsg = 'An error occurred during payment.';
-            
-            if (err && typeof err === 'object') {
-                const axiosError = err as { response?: { data?: { message?: string } }; message?: string };
-                errorMsg = axiosError.response?.data?.message || axiosError.message || errorMsg;
-            }
-            
-            setMessage(errorMsg);
+            setMessage(handleApiError(err));
         } finally {
             setIsProcessing(false);
         }
     };
+
 
     return (
         <AnimatePresence>
@@ -108,14 +132,40 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
                     )}
 
                     {type !== 'wallet_topup' ? (
-                        <div className="mb-8 p-6 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-4">
-                            <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white shrink-0">
-                                <span className="font-bold">KES</span>
+                        <div className="mb-8">
+                            <div className="p-6 bg-green-50 rounded-2xl border border-green-100 flex items-center gap-4 mb-4">
+                                <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center text-white shrink-0">
+                                    <span className="font-bold">KES</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-green-800">Amount to Pay</p>
+                                    <p className="text-3xl font-bold text-green-900">{amount?.toLocaleString()}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-sm text-green-800">Amount to Pay</p>
-                                <p className="text-3xl font-bold text-green-900">{amount?.toLocaleString()}</p>
-                            </div>
+                            
+                            {type === 'reservation' && walletBalance > 0 && !loadingWallet && (
+                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-semibold text-gray-800">Wallet Balance</p>
+                                            <p className="text-sm text-gray-500">KES {walletBalance.toLocaleString()}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => setUseWallet(!useWallet)}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useWallet ? 'bg-green-600' : 'bg-gray-300'}`}
+                                        >
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useWallet ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
+                                    </div>
+                                    {useWallet && (
+                                        <div className="mt-3 text-sm text-green-700 bg-green-100/50 p-2 rounded-lg">
+                                            {walletBalance >= (amount || 0) 
+                                                ? "Your wallet covers the full amount. No M-Pesa prompt will be sent."
+                                                : `Your wallet will cover KES ${walletBalance.toLocaleString()}. You will pay the remaining KES ${(amount! - walletBalance).toLocaleString()} via M-Pesa.`}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="mb-8 space-y-2">
@@ -146,7 +196,7 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
                                         value={phone}
                                         onChange={(e) => setPhone(e.target.value)}
                                         disabled={isProcessing}
-                                        placeholder="2547XXXXXXXX"
+                                        placeholder="07XXXXXXXX or +254..."
                                         className="input flex-1 h-14"
                                         type="tel"
                                     />
@@ -160,7 +210,7 @@ export default function MpesaPaymentSheet({ isOpen, onClose, type, targetId, amo
 
                             <button
                                 onClick={handlePayment}
-                                disabled={isProcessing || !phone}
+                                disabled={isProcessing || (!phone && (!useWallet || walletBalance < (amount || 0)))}
                                 className="btn btn-primary w-full h-14 text-lg relative overflow-hidden"
                             >
                                 {isProcessing ? (

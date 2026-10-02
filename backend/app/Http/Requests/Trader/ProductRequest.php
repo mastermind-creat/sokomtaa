@@ -22,9 +22,12 @@ class ProductRequest extends FormRequest
             'name_sw' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
+            'discount_price' => 'nullable|numeric|min:0|lt:price',
+            'discount_start_date' => 'nullable|date',
+            'discount_end_date' => 'nullable|date|after_or_equal:discount_start_date',
             'unit' => 'required|string|max:50', // e.g., kg, piece, bunch
             'stock_quantity' => 'nullable|integer|min:0',
-            'image' => $isPost ? 'required|image|max:5120' : 'nullable|image|max:5120', // 5MB limit
+            'image' => 'nullable|image|max:5120', // 5MB limit
             'is_active' => 'nullable|boolean',
         ];
     }
@@ -32,8 +35,8 @@ class ProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'image.required' => 'Picha ya bidhaa inahitajika. (A product image is required.)',
-            'price.numeric' => 'Bei lazima iwe namba. (Price must be a number.)',
+            'image.required' => 'A product image is required.',
+            'price.numeric' => 'Price must be a valid number.',
         ];
     }
 }

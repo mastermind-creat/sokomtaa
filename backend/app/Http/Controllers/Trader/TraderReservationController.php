@@ -36,7 +36,41 @@ class TraderReservationController extends Controller
 
         $reservations = $query->paginate(20);
 
+        // Append trader_amount: what the trader earns (excludes resident service fee)
+        $reservations->getCollection()->transform(function ($r) {
+            $r->trader_amount = (float) $r->unit_price * $r->quantity;
+            return $r;
+        });
+
         return $this->success($reservations);
+    }
+
+    /**
+     * Get the 5 most recent active reservations for the dashboard.
+     */
+    public function recent(): JsonResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!$user->trader) {
+            return $this->error('User is not a trader.', 'NOT_TRADER', 403);
+        }
+
+        $traderId = $user->trader->id;
+        
+        $recent = Reservation::where('trader_id', $traderId)
+            ->whereIn('status', ['pending', 'paid', 'ready'])
+            ->with(['resident:id,name,phone', 'product:id,name,unit,image_url'])
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(function ($r) {
+                $r->trader_amount = (float) $r->unit_price * $r->quantity;
+                return $r;
+            });
+
+        return $this->success($recent);
     }
 
     /**

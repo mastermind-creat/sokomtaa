@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/shared/DashboardLayout';
-import { 
-    HelpCircle, 
-    Search, 
-    ChevronRight, 
-    MessageSquare, 
-    ShoppingBag, 
-    CreditCard, 
+import {
+    HelpCircle,
+    Search,
+    ChevronRight,
+    MessageSquare,
+    ShoppingBag,
+    CreditCard,
     ShieldCheck,
     ChevronDown,
     MapPin,
@@ -24,55 +25,56 @@ interface FAQ {
 }
 
 export default function HelpCenterPage() {
+    const router = useRouter();
     const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
     const [activeCategory, setActiveCategory] = useState('All');
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
     const categories = [
-        { id: 'All', label: 'Zote', icon: HelpCircle, color: 'text-brand-600 bg-brand-50' },
-        { id: 'Getting Started', label: 'Mwanzo', icon: Smartphone, color: 'text-blue-600 bg-blue-50' },
-        { id: 'Orders', label: 'Maagizo', icon: ShoppingBag, color: 'text-amber-600 bg-amber-50' },
-        { id: 'Payments', label: 'Malipo', icon: CreditCard, color: 'text-green-600 bg-green-50' },
-        { id: 'Market Rules', label: 'Sheria', icon: ShieldCheck, color: 'text-purple-600 bg-purple-50' },
+        { id: 'All', label: t('help.categories.all') || 'All', icon: HelpCircle, color: 'text-brand-600 bg-brand-50' },
+        { id: 'Getting Started', label: t('help.categories.getting_started') || 'Getting Started', icon: Smartphone, color: 'text-blue-600 bg-blue-50' },
+        { id: 'Orders', label: t('help.categories.orders') || 'Orders', icon: ShoppingBag, color: 'text-amber-600 bg-amber-50' },
+        { id: 'Payments', label: t('help.categories.payments') || 'Payments', icon: CreditCard, color: 'text-green-600 bg-green-50' },
+        { id: 'Market Rules', label: t('help.categories.rules') || 'Market Rules', icon: ShieldCheck, color: 'text-purple-600 bg-purple-50' },
     ];
 
     const faqs: FAQ[] = [
         {
             category: 'Getting Started',
-            question: 'Soko Mtaa ni nini?',
-            answer: 'Soko Mtaa ni jukwaa la kidijitali linalounganisha wafanyabiashara wa masoko ya mtaani na wateja wao, likiruhusu uhifadhi wa bidhaa na malipo rahisi kupitia M-Pesa.'
+            question: 'What is Soko Mtaa?',
+            answer: 'Soko Mtaa is a digital platform connecting local market traders with their customers, allowing seamless product reservations and easy payments via M-Pesa.'
         },
         {
             category: 'Orders',
-            question: 'Ninawezaje kuhifadhi (reserve) bidhaa?',
-            answer: 'Tafuta mfanyabiashara unayemthamini, chagua bidhaa, na ubonyeze "Hifadhi (Reserve)". Utaweza kulipia kupitia M-Pesa na kuchukua bidhaa yako sokoni ndani ya saa 24.'
+            question: 'How do I reserve a product?',
+            answer: 'Find a trader you like nearby, select a product, and click "Reserve". You can pay via M-Pesa and pick up your item at the market within 24 hours.'
         },
         {
             category: 'Payments',
-            question: 'Je, malipo ya M-Pesa ni salama?',
-            answer: 'Ndiyo, malipo yote yanafanywa kupitia mfumo rasmi wa M-Pesa Daraja. Pesa zako zinashikiliwa kwa usalama mpaka utakapochukua bidhaa yako.'
+            question: 'Are M-Pesa payments secure?',
+            answer: 'Yes, all payments are processed through the official M-Pesa Daraja system. Your funds are held securely until you pick up your item.'
         },
         {
             category: 'Market Rules',
-            question: 'Nifanye nini nikiwa na malalamiko?',
-            answer: 'Unaweza kuwasilisha malalamiko kupitia sehemu ya "Malalamiko" kwenye wasifu wako. Admin wa soko atazipitia na kukusaidia kutatua tatizo hilo.'
+            question: 'What should I do if I have a complaint?',
+            answer: 'You can submit a complaint through the "Complaints" section in your profile. The market admin will review it and help resolve the issue.'
         },
         {
             category: 'Orders',
-            question: 'Ninaweza kughairi uhifadhi wangu?',
-            answer: 'Ndiyo, unaweza kughairi uhifadhi kupitia ukurasa wa "Uhifadhi" kabla ya muda wa kuchukua bidhaa kuisha.'
+            question: 'Can I cancel my reservation?',
+            answer: 'Yes, you can cancel a reservation through the "Reservations" page before the pickup time expires.'
         },
         {
             category: 'Getting Started',
-            question: 'Ninawezaje kuhakiki akaunti yangu?',
-            answer: 'Nenda kwenye mipangilio ya wasifu wako na ubonyeze "Uhakiki". Utaulizwa nambari yako ya simu na kitambulisho cha Taifa kwa wafanyabiashara.'
+            question: 'How do I verify my account?',
+            answer: 'Go to your profile settings and click "Verification". You will be asked for your phone number and National ID if you are a trader.'
         }
     ];
 
     const filteredFaqs = faqs.filter(faq => {
-        const matchesSearch = faq.question.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                             faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = activeCategory === 'All' || faq.category === activeCategory;
         return matchesSearch && matchesCategory;
     });
@@ -80,15 +82,15 @@ export default function HelpCenterPage() {
     return (
         <DashboardLayout title={t('help.title')}>
             <div className="max-w-3xl mx-auto space-y-8 pb-12 animate-fade-up">
-                
+
                 {/* Search Header */}
                 <div className="text-center space-y-4 pt-4">
                     <h1 className="text-3xl font-black text-green-950 tracking-tight">{t('help.how_can_we_help')}</h1>
-                    <p className="text-text-secondary font-medium">Tafuta majibu ya haraka kwa maswali yako.</p>
-                    
+                    <p className="text-text-secondary font-medium">{t('help.search_placeholder')}</p>
+
                     <div className="relative max-w-xl mx-auto mt-8">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
-                        <input 
+                        <input
                             type="text"
                             placeholder={t('help.search_placeholder')}
                             value={searchQuery}
@@ -104,11 +106,10 @@ export default function HelpCenterPage() {
                         <button
                             key={cat.id}
                             onClick={() => setActiveCategory(cat.id)}
-                            className={`flex flex-col items-center gap-2 p-4 rounded-[2rem] min-w-[100px] transition-all border-2 ${
-                                activeCategory === cat.id 
-                                ? 'bg-white border-brand-500 shadow-brand-md scale-105' 
-                                : 'bg-white border-transparent shadow-brand-sm opacity-60'
-                            }`}
+                            className={`flex flex-col items-center gap-2 p-4 rounded-[2rem] min-w-[100px] transition-all border-2 ${activeCategory === cat.id
+                                    ? 'bg-white border-brand-500 shadow-brand-md scale-105'
+                                    : 'bg-white border-transparent shadow-brand-sm opacity-60'
+                                }`}
                         >
                             <div className={`w-12 h-12 rounded-2xl ${cat.color} flex items-center justify-center`}>
                                 <cat.icon size={24} />
@@ -122,14 +123,14 @@ export default function HelpCenterPage() {
 
                 {/* FAQ List */}
                 <div className="space-y-4">
-                    <h2 className="text-xs font-black text-text-muted uppercase tracking-[0.2em] ml-4">Maswali Yanayoulizwa Sana</h2>
-                    
+                    <h2 className="text-xs font-black text-text-muted uppercase tracking-[0.2em] ml-4">{t('help.faqs_title')}</h2>
+
                     <div className="bg-white border border-border-default rounded-[2.5rem] overflow-hidden shadow-brand-sm">
                         {filteredFaqs.length > 0 ? filteredFaqs.map((faq, index) => {
                             const isExpanded = expandedIndex === index;
                             return (
                                 <div key={index} className={index !== filteredFaqs.length - 1 ? 'border-b border-gray-50' : ''}>
-                                    <button 
+                                    <button
                                         onClick={() => setExpandedIndex(isExpanded ? null : index)}
                                         className="w-full text-left p-6 flex items-center justify-between group transition-colors hover:bg-neutral-50"
                                     >
@@ -139,12 +140,12 @@ export default function HelpCenterPage() {
                                             </div>
                                             <span className="font-bold text-green-950 text-sm leading-tight pr-4">{faq.question}</span>
                                         </div>
-                                        <ChevronDown 
-                                            size={20} 
-                                            className={`text-text-muted transition-transform duration-300 ${isExpanded ? 'rotate-180 text-brand-600' : ''}`} 
+                                        <ChevronDown
+                                            size={20}
+                                            className={`text-text-muted transition-transform duration-300 ${isExpanded ? 'rotate-180 text-brand-600' : ''}`}
                                         />
                                     </button>
-                                    
+
                                     <AnimatePresence>
                                         {isExpanded && (
                                             <motion.div
@@ -168,12 +169,12 @@ export default function HelpCenterPage() {
                                 <div className="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center mx-auto text-brand-600">
                                     <Search size={32} />
                                 </div>
-                                <p className="text-text-secondary font-bold">Samahani, hatujapata jibu unalotafuta.</p>
-                                <button 
-                                    onClick={() => {setSearchQuery(''); setActiveCategory('All');}}
+                                <p className="text-text-secondary font-bold">{t('help.no_results')}</p>
+                                <button
+                                    onClick={() => { setSearchQuery(''); setActiveCategory('All'); }}
                                     className="text-brand-600 font-bold text-sm underline underline-offset-4"
                                 >
-                                    Onyesha maswali yote
+                                    {t('help.show_all')}
                                 </button>
                             </div>
                         )}
@@ -187,13 +188,16 @@ export default function HelpCenterPage() {
                             <MessageSquare size={24} />
                         </div>
                         <div>
-                            <h3 className="text-xl font-bold">Bado unahitaji msaada?</h3>
+                            <h3 className="text-xl font-bold">{t('help.contact_title')}</h3>
                             <p className="text-green-100/70 text-sm font-medium max-w-md">
-                                Timu yetu ya msaada iko tayari kukusaidia. Wasiliana nasi kupitia mfumo wetu wa malalamiko.
+                                {t('help.contact_subtitle')}
                             </p>
                         </div>
-                        <button className="bg-amber-500 hover:bg-amber-400 text-green-950 px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95">
-                            WASILIANA NASI SASA
+                        <button
+                            onClick={() => router.push('/complaints')}
+                            className="bg-amber-500 hover:bg-amber-400 text-green-950 px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95"
+                        >
+                            {t('help.contact_button')}
                         </button>
                     </div>
 
@@ -206,13 +210,13 @@ export default function HelpCenterPage() {
                 <div className="grid grid-cols-2 gap-4">
                     <div className="bg-white p-6 rounded-[2rem] border border-border-default shadow-brand-sm flex flex-col items-center text-center gap-3">
                         <MapPin className="text-brand-600" size={24} />
-                        <span className="text-xs font-black text-green-950 uppercase tracking-widest">Ofisi za Soko</span>
-                        <p className="text-[11px] text-text-secondary leading-snug">Kolenyo Market, Ghorofa ya 2, Chumba 12</p>
+                        <span className="text-xs font-black text-green-950 uppercase tracking-widest">Market Offices</span>
+                        <p className="text-[11px] text-text-secondary leading-snug">Kolenyo Market, 2nd Floor, Room 12</p>
                     </div>
                     <div className="bg-white p-6 rounded-[2rem] border border-border-default shadow-brand-sm flex flex-col items-center text-center gap-3">
                         <Smartphone className="text-brand-600" size={24} />
-                        <span className="text-xs font-black text-green-950 uppercase tracking-widest">Piga Simu</span>
-                        <p className="text-[11px] text-text-secondary leading-snug">+254 700 000 000 (Masaa ya Kazi)</p>
+                        <span className="text-xs font-black text-green-950 uppercase tracking-widest">Call Us</span>
+                        <p className="text-[11px] text-text-secondary leading-snug">+254 700 000 000 (Working Hours)</p>
                     </div>
                 </div>
 

@@ -11,9 +11,11 @@ import { motion } from 'framer-motion';
 const AdminSidebar = dynamic(() => import('@/components/admin/AdminSidebar').then(m => m.default));
 const TraderSidebar = dynamic(() => import('@/components/trader/TraderSidebar').then(m => m.default));
 const ResidentSidebar = dynamic(() => import('@/components/resident/ResidentSidebar').then(m => m.default));
+const DeliverySidebar = dynamic(() => import('@/components/delivery/DeliverySidebar').then(m => m.default));
 const MobileSidebar = dynamic(() => import('@/components/admin/MobileSidebar').then(m => m.default));
 const TraderMobileSidebar = dynamic(() => import('@/components/trader/TraderMobileSidebar').then(m => m.default));
 const ResidentMobileSidebar = dynamic(() => import('@/components/resident/ResidentMobileSidebar').then(m => m.default));
+const DeliveryMobileSidebar = dynamic(() => import('@/components/delivery/DeliveryMobileSidebar').then(m => m.default));
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -23,8 +25,15 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, title }: DashboardLayoutProps) {
     const { user } = useAuthStore();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const renderSidebar = () => {
+        if (!mounted) return <div className="hidden lg:block w-[280px] h-screen bg-[#FAFAF8] border-r border-gray-100" />;
+        
         if (!user) return <ResidentSidebar />;
         
         switch (user.role) {
@@ -32,6 +41,8 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                 return <AdminSidebar />;
             case 'trader':
                 return <TraderSidebar />;
+            case 'delivery':
+                return <DeliverySidebar />;
             default:
                 return <ResidentSidebar />;
         }
@@ -40,19 +51,25 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
     return (
         <div className="flex flex-col lg:flex-row min-h-screen bg-[#FAFAF8] w-full max-w-full overflow-hidden">
             {/* Mobile Drawer */}
-            {user?.role === 'admin' && (
+            {mounted && user?.role === 'admin' && (
                 <MobileSidebar 
                     isOpen={isMobileMenuOpen} 
                     onClose={() => setIsMobileMenuOpen(false)} 
                 />
             )}
-            {user?.role === 'trader' && (
+            {mounted && user?.role === 'trader' && (
                 <TraderMobileSidebar 
                     isOpen={isMobileMenuOpen} 
                     onClose={() => setIsMobileMenuOpen(false)} 
                 />
             )}
-            {(!user || user.role === 'resident') && (
+            {mounted && user?.role === 'delivery' && (
+                <DeliveryMobileSidebar 
+                    isOpen={isMobileMenuOpen} 
+                    onClose={() => setIsMobileMenuOpen(false)} 
+                />
+            )}
+            {mounted && (!user || user.role === 'resident') && (
                 <ResidentMobileSidebar 
                     isOpen={isMobileMenuOpen} 
                     onClose={() => setIsMobileMenuOpen(false)} 

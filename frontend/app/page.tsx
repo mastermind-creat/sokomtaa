@@ -5,17 +5,17 @@ import React from 'react';
 // Components
 import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
+import { CategoryGrid } from '@/components/landing/CategoryGrid';
 import { ProductPreview } from '@/components/landing/ProductPreview';
 import { MarketPreview } from '@/components/landing/MarketPreview';
+import { TopTradersPreview } from '@/components/landing/TopTradersPreview';
 import { HowItWorks } from '@/components/landing/HowItWorks';
-import { Features } from '@/components/landing/Features';
-import { RoleCards } from '@/components/landing/RoleCards';
 import { CallToAction } from '@/components/landing/CallToAction';
 import { Footer } from '@/components/landing/Footer';
 
 /**
  * Public Landing Page
- * Refactored into modular components for scalability.
+ * Streamlined for high conversion and dynamic discovery.
  */
 export default function PublicLandingPage() {
   return (
@@ -24,11 +24,11 @@ export default function PublicLandingPage() {
       
       <main>
         <Hero />
+        <CategoryGrid />
         <ProductPreview />
         <MarketPreview />
         <HowItWorks />
-        <Features />
-        <RoleCards />
+        <TopTradersPreview />
         <CallToAction />
       </main>
 

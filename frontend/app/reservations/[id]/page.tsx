@@ -18,13 +18,20 @@ import {
     XCircle,
     ShoppingBag,
     ShieldCheck,
-    Smartphone
+    Smartphone,
+    Star,
+    Truck,
+    Bike,
+    User,
+    Check
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMpesa } from '@/hooks/useMpesa';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import ReviewSheet from '@/components/resident/ReviewSheet';
+import { ApiResponse } from '@/types';
 
 interface Reservation {
     id: number;
@@ -32,6 +39,7 @@ interface Reservation {
     quantity: number;
     total_amount: string;
     unit_price: string;
+    service_fee?: string;
     status: 'pending' | 'paid' | 'ready' | 'completed' | 'cancelled' | 'expired';
     pickup_deadline: string;
     product: {
@@ -46,6 +54,18 @@ interface Reservation {
         phone: string;
     };
     created_at: string;
+    delivery_option?: boolean;
+    delivery_status?: 'pending_assignment' | 'assigned' | 'picked_up' | 'in_transit' | 'delivered' | null;
+    delivery_fee?: string;
+    delivery_address?: string;
+    rider?: {
+        name: string;
+        phone: string;
+        delivery_profile?: {
+            vehicle_type: string;
+            license_plate?: string;
+        } | null;
+    } | null;
 }
 
 export default function ReservationPickupPage() {
@@ -56,7 +76,9 @@ export default function ReservationPickupPage() {
     const { initiateStk, isPolling, status: mpesaStatus, error: mpesaError } = useMpesa();
     const [checkoutId, setCheckoutId] = React.useState<string | null>(null);
 
-    const { data: resData, isLoading, refetch } = useQuery<ApiResponse<Reservation>>({
+    const [showReviewSheet, setShowReviewSheet] = React.useState(false);
+
+    const { data: resData, isLoading, refetch } = useQuery<ApiResponse<Reservation & { review?: any }>>({
         queryKey: ['reservation', id],
         queryFn: () => api.get(`/reservations/${id}`),
     });
@@ -107,7 +129,7 @@ export default function ReservationPickupPage() {
 
     if (!reservation) return null;
 
-    const isPickupReady = ['paid', 'ready'].includes(reservation.status);
+    const isPickupReady = ['paid', 'ready'].includes(reservation.status) && !reservation.delivery_option;
 
     return (
         <div className="min-h-screen bg-surface pb-32">
@@ -173,7 +195,165 @@ export default function ReservationPickupPage() {
                     )}
                 </div>
 
-                {/* 2. Pickup Location & Instructions */}
+                {/* 2. Delivery Progress Tracker (Only when delivery_option is true) */}
+                {reservation.delivery_option && (
+                    <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-brand-sm space-y-6">
+                        <div className="flex items-center justify-between border-b border-gray-50 pb-4">
+                            <div>
+                                <h3 className="text-sm font-black text-green-950 uppercase tracking-widest">Delivery Progress</h3>
+                                <p className="text-[10px] font-bold text-text-muted mt-0.5">Rider tracking updates</p>
+                            </div>
+                            <span className="w-10 h-10 bg-brand-50 text-brand-600 rounded-xl flex items-center justify-center shrink-0">
+                                <Truck size={20} />
+                            </span>
+                        </div>
+
+                        {/* Progress Stepper */}
+                        <div className="relative space-y-8 py-2">
+                            {/* Vertical Line */}
+                            <div className="absolute left-[15px] top-4 bottom-4 w-0.5 bg-neutral-100 z-0">
+                                <div 
+                                    className="w-full bg-brand-600 transition-all duration-500" 
+                                    style={{ 
+                                        height: 
+                                            reservation.delivery_status === 'delivered' ? '100%' :
+                                            ['picked_up', 'in_transit'].includes(reservation.delivery_status || '') ? '66%' :
+                                            reservation.delivery_status === 'assigned' ? '33%' : '0%'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Step 1: Paid & Booked */}
+                            <div className="relative flex gap-4 z-10">
+                                <div className="w-8 h-8 shrink-0 rounded-full border-2 border-brand-500 bg-white flex items-center justify-center text-brand-600 shadow-sm">
+                                    <Check size={14} className="stroke-[3]" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-black text-green-950 uppercase tracking-wide">Order Paid</h4>
+                                    <p className="text-[10px] text-text-secondary mt-0.5">Payment received. Awaiting rider assignment.</p>
+                                </div>
+                            </div>
+
+                            {/* Step 2: Rider Assigned */}
+                            <div className="relative flex gap-4 z-10">
+                                <div className={`w-8 h-8 shrink-0 rounded-full border-2 bg-white flex items-center justify-center shadow-sm ${
+                                    reservation.delivery_status && reservation.delivery_status !== 'pending_assignment'
+                                        ? 'border-brand-500 text-brand-600'
+                                        : 'border-neutral-200 text-neutral-300'
+                                }`}>
+                                    {reservation.delivery_status && reservation.delivery_status !== 'pending_assignment' ? (
+                                        <Check size={14} className="stroke-[3]" />
+                                    ) : (
+                                        <div className="w-2 h-2 rounded-full bg-neutral-300 animate-pulse" />
+                                    )}
+                                </div>
+                                <div>
+                                    <h4 className={`text-xs font-black uppercase tracking-wide ${
+                                        reservation.delivery_status && reservation.delivery_status !== 'pending_assignment' ? 'text-green-950' : 'text-neutral-400'
+                                    }`}>Rider Assigned</h4>
+                                    <p className="text-[10px] text-text-secondary mt-0.5">
+                                        {reservation.delivery_status && reservation.delivery_status !== 'pending_assignment' 
+                                            ? `${reservation.rider?.name || 'A rider'} has accepted your shipment.`
+                                            : 'Finding a reliable local rider to deliver your items...'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Step 3: Out for Delivery */}
+                            <div className="relative flex gap-4 z-10">
+                                <div className={`w-8 h-8 shrink-0 rounded-full border-2 bg-white flex items-center justify-center shadow-sm ${
+                                    ['picked_up', 'in_transit', 'delivered'].includes(reservation.delivery_status || '')
+                                        ? 'border-brand-500 text-brand-600'
+                                        : 'border-neutral-200 text-neutral-300'
+                                }`}>
+                                    {['picked_up', 'in_transit', 'delivered'].includes(reservation.delivery_status || '') ? (
+                                        <Check size={14} className="stroke-[3]" />
+                                    ) : (
+                                        <Truck size={14} />
+                                    )}
+                                </div>
+                                <div>
+                                    <h4 className={`text-xs font-black uppercase tracking-wide ${
+                                        ['picked_up', 'in_transit', 'delivered'].includes(reservation.delivery_status || '') ? 'text-green-950' : 'text-neutral-400'
+                                    }`}>Out for Delivery</h4>
+                                    <p className="text-[10px] text-text-secondary mt-0.5">
+                                        {['picked_up', 'in_transit', 'delivered'].includes(reservation.delivery_status || '')
+                                            ? 'The rider has picked up your items and is heading to your location!'
+                                            : 'Rider will collect items once packaged.'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Step 4: Completed / Delivered */}
+                            <div className="relative flex gap-4 z-10">
+                                <div className={`w-8 h-8 shrink-0 rounded-full border-2 bg-white flex items-center justify-center shadow-sm ${
+                                    reservation.delivery_status === 'delivered'
+                                        ? 'border-brand-500 text-brand-600 bg-brand-50'
+                                        : 'border-neutral-200 text-neutral-300'
+                                }`}>
+                                    <ShieldCheck size={14} />
+                                </div>
+                                <div>
+                                    <h4 className={`text-xs font-black uppercase tracking-wide ${
+                                        reservation.delivery_status === 'delivered' ? 'text-green-950' : 'text-neutral-400'
+                                    }`}>Delivered</h4>
+                                    <p className="text-[10px] text-text-secondary mt-0.5">
+                                        {reservation.delivery_status === 'delivered'
+                                            ? 'Items delivered and verification code checked successfully!'
+                                            : 'Awaiting handoff.'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Rider details card if assigned */}
+                        {reservation.rider && (
+                            <div className="mt-4 p-4 bg-brand-50/50 rounded-2xl border border-brand-100 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-brand-600 border border-brand-100 shrink-0">
+                                        {reservation.rider.delivery_profile?.vehicle_type === 'bicycle' ? (
+                                            <Bike size={24} />
+                                        ) : reservation.rider.delivery_profile?.vehicle_type === 'foot' ? (
+                                            <User size={24} />
+                                        ) : (
+                                            <Truck size={24} />
+                                        )}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[9px] font-black text-brand-700 uppercase tracking-widest">
+                                            {reservation.rider.delivery_profile?.vehicle_type === 'bicycle' ? 'Bicycle Rider' :
+                                             reservation.rider.delivery_profile?.vehicle_type === 'foot' ? 'Foot Delivery' :
+                                             reservation.rider.delivery_profile?.vehicle_type === 'handcart' ? 'Handcart Delivery' : 'Boda Rider'}
+                                        </p>
+                                        <h4 className="text-xs font-black text-green-950 truncate leading-tight">{reservation.rider.name}</h4>
+                                        <p className="text-[9px] font-bold text-text-muted mt-0.5">
+                                            {reservation.rider.delivery_profile?.license_plate ? `Plate: ${reservation.rider.delivery_profile.license_plate}` : 'No Plate'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <a 
+                                    href={`tel:${reservation.rider.phone}`}
+                                    className="w-10 h-10 bg-brand-600 text-white rounded-xl flex items-center justify-center active:scale-95 transition-all hover:bg-brand-700 shadow-md shadow-brand-200"
+                                >
+                                    <Phone size={16} />
+                                </a>
+                            </div>
+                        )}
+
+                        {/* Release code note */}
+                        {reservation.delivery_status !== 'delivered' && (
+                            <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 text-center space-y-1.5">
+                                <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest">Verification Required</p>
+                                <p className="text-[10px] text-amber-800 leading-normal font-medium">
+                                    Provide the pickup code <span className="font-mono font-black text-brand-700 select-all text-xs">{reservation.reservation_code}</span> to the rider once your package arrives to complete delivery securely.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 3. Location & Destination Summary */}
                 <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-brand-sm space-y-6">
                     <div className="flex items-center justify-between">
                         <h3 className="text-sm font-black text-green-950 uppercase tracking-widest">Order Summary</h3>
@@ -181,12 +361,13 @@ export default function ReservationPickupPage() {
                     </div>
 
                     <div className="space-y-4">
+                        {/* Pickup Point (Market Stall) */}
                         <div className="flex gap-4">
                             <div className="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center text-brand-600 shrink-0">
-                                <MapPin size={24} />
+                                <Store size={24} />
                             </div>
                             <div>
-                                <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">Market & Stall</p>
+                                <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">Pickup Location</p>
                                 <h4 className="text-sm font-black text-green-950">{reservation.trader.business_name}</h4>
                                 <p className="text-xs font-medium text-text-secondary">
                                     {reservation.trader.stall ? (
@@ -198,24 +379,60 @@ export default function ReservationPickupPage() {
                             </div>
                         </div>
 
-                        <div className="flex gap-4">
-                            <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
-                                <Clock size={24} />
+                        {/* Delivery Destination if delivery option is true */}
+                        {reservation.delivery_option ? (
+                            <div className="flex gap-4">
+                                <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
+                                    <MapPin size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">Delivery Address</p>
+                                    <h4 className="text-sm font-black text-green-950 leading-snug">{reservation.delivery_address}</h4>
+                                    <p className="text-xs font-bold text-brand-600 mt-0.5">
+                                        Fee: KES {parseFloat(reservation.delivery_fee || '0').toLocaleString()}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">Pickup Deadline</p>
-                                <h4 className="text-sm font-black text-green-950">
-                                    {new Date(reservation.pickup_deadline).toLocaleDateString()} at {new Date(reservation.pickup_deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </h4>
-                                <p className="text-[10px] text-amber-600 font-bold uppercase mt-1">24 hours after payment</p>
+                        ) : reservation.status === 'completed' ? (
+                            <div className="flex gap-4">
+                                <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600 shrink-0">
+                                    <CheckCircle2 size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">Delivery Status</p>
+                                    <h4 className="text-sm font-black text-green-950">
+                                        Delivered
+                                    </h4>
+                                    <p className="text-[10px] text-green-600 font-bold uppercase mt-1">Order completed successfully</p>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            /* Regular pickup deadline if self collection */
+                            <div className="flex gap-4">
+                                <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 shrink-0">
+                                    <Clock size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-text-muted uppercase tracking-tight">Pickup Deadline</p>
+                                    <h4 className="text-sm font-black text-green-950">
+                                        {new Date(reservation.pickup_deadline).toLocaleDateString()} at {new Date(reservation.pickup_deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </h4>
+                                    <p className="text-[10px] text-amber-600 font-bold uppercase mt-1">24 hours after payment</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="pt-4 border-t border-dashed border-gray-100">
-                        <p className="text-[11px] text-text-secondary leading-relaxed font-medium">
-                            Please arrive at the market before the scheduled time. Once you arrive, show your <strong>order code</strong> to the trader to receive your items.
-                        </p>
+                        {reservation.delivery_option ? (
+                            <p className="text-[11px] text-text-secondary leading-relaxed font-medium">
+                                A local rider will pick up your package from the stall above and deliver it directly to your address. Show the code only upon successful arrival.
+                            </p>
+                        ) : (
+                            <p className="text-[11px] text-text-secondary leading-relaxed font-medium">
+                                Please arrive at the market before the scheduled time. Once you arrive, show your <strong>order code</strong> to the trader to receive your items.
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -286,6 +503,16 @@ export default function ReservationPickupPage() {
                         </div>
                     )}
 
+                    {reservation.status === 'completed' && !reservation.review && (
+                        <button 
+                            onClick={() => setShowReviewSheet(true)}
+                            className="w-full h-16 bg-amber-500 text-white rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-amber-200"
+                        >
+                            <Star size={18} fill="currentColor" />
+                            {reservation.delivery_option ? 'Leave a Review on Shipping' : 'Leave a Review'}
+                        </button>
+                    )}
+
                     <button 
                         onClick={() => router.push(`/trader/${reservation.trader.id}`)}
                         className="w-full h-16 bg-white border-2 border-gray-100 text-green-950 rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest active:scale-95 transition-all"
@@ -313,6 +540,14 @@ export default function ReservationPickupPage() {
                 </div>
 
             </main>
+            <AnimatePresence>
+                {showReviewSheet && reservation && (
+                    <ReviewSheet 
+                        reservation={reservation as any}
+                        onClose={() => setShowReviewSheet(false)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

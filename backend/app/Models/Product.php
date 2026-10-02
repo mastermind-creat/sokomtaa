@@ -18,6 +18,9 @@ class Product extends Model
         'name_sw',
         'description',
         'price',
+        'discount_price',
+        'discount_start_date',
+        'discount_end_date',
         'unit',
         'stock_status',
         'stock_quantity',
@@ -30,10 +33,34 @@ class Product extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'discount_price' => 'decimal:2',
+        'discount_start_date' => 'datetime',
+        'discount_end_date' => 'datetime',
         'is_active' => 'boolean',
         'is_boosted' => 'boolean',
         'boosted_until' => 'datetime',
     ];
+
+    protected $appends = ['active_price'];
+
+    /**
+     * Get the active price based on discounts and current date.
+     */
+    public function getActivePriceAttribute()
+    {
+        if ($this->discount_price !== null) {
+            $now = now();
+            
+            $startValid = !$this->discount_start_date || $this->discount_start_date <= $now;
+            $endValid = !$this->discount_end_date || $this->discount_end_date >= $now;
+            
+            if ($startValid && $endValid) {
+                return $this->discount_price;
+            }
+        }
+        
+        return $this->price;
+    }
 
     /**
      * Scope for products that are currently boosted.

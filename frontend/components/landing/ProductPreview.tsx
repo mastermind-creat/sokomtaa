@@ -3,11 +3,12 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { motion, Variants } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { Product, ApiResponse } from '@/types';
-import { ShoppingBag, ArrowRight, Tag, Store } from 'lucide-react';
+import { ShoppingBag, ArrowRight, Tag, Store, Star, Flame, Plus } from 'lucide-react';
 
 export const ProductPreview = () => {
   const [hasHydrated, setHasHydrated] = React.useState(false);
@@ -17,100 +18,211 @@ export const ProductPreview = () => {
     setHasHydrated(true);
   }, []);
 
-  const { data: response, isLoading } = useQuery<ApiResponse<{ popular_products: Product[] }>>({
+  const { data: response, isLoading } = useQuery<ApiResponse<{ popular_products: Product[], boosted_products: Product[] }>>({
     queryKey: ['recommendations'],
-    queryFn: () => api.get('/recommendations').then(res => res.data),
+    queryFn: () => api.get('/recommendations'),
   });
 
-  const products = response?.data?.popular_products || [];
+  const popularProducts = (response?.data?.popular_products || []).slice(0, 12);
+  const boostedProducts = response?.data?.boosted_products || [];
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
+  };
+
+  const getActivePrice = (product: Product): number => {
+    // Prefer server-computed value (accurate timezone)
+    if (product.active_price != null) return Number(product.active_price);
+    // Fallback client-side check
+    if (product.discount_price != null) {
+      const now = new Date();
+      const startValid = !product.discount_start_date || new Date(product.discount_start_date) <= now;
+      const endValid = !product.discount_end_date || new Date(product.discount_end_date) >= now;
+      if (startValid && endValid) return Number(product.discount_price);
+    }
+    return Number(product.price);
+  };
 
   return (
-    <section id="product-preview" className="py-24 px-6 bg-surface-base">
-      <div className="max-w-7xl mx-auto">
+    <section id="products" className="py-20 px-6 bg-surface-base relative overflow-hidden">
+      {/* Decorative background blur */}
+      <div className="absolute top-40 right-0 w-[500px] h-[500px] bg-brand-500/5 blur-[100px] rounded-full pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
           <div>
-            <p className="text-brand-600 font-black uppercase tracking-widest text-sm mb-4">Marketplace</p>
-            <h2 className="font-display text-4xl md:text-5xl font-[1000] text-green-950 tracking-tighter">
-              Trending Products
-            </h2>
-            <p className="mt-4 text-gray-500 font-medium max-w-xl">
-              Discover what&apos;s fresh and popular in your local markets right now.
+            <p className="text-brand-600 font-black uppercase tracking-widest text-[10px] mb-3 flex items-center gap-2">
+              <Flame size={14} className="text-amber-500" />
+              Fresh & Trending
             </p>
+            <h2 className="font-display text-3xl md:text-5xl font-[1000] text-green-950 tracking-tighter">
+              Featured Products
+            </h2>
           </div>
           <Link
-            href={hasHydrated && isAuthenticated ? "/search" : "/login"}
-            className="inline-flex items-center gap-2 text-brand-600 font-black uppercase tracking-widest text-xs group transition-all"
+            href={hasHydrated && isAuthenticated ? "/resident/search" : "/login"}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-green-950 font-black uppercase tracking-widest text-[10px] rounded-xl shadow-sm group hover:border-brand-300 hover:text-brand-600 transition-all"
           >
-            Explore All Products
-            <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+            Explore Marketplace
+            <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="aspect-[3/4] bg-gray-100 animate-pulse rounded-[32px]" />
+              <div key={i} className="aspect-[4/5] bg-gray-100 animate-pulse rounded-[32px]" />
             ))}
           </div>
-        ) : products.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-[40px] border border-gray-100">
+        ) : popularProducts.length === 0 && boostedProducts.length === 0 ? (
+          <div className="text-center py-24 bg-white rounded-[40px] border border-gray-100 shadow-sm">
             <ShoppingBag size={48} className="mx-auto text-gray-200 mb-4" />
-            <p className="font-bold text-gray-400">No trending products found.</p>
+            <h3 className="text-xl font-black text-green-950 mb-1">Market is Quiet</h3>
+            <p className="text-sm font-medium text-gray-400">Check back later for fresh products.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-            {products.map((product) => (
-              <div key={product.id} className="group flex flex-col bg-white border border-gray-100 rounded-[32px] overflow-hidden hover:shadow-2xl hover:shadow-gray-200/50 transition-all duration-500">
-                <div className="aspect-square bg-gray-50 relative overflow-hidden">
-                  {product.image_url ? (
-                    <Image
-                      src={product.image_url}
-                      alt={product.name}
-                      fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-200">
-                      <ShoppingBag size={48} />
-                    </div>
-                  )}
-                  <div className="absolute top-4 right-4">
-                    <div className="px-3 py-1 bg-white/90 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-widest text-green-950 shadow-sm">
-                      KES {product.price}
-                    </div>
-                  </div>
-                </div>
+          <div className="space-y-12">
 
-                <div className="p-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Tag size={12} className="text-brand-600" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                      {product.category?.name || 'General'}
-                    </span>
-                  </div>
-                  <h3 className="font-display text-lg font-black text-green-950 tracking-tight mb-4 group-hover:text-brand-600 transition-colors line-clamp-1">
-                    {product.name}
-                  </h3>
-
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-brand-50 rounded-lg flex items-center justify-center">
-                        <Store size={12} className="text-brand-600" />
-                      </div>
-                      <span className="text-[10px] font-bold text-gray-500 truncate max-w-[80px]">
-                        {product.trader?.business_name || 'Trader'}
-                      </span>
-                    </div>
-                    <Link
-                      href={hasHydrated && isAuthenticated ? `/market/${product.trader?.market_id}` : "/login"}
-                      className="w-10 h-10 bg-brand-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition-colors"
+            {/* Boosted Products - Featured Horizontal Layout */}
+            {boostedProducts.length > 0 && (
+              <div className="bg-amber-50/50 p-6 md:p-8 rounded-[40px] border border-amber-100">
+                <h3 className="text-sm font-black text-amber-700 mb-6 flex items-center gap-2 uppercase tracking-widest">
+                  <Star size={16} className="text-amber-400 fill-amber-400" />
+                  Premium Picks
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {boostedProducts.slice(0, 3).map((product) => (
+                    <motion.div
+                      key={`boosted-${product.id}`}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      className="group relative"
                     >
-                      <ShoppingBag size={18} />
-                    </Link>
-                  </div>
+                      <Link
+                        href={hasHydrated && isAuthenticated ? `/trader/${product.trader_id}` : "/login"}
+                        className="flex bg-white border border-amber-100 rounded-[28px] overflow-hidden shadow-lg shadow-amber-500/5 hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-500 p-3 gap-4 items-center"
+                      >
+                        <div className="w-24 h-24 bg-gray-50 rounded-2xl relative overflow-hidden flex-shrink-0">
+                          {product.image_url ? (
+                            <Image
+                              src={product.image_url}
+                              alt={product.name}
+                              fill
+                              className="object-cover transition-transform duration-700 group-hover:scale-110"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-200">
+                              <ShoppingBag size={24} />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0 pr-2">
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 rounded-md text-[9px] font-black uppercase tracking-widest text-amber-600 mb-1">
+                            Promoted
+                          </div>
+                          <h4 className="font-display text-base font-black text-green-950 tracking-tight mb-0.5 truncate group-hover:text-brand-600 transition-colors">
+                            {product.name}
+                          </h4>
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="text-brand-600 font-black text-sm">KES {getActivePrice(product)}</p>
+                            {getActivePrice(product) < Number(product.price) && (
+                              <p className="text-gray-400 font-bold text-[10px] line-through">KES {product.price}</p>
+                            )}
+                          </div>
+                          <div className="inline-flex w-full items-center justify-center gap-2 py-1.5 bg-green-50 text-brand-700 rounded-lg font-bold text-[10px] group-hover:bg-brand-600 group-hover:text-white transition-colors">
+                            Reserve
+                          </div>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Popular Products - Grid */}
+            {popularProducts.length > 0 && (
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-50px" }}
+                className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6"
+              >
+                {popularProducts.map((product) => (
+                  <motion.div variants={itemVariants} key={`popular-${product.id}`} className="group relative">
+                    <Link
+                      href={hasHydrated && isAuthenticated ? `/trader/${product.trader_id}` : "/login"}
+                      className="flex flex-col h-full bg-white border border-gray-100 rounded-[28px] overflow-hidden hover:shadow-2xl hover:shadow-gray-200/50 hover:-translate-y-1 transition-all duration-500"
+                    >
+                      <div className="aspect-square bg-gray-50 relative overflow-hidden">
+                        {product.image_url ? (
+                          <Image
+                            src={product.image_url}
+                            alt={product.name}
+                            fill
+                            className="object-cover transition-transform duration-700 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-200">
+                            <ShoppingBag size={32} />
+                          </div>
+                        )}
+
+                        {/* Price Badge */}
+                        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+                          <div className="px-2.5 py-1 bg-white/95 backdrop-blur-md rounded-lg text-[10px] font-black uppercase tracking-widest text-green-950 shadow-sm border border-white/20">
+                            KES {getActivePrice(product)}
+                          </div>
+                          {getActivePrice(product) < Number(product.price) && (
+                            <div className="px-1.5 py-0.5 bg-white/80 backdrop-blur-sm rounded text-[8px] font-bold uppercase tracking-widest text-gray-500 line-through shadow-sm">
+                              {product.price}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Quick Action Button */}
+                        <div className="absolute bottom-3 right-3">
+                          <div className="w-10 h-10 bg-brand-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-brand-500 hover:scale-110 transition-all duration-300">
+                            <Plus size={18} strokeWidth={2.5} />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 flex-1 flex flex-col">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Tag size={10} className="text-brand-500" />
+                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                            {product.category?.name || 'General'}
+                          </span>
+                        </div>
+                        <h3 className="font-display text-sm font-black text-green-950 tracking-tight mb-3 group-hover:text-brand-600 transition-colors line-clamp-1">
+                          {product.name}
+                        </h3>
+
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-50 mt-auto">
+                          <div className="w-6 h-6 bg-brand-50 rounded-lg flex items-center justify-center text-brand-600">
+                            <Store size={12} />
+                          </div>
+                          <span className="text-[10px] font-bold text-gray-600 truncate">
+                            {product.trader?.business_name || 'Trader'}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+
           </div>
         )}
       </div>
