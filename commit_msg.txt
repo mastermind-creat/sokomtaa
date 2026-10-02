@@ -1,0 +1,79 @@
+feat: polyglot architecture upgrade — full implementation
+
+Migrates Soko Mtaa from monolithic Laravel + Next.js + MySQL to a
+polyglot microservice architecture with PostgreSQL/PostGIS, Python
+FastAPI AI service, Go WebSocket GPS gateway, and upgraded Next.js
+map components. All existing business logic (RBAC, M-Pesa, reservations)
+is preserved and extended.
+
+Phase 1 - Database Foundation (PostgreSQL + PostGIS):
+- Switch Laravel DB driver from MySQL to pgsql
+- Migration: add_postgis_location_to_stalls with GEOGRAPHY(Point,4326)
+  column, GiST spatial index, PostGIS availability guard
+- Migration: populate_stall_locations_from_pixel_coords (idempotent,
+  converts map_x/map_y to WGS-84 using Kolenyo Market reference)
+- Stall model: location cast, getLat/getLon accessors, saving observer
+
+Phase 2 - Laravel API Extensions:
+- GeoService: ST_Within bbox queries, Redis GEO cache (5s TTL),
+  addTraderToGeo / removeTraderFromGeo
+- StallMapController: GET /api/map/stalls with WGS-84 validation
+- ReconcileGeoCache: 5-min artisan scheduler command
+- InternalApiAuth middleware: X-Internal-Token (401 on missing/invalid)
+- AiMatchController: POST /internal/ai/match-traders (price ascending)
+- AiPipelineService: circuit-breaker 5s timeout, PII-redacted logging
+- MultiCheckoutService: atomic transaction, STK Push, T07 SMS dispatch
+- HealthController: GET /api/health (PostgreSQL + Redis liveness)
+- AiController: POST /api/ai/chat (throttle:10,1)
+- SubscribeRiderEvents: Redis Pub/Sub subscriber for rider.disconnected
+
+Phase 3 - Go WebSocket GPS Gateway (go_gateway/):
+- JWT auth service (HS256, rejects expired/invalid-sig tokens)
+- Redis service: GeoAdd, GeoRemove, Publish, 30s in-memory buffer
+- WebSocket handler: 30s idle timeout, WGS-84 validation, GEOADD,
+  rider.position_updated publish, rider.disconnected on close
+- Health endpoint with RedisPinger interface
+- Structured JSON logs to stdout
+- Multi-stage Dockerfile (golang:1.22-alpine -> alpine:3.19)
+
+Phase 4 - Python FastAPI AI Service (fastapi_service/):
+- NLP service: spaCy en_core_web_sm, 10 Kenyan staple meals, no PII logging
+- Recipe scaler: per-person ratio table, linear headcount scaling
+- Pantry service: Redis session state, deduction, zero-qty removal
+- Laravel client: httpx AsyncClient, X-Internal-Token, 5s timeout
+- Routers: /ai/parse-recipe, /ai/pantry-exclusion, /ai/match-traders,
+  /ai/health, /ai/parse-recipe/roundtrip
+- X-Internal-Token middleware (skips /ai/health)
+- Structured JSON logging, Dockerfile (python:3.12-slim)
+
+Phase 5 - Next.js Map Component Upgrades (frontend/):
+- Replaced Leaflet with MapLibre GL + supercluster
+- useStallMap: 300ms debounce, localStorage cache, offline detection
+- useRiderTracking: WebSocket, exponential backoff min(2^(N-1)*1s, 30s),
+  isTrackingUnavailable after 3 failed attempts
+- useMapClusters: Supercluster zoom<15 clustering
+- useServiceHealth: 30s health endpoint polling
+- StallMap, StallBottomSheet, ClusterLayer, RiderMarker components
+- ServiceDegradationBanner for upstream service failures
+- Resident map page and reservation detail page with rider tracking
+
+Phase 6 - Cross-Service Wiring:
+- All routes registered (map/stalls, ai/chat, checkout/multi, internal/*)
+- InternalApiAuth aliased as internal.auth in bootstrap/app.php
+- throttle:60,1 on map/stalls, throttle:10,1 on ai/chat
+- Structured JSON logging across all services
+
+Phase 7 - Deployment Configuration:
+- docker-compose.yml: postgres (postgis:15-3.3), redis:7, laravel,
+  fastapi (internal only, no public port), go_gateway, nginx
+- nginx/nginx.conf: /ws/ -> Go (WebSocket), /api/ -> Laravel,
+  FastAPI NOT exposed publicly
+- DEPLOYMENT.md: full step-by-step deployment sequence
+- scripts/smoke_test.sh: full pipeline smoke test
+
+Tests:
+- Laravel: GeoServiceTest, AiPipelineLoggingTest, StallMapControllerTest,
+  HealthEndpointTest, ThrottleTest, CommunicationContractsTest
+- FastAPI: hypothesis PBT properties, router and service unit tests
+- Go: health_test.go, auth_service_test.go
+- Frontend: useRiderTracking (backoff), useStallMap (debounce + offline)
