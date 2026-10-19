@@ -204,3 +204,44 @@ class TestProperty17NoZeroQuantityAfterExclusion:
 
         for item in result:
             assert item.quantity > 0, f"Zero-quantity item found: {item.name}"
+
+
+# ---------------------------------------------------------------------------
+# Property 19: Internal Endpoints Reject Unauthenticated Requests (FastAPI)
+# Validates: Requirements 14.2
+# ---------------------------------------------------------------------------
+
+from fastapi.testclient import TestClient
+from app.main import app
+from app.config import settings
+
+_auth_test_client = TestClient(app, raise_server_exceptions=False)
+
+
+class TestProperty19InternalEndpointAuth:
+    """Feature: polyglot-architecture-upgrade, Property 19: Internal Endpoints Reject Unauthenticated Requests (FastAPI)"""
+
+    @given(token=st.text(max_size=50).filter(lambda t: t != settings.internal_token))
+    @hyp_settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
+    def test_invalid_token_returns_401_on_protected_endpoints(self, token):
+        endpoints = [
+            ("/ai/parse-recipe", {"text": "ugali for 2", "user_id": 1}),
+            ("/ai/pantry-exclusion", {"session_id": "test-uuid", "pantry_items": ["salt"]}),
+            ("/ai/match-traders", {"session_id": "test-uuid", "resident_lat": -0.0917, "resident_lon": 34.7679}),
+        ]
+        for path, body in endpoints:
+            resp = _auth_test_client.post(path, json=body, headers={"X-Internal-Token": token})
+            assert resp.status_code == 401
+            assert resp.json().get("code") == "UNAUTHENTICATED"
+
+    def test_missing_token_header_returns_401(self):
+        endpoints = [
+            ("/ai/parse-recipe", {"text": "ugali for 2", "user_id": 1}),
+            ("/ai/pantry-exclusion", {"session_id": "test-uuid", "pantry_items": ["salt"]}),
+            ("/ai/match-traders", {"session_id": "test-uuid", "resident_lat": -0.0917, "resident_lon": 34.7679}),
+        ]
+        for path, body in endpoints:
+            resp = _auth_test_client.post(path, json=body)
+            assert resp.status_code == 401
+            assert resp.json().get("code") == "UNAUTHENTICATED"
+

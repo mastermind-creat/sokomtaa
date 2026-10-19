@@ -26,7 +26,7 @@ return new class extends Migration
 
         Schema::table('reservations', function (Blueprint $table) {
             $table->string('paypal_order_id')->nullable()
-                  ->after('mpesa_checkout_request_id');
+                  ->after('reservation_code');
         });
     }
 

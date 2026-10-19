@@ -29,7 +29,7 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Implement `down()` to drop the index then drop the column
     - _Requirements: 1.2, 1.3, 1.4, 1.7_
 
-  - [ ]* 1.3 Write property test for stall location write round-trip
+  - [x] 1.3 Write property test for stall location write round-trip
     - **Property 1: Stall Location Write Round-Trip**
     - For any valid WGS-84 lon/lat pair, write `ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography` then read back `ST_X` and `ST_Y`; assert values are within float epsilon
     - **Validates: Requirements 1.5**
@@ -43,13 +43,13 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Seed `active_traders` Redis GEO key with all currently open stalls as a post-migration step
     - _Requirements: 1.5, 1.6, 1.8, 15.1, 15.2, 15.3, 15.4_
 
-  - [ ]* 1.5 Write property test for migration completeness
+  - [x] 1.5 Write property test for migration completeness
     - **Property 2: Migration Completeness**
     - For all stalls with non-null `map_x` and `map_y`, after the migration runs the `location` column must be non-null
     - **Validates: Requirements 1.6, 15.1**
     - Library: eris
 
-  - [ ]* 1.6 Write property test for migration idempotence
+  - [x] 1.6 Write property test for migration idempotence
     - **Property 28: Migration Idempotence**
     - For stalls with `location` already set, running the migration a second time must leave those values unchanged
     - **Validates: Requirements 15.5**
@@ -71,13 +71,13 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Implement `removeTraderFromGeo(int $stallId): void` executing `ZREM active_traders`
     - _Requirements: 2.2, 2.4, 2.7, 3.1, 3.2_
 
-  - [ ]* 2.2 Write property test for viewport bbox containment
+  - [x] 2.2 Write property test for viewport bbox containment
     - **Property 3: Viewport Bbox Containment**
     - For any valid bbox, every stall returned by the GeoService must have a `location` geometrically within the envelope
     - **Validates: Requirements 2.2**
     - Library: eris
 
-  - [ ]* 2.3 Write property test for maintenance stall exclusion
+  - [x] 2.3 Write property test for maintenance stall exclusion
     - **Property 4: Maintenance Stall Exclusion**
     - For any valid bbox query over any stall distribution, no stall with `status = 'maintenance'` should appear in results
     - **Validates: Requirements 2.4**
@@ -95,13 +95,13 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Ensure the Redis write happens within the same request cycle (within 5 seconds)
     - _Requirements: 2.8, 3.1, 3.2_
 
-  - [ ]* 2.6 Write property test for active trader GEO membership
+  - [x] 2.6 Write property test for active trader GEO membership
     - **Property 5: Active Trader GEO Membership**
     - For any stall marked `is_open = true`, after the open event is processed the stall's ID must be a member of `active_traders`
     - **Validates: Requirements 3.1**
     - Library: eris
 
-  - [ ]* 2.7 Write property test for stall open/close Redis round-trip
+  - [x] 2.7 Write property test for stall open/close Redis round-trip
     - **Property 6: Stall Open/Close Redis Round-Trip**
     - Opening then immediately closing a stall must result in the stall's ID being absent from `active_traders`
     - **Validates: Requirements 3.2**
@@ -114,7 +114,7 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Register command in the scheduler to run every 5 minutes
     - _Requirements: 3.7_
 
-  - [ ]* 2.9 Write property test for active_traders consistency with database
+  - [x] 2.9 Write property test for active_traders consistency with database
     - **Property 10: active_traders Consistency with Database**
     - After `ReconcileGeoCache` runs, for all stalls: `is_open = true` implies member of `active_traders`, `is_open = false` implies absent
     - **Validates: Requirements 3.7**
@@ -132,13 +132,13 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Return per-commodity trader list with `trader_id`, `business_name`, `product_id`, `price`, `average_rating`, `stall_number`
     - _Requirements: 8.1, 8.2, 8.3, 8.6_
 
-  - [ ]* 2.12 Write property test for trader ranking by price ascending
+  - [x] 2.12 Write property test for trader ranking by price ascending
     - **Property 18: Trader Ranking by Price Ascending**
     - For any commodity matched against any set of traders, the returned list must be ordered by `price` ascending with no cheaper option after a more expensive one
     - **Validates: Requirements 8.3**
     - Library: eris
 
-  - [ ]* 2.13 Write property test for internal endpoint authentication
+  - [x] 2.13 Write property test for internal endpoint authentication
     - **Property 19: Internal Endpoints Reject Unauthenticated Requests (Laravel)**
     - Any request to `POST /internal/ai/match-traders` missing or with incorrect `X-Internal-Token` must return HTTP 401
     - **Validates: Requirements 8.6, 14.3**
@@ -149,7 +149,7 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - On `ConnectionException` or non-2xx response: log to `fastapi` log channel (redacting `text` fields), return `SERVICE_UNAVAILABLE` error
     - _Requirements: 12.7, 13.6, 14.5_
 
-  - [ ]* 2.15 Write property test for circuit-breaker timeout
+  - [x] 2.15 Write property test for circuit-breaker timeout
     - **Property 26: Circuit-Breaker Timeout on FastAPI Unavailability**
     - For any call to a hanging/unreachable FastAPI endpoint, Laravel must return a `SERVICE_UNAVAILABLE` response within 5 seconds
     - **Validates: Requirements 12.7**
@@ -162,19 +162,19 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Dispatch SMS notifications to each involved trader using template T07
     - _Requirements: 9.3, 9.4, 9.5, 9.6, 9.7, 9.8_
 
-  - [ ]* 2.17 Write property test for multi-merchant checkout payload completeness
+  - [x] 2.17 Write property test for multi-merchant checkout payload completeness
     - **Property 21: Multi-Merchant Checkout Payload Contains All Items**
     - For any selection of N commodity-trader pairs, the assembled payload must contain exactly N line items, each with correct fields
     - **Validates: Requirements 9.3**
     - Library: eris
 
-  - [ ]* 2.18 Write property test for successful payment creates all reservations as paid
+  - [x] 2.18 Write property test for successful payment creates all reservations as paid
     - **Property 22: Successful Payment Creates All Reservations as Paid**
     - For any multi-merchant checkout with N traders, when STK Push succeeds, exactly N reservations with `status = 'paid'` must exist
     - **Validates: Requirements 9.5, 9.7**
     - Library: eris
 
-  - [ ]* 2.19 Write property test for failed payment creates no reservations
+  - [x] 2.19 Write property test for failed payment creates no reservations
     - **Property 23: Failed Payment Creates No Reservations**
     - For any multi-merchant checkout where STK Push fails, zero reservation records should be created; database state must be identical before and after
     - **Validates: Requirements 9.6, 9.7**
@@ -191,7 +191,7 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Include delivery fee in the STK Push total when `delivery_type = 'rider'`
     - _Requirements: 9.2_
 
-  - [ ]* 2.22 Write property test for delivery fee proportional to max trader distance
+  - [x] 2.22 Write property test for delivery fee proportional to max trader distance
     - **Property 20: Delivery Fee Proportional to Max Trader Distance**
     - For any set of trader positions and a resident position, a strictly farther maximum trader must never produce a lower delivery fee
     - **Validates: Requirements 9.2**
@@ -239,7 +239,7 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Reject missing, expired, or invalid-signature tokens
     - _Requirements: 4.1, 14.1_
 
-  - [ ]* 4.5 Write property test for Go_Gateway rejecting WebSocket without valid JWT
+  - [x] 4.5 Write property test for Go_Gateway rejecting WebSocket without valid JWT
     - **Property 27: Go_Gateway Rejects WebSocket Without Valid JWT**
     - For any WebSocket upgrade request missing a token, carrying an expired token, or an invalid-signature token, the gateway must refuse with HTTP 4xx and not establish a connection
     - **Validates: Requirements 14.1**
@@ -258,19 +258,19 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - On close: `Publish rider.disconnected` event
     - _Requirements: 4.1, 4.2, 4.4, 4.5, 4.8, 3.3, 3.4, 3.5_
 
-  - [ ]* 4.8 Write property test for GPS ping position round-trip
+  - [x] 4.8 Write property test for GPS ping position round-trip
     - **Property 7: GPS Ping Position Round-Trip**
     - For any rider ID and valid GPS ping, after `GeoAdd`, `GEOPOS active_riders <riderID>` must return coordinates within ±0.0001 degrees of the input
     - **Validates: Requirements 3.3, 4.2**
     - Library: rapid
 
-  - [ ]* 4.9 Write property test for single GEO entry per rider
+  - [x] 4.9 Write property test for single GEO entry per rider
     - **Property 8: Single GEO Entry Per Rider**
     - After N GPS pings (N ≥ 1) for any rider, the count of entries in `active_riders` for that rider ID must be exactly 1
     - **Validates: Requirements 3.4**
     - Library: rapid
 
-  - [ ]* 4.10 Write property test for position updated event emitted on each write
+  - [x] 4.10 Write property test for position updated event emitted on each write
     - **Property 11: Position Updated Event Emitted on Each Write**
     - For any successful `GEOADD active_riders`, a `rider.position_updated` event must be published to `rider_events` containing the correct rider ID, latitude, and longitude
     - **Validates: Requirements 4.8**
@@ -328,19 +328,19 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Scaling must be linear: doubling headcount doubles every quantity
     - _Requirements: 5.3_
 
-  - [ ]* 6.5 Write property test for recipe parse producing valid commodity structure
+  - [x] 6.5 Write property test for recipe parse producing valid commodity structure
     - **Property 12: Recipe Parse Produces Valid Commodity Structure**
     - For any valid recipe text with recognisable meal and headcount, every element in `commodities` must have non-empty `name`, positive `quantity`, and non-empty `unit`
     - **Validates: Requirements 5.2, 5.4**
     - Library: hypothesis
 
-  - [ ]* 6.6 Write property test for headcount scaling linearity
+  - [x] 6.6 Write property test for headcount scaling linearity
     - **Property 13: Headcount Scaling is Linear (Metamorphic)**
     - For any valid recipe text, doubling the headcount must double every `quantity` in the result (within floating-point tolerance)
     - **Validates: Requirements 5.3**
     - Library: hypothesis
 
-  - [ ]* 6.7 Write property test for recipe parse idempotence
+  - [x] 6.7 Write property test for recipe parse idempotence
     - **Property 14: Recipe Parse Idempotence**
     - For any valid recipe text, calling the parser twice must produce an equivalent `commodities` array (same items, quantities, units)
     - **Validates: Requirements 5.8**
@@ -354,7 +354,7 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - `POST /ai/parse-recipe/roundtrip`: accept `RecipeResponse` body, deserialise, re-serialise, return result (for Property 15 verification)
     - _Requirements: 5.1, 5.2, 5.5, 5.6, 6.1, 6.2, 6.6_
 
-  - [ ]* 6.9 Write property test for RecipeResponse serialisation round-trip
+  - [x] 6.9 Write property test for RecipeResponse serialisation round-trip
     - **Property 15: RecipeResponse Serialisation Round-Trip**
     - For any valid `RecipeResponse` object, serialising → deserialising → re-serialising must produce a byte-for-byte identical JSON string; commodity count must be preserved
     - **Validates: Requirements 6.3, 6.4**
@@ -368,13 +368,13 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Return original list unchanged when `pantry_items` is empty
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
 
-  - [ ]* 6.11 Write property test for pantry deduction removes specified items
+  - [x] 6.11 Write property test for pantry deduction removes specified items
     - **Property 16: Pantry Deduction Removes Specified Items**
     - For any `Commodity_List` and any non-empty subset of pantry items, after exclusion none of the confirmed pantry items should appear in the result; empty array when all items confirmed; original list when pantry is empty
     - **Validates: Requirements 7.2, 7.3, 7.6**
     - Library: hypothesis
 
-  - [ ]* 6.12 Write property test for no zero-quantity items after pantry exclusion
+  - [x] 6.12 Write property test for no zero-quantity items after pantry exclusion
     - **Property 17: No Zero-Quantity Items After Pantry Exclusion**
     - For any pantry exclusion operation, every `CommodityItem` in the returned list must have `quantity > 0`; items reaching zero quantity must be removed entirely
     - **Validates: Requirements 7.7**
@@ -396,7 +396,7 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Inform Resident if no traders stock an item; exclude unavailable items from checkout assembly
     - _Requirements: 8.2, 8.3, 8.4, 8.5_
 
-  - [ ]* 6.16 Write property test for internal endpoint authentication (FastAPI)
+  - [x] 6.16 Write property test for internal endpoint authentication (FastAPI)
     - **Property 19: Internal Endpoints Reject Unauthenticated Requests (FastAPI)**
     - Any request to FastAPI routes without a valid `X-Internal-Token` header must return HTTP 401
     - **Validates: Requirements 14.2**
@@ -453,7 +453,7 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Expose `{ clusters, supercluster }` for use in the canvas layer
     - _Requirements: 10.3, 10.4_
 
-  - [ ]* 8.5 Write property test for Supercluster applied at zoom below 15
+  - [x] 8.5 Write property test for Supercluster applied at zoom below 15
     - **Property 24: Supercluster Applied at Zoom Below 15**
     - For any set of stall GeoJSON features, at zoom < 15 nearby features must be grouped into cluster objects; at zoom ≥ 15 individual markers must be rendered
     - **Validates: Requirements 10.3**
@@ -484,7 +484,7 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Export `{ position, isConnected, isTrackingUnavailable }`
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-  - [ ]* 8.10 Write property test for exponential backoff stays within bounds
+  - [x] 8.10 Write property test for exponential backoff stays within bounds
     - **Property 25: Exponential Backoff Stays Within Bounds**
     - For any sequence of reconnect attempts N, `delay(N) = min(2^(N-1) * 1000ms, 30000ms)`; delay must never fall below previous attempt, never exceed 30s, and must start at 1s
     - **Validates: Requirements 11.3**
@@ -515,7 +515,7 @@ service → Next.js map upgrades → cross-service wiring → property tests →
     - Log the removal with rider ID
     - _Requirements: 3.5, 3.6_
 
-  - [ ]* 10.2 Write property test for rider disconnect cleaning GEO state
+  - [x] 10.2 Write property test for rider disconnect cleaning GEO state
     - **Property 9: Rider Disconnect Cleans GEO State**
     - For any rider whose WebSocket closes, after the `rider.disconnected` Pub/Sub event is processed, the rider's ID must not be present in `active_riders`
     - **Validates: Requirements 3.5, 3.6**
