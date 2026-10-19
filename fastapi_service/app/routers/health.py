@@ -12,7 +12,8 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.services.nlp_service import nlp_model_ready, NLP_MODEL_NAME
+from app.services import nlp_service
+from app.services.nlp_service import NLP_MODEL_NAME
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -32,7 +33,7 @@ async def health() -> Any:
     except Exception as exc:  # noqa: BLE001
         logger.warning("Redis health check failed: %s", exc)
 
-    if not nlp_model_ready:
+    if not nlp_service.nlp_model_ready:
         return JSONResponse(
             status_code=503,
             content={
