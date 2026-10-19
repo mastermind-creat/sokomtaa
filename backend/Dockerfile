@@ -28,8 +28,10 @@ RUN docker-php-ext-install \
     opcache
 
 # Install Redis extension
-RUN pecl install redis \
- && docker-php-ext-enable redis
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+ && pecl install redis \
+ && docker-php-ext-enable redis \
+ && apk del .build-deps
 
 # Install Composer
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
@@ -51,6 +53,9 @@ COPY . .
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
  && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Ensure supervisor and nginx log/run directories exist
+RUN mkdir -p /var/log/supervisor /var/log/nginx /run/nginx
 
 # Copy nginx and supervisor configs
 COPY docker/nginx.conf /etc/nginx/nginx.conf

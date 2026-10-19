@@ -10,7 +10,9 @@ return [
         'https://sokomtaa.co.ke',
         'https://www.sokomtaa.co.ke',
     ],
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '#^https://sokomtaa.*\.vercel\.app$#',
+    ],
     'allowed_headers'          => ['*'],
     'exposed_headers'          => [],
     'max_age'                  => 0,
