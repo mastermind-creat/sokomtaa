@@ -73,13 +73,19 @@ export async function POST(req: Request) {
       const openai = createOpenAI({ apiKey: aiConfig.openai_api_key });
       // Use .chat() to force /v1/chat/completions — the newer Responses API
       // in @ai-sdk/openai v3 has a schema serialization issue (type: null).
-      model = openai.chat(aiConfig.model || 'gpt-4o-mini');
+      const openaiModel = (!aiConfig.model || aiConfig.model.includes('llama') || aiConfig.model.includes('mixtral'))
+        ? 'gpt-4o-mini'
+        : aiConfig.model;
+      model = openai.chat(openaiModel);
     } else {
       if (!aiConfig.groq_api_key) {
         return Response.json({ error: 'Groq API key not configured. Go to Admin → Settings → AI to add it.' }, { status: 500 });
       }
       const groq = createGroq({ apiKey: aiConfig.groq_api_key });
-      model = groq(aiConfig.model || 'llama-3.3-70b-versatile');
+      const groqModel = (!aiConfig.model || aiConfig.model.includes('gpt'))
+        ? 'llama-3.3-70b-versatile'
+        : aiConfig.model;
+      model = groq(groqModel);
     }
 
     // Fetch user location if authenticated
@@ -159,7 +165,6 @@ CAPABILITIES:
           properties: {},
           required: [],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           const res = await fetch(`${apiUrl}/traders/featured`, {
             headers: { 'Accept': 'application/json' },
@@ -180,7 +185,6 @@ CAPABILITIES:
           },
           required: ['query'],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async ({ query }: { query: string }) => {
           const params = new URLSearchParams({ q: query });
           if (userLocation) {
@@ -218,7 +222,6 @@ CAPABILITIES:
           },
           required: ['query', 'category'],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async ({ query, category }: { query: string; category: string | null }) => {
           const params = new URLSearchParams({ q: query });
           if (category) params.append('category', category);
@@ -259,7 +262,6 @@ CAPABILITIES:
           },
           required: ['product_id', 'quantity', 'notes'],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async ({ product_id, quantity, notes }: { product_id: number; quantity: number; notes?: string | null }) => {
           if (!token) return { error: 'You must be logged in to make a reservation.' };
           const res = await laravelFetch('/reservations', token, {
@@ -287,7 +289,6 @@ CAPABILITIES:
           },
           required: ['reservation_id', 'phone_number'],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async ({ reservation_id, phone_number }: { reservation_id: number; phone_number: string }) => {
           if (!token) return { error: 'You must be logged in to make a payment.' };
           const res = await laravelFetch(`/reservations/${reservation_id}/pay`, token, {
@@ -311,7 +312,6 @@ CAPABILITIES:
           properties: {},
           required: [],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in.' };
           const res = await laravelFetch('/resident/reservations', token);
@@ -340,7 +340,6 @@ CAPABILITIES:
           properties: {},
           required: [],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in as a trader.' };
           const res = await laravelFetch('/trader/stats', token);
@@ -356,7 +355,6 @@ CAPABILITIES:
           properties: {},
           required: [],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in as a trader.' };
           const res = await laravelFetch('/trader/products', token);
@@ -387,7 +385,6 @@ CAPABILITIES:
           properties: {},
           required: [],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           const res = await fetch(`${apiUrl}/categories`, { headers: { 'Accept': 'application/json' } });
           if (!res.ok) return { error: 'Failed to fetch categories.' };
@@ -410,7 +407,6 @@ CAPABILITIES:
           },
           required: ['name', 'category_id', 'price', 'stock_quantity', 'unit', 'description'],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async (payload: { name: string; category_id: number; price: number; stock_quantity: number; unit: string; description?: string }) => {
           if (!token) return { error: 'You must be logged in as a trader.' };
           const res = await laravelFetch('/trader/products', token, {
@@ -437,7 +433,6 @@ CAPABILITIES:
           },
           required: ['product_id', 'stock_quantity'],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async ({ product_id, stock_quantity }: { product_id: number; stock_quantity: number }) => {
           if (!token) return { error: 'You must be logged in as a trader.' };
           
@@ -477,7 +472,6 @@ CAPABILITIES:
           properties: {},
           required: [],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in as an admin.' };
           const res = await laravelFetch('/admin/stats', token);
@@ -494,7 +488,6 @@ CAPABILITIES:
           properties: {},
           required: [],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in as an admin.' };
           const res = await laravelFetch('/admin/fees/delinquents', token);
@@ -519,7 +512,6 @@ CAPABILITIES:
           properties: {},
           required: [],
         }),
-        // @ts-expect-error - AI SDK v6 strict type inference workaround
         execute: async () => {
           if (!token) return { error: 'You must be logged in as an admin.' };
           const res = await laravelFetch('/complaints?status=open', token);

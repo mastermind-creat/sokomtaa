@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Sparkles, X, Send, Loader2, Bot, MessageSquare, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { BrainCircuit, X, Send, Loader2, MessagesSquare, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
@@ -308,7 +308,7 @@ export default function AiAssistantFab() {
           className="w-12 h-12 md:w-14 md:h-14 bg-brand-600 text-white rounded-full shadow-2xl flex items-center justify-center border-4 border-white/20 backdrop-blur-sm"
           aria-label="Open AI Assistant"
         >
-          <Sparkles size={22} className="animate-[spin_4s_linear_infinite]" />
+          <BrainCircuit size={24} />
         </motion.button>
       </div>
 
@@ -335,7 +335,7 @@ export default function AiAssistantFab() {
               <div className="p-5 bg-brand-600 text-white flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
-                    <Bot size={20} />
+                    <BrainCircuit size={20} />
                   </div>
                   <div>
                     <h3 className="font-black text-sm uppercase tracking-widest">Soko AI</h3>
@@ -345,7 +345,14 @@ export default function AiAssistantFab() {
                       ) : isSpeaking ? (
                         <><span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse inline-block" /> Speaking...</>
                       ) : isLoading ? (
-                        <><span className="w-1.5 h-1.5 bg-white/60 rounded-full animate-pulse inline-block" /> Thinking...</>
+                        <span className="flex items-center gap-0.5">
+                          Typing
+                          <span className="inline-flex gap-[3px] ml-0.5">
+                            <span className="w-1 h-1 bg-white/70 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="w-1 h-1 bg-white/70 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="w-1 h-1 bg-white/70 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </span>
+                        </span>
                       ) : (
                         <><span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block" /> Online</>
                       )}
@@ -410,16 +417,16 @@ export default function AiAssistantFab() {
                           ) : isSpeaking ? (
                             <Volume2 size={50} className="text-white animate-bounce" />
                           ) : isLoading ? (
-                            <Bot size={50} className="text-white animate-[spin_3s_linear_infinite]" />
+                            <BrainCircuit size={50} className="text-white animate-pulse" />
                           ) : (
-                            <Bot size={50} className="text-white" />
+                            <BrainCircuit size={50} className="text-white" />
                           )}
                         </div>
                       </div>
 
                       {/* Status Text */}
                       <h2 className="text-2xl font-black text-white tracking-wide mb-2">
-                        {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : isLoading ? 'Thinking...' : 'Ready'}
+                        {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : isLoading ? 'Typing...' : 'Ready'}
                       </h2>
                       
                       <p className="text-brand-200 text-sm font-medium max-w-[250px]">
@@ -450,7 +457,7 @@ export default function AiAssistantFab() {
                   {messages.length === 0 && (
                     <div className="text-center py-10 space-y-4">
                       <div className="w-14 h-14 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center mx-auto">
-                        <MessageSquare size={28} />
+                        <MessagesSquare size={28} />
                       </div>
                       <div className="space-y-1">
                         <p className="font-black text-green-950">Habari, {user?.name?.split(' ')[0] || 'rafiki'}!</p>
@@ -490,9 +497,19 @@ export default function AiAssistantFab() {
 
                   {isLoading && (
                     <div className="flex justify-start mb-4">
-                      <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm flex items-center gap-2">
-                        <Loader2 size={14} className="animate-spin text-brand-600" />
-                        <span className="text-[11px] text-gray-400 font-medium">Thinking...</span>
+                      <div className="bg-white px-4 py-3 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm flex items-center gap-1.5">
+                        <span
+                          className="w-2 h-2 bg-brand-400 rounded-full animate-bounce"
+                          style={{ animationDelay: '0ms', animationDuration: '1s' }}
+                        />
+                        <span
+                          className="w-2 h-2 bg-brand-500 rounded-full animate-bounce"
+                          style={{ animationDelay: '200ms', animationDuration: '1s' }}
+                        />
+                        <span
+                          className="w-2 h-2 bg-brand-600 rounded-full animate-bounce"
+                          style={{ animationDelay: '400ms', animationDuration: '1s' }}
+                        />
                       </div>
                     </div>
                   )}

@@ -47,8 +47,10 @@ class AdminSettingController extends Controller
         ]);
 
         foreach ($request->settings as $settingData) {
-            SystemSetting::where('key', $settingData['key'])
-                ->update(['value' => (string) $settingData['value']]);
+            SystemSetting::updateOrCreate(
+                ['key' => $settingData['key']],
+                ['value' => (string) ($settingData['value'] ?? '')]
+            );
         }
 
         return response()->json([

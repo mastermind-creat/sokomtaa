@@ -77,7 +77,10 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $phone = $this->normalizePhone($request->phone);
-        $user = User::where('phone', $phone)->first();
+        $user = User::where('phone', $phone)
+            ->orWhere('phone', $request->phone)
+            ->orWhere('email', $request->phone)
+            ->first();
 
         if (! $user) {
             return $this->error('The phone number is not registered.', 'AUTH_FAILED', 422);

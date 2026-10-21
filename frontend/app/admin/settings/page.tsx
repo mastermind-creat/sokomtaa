@@ -281,11 +281,18 @@ export default function AdminSettingsPage() {
                                         </div>
                                         <select
                                             value={localSettings['ai_provider'] || 'groq'}
-                                            onChange={(e) => handleSettingChange('ai_provider', e.target.value)}
-                                            className="w-full bg-gray-50/50 border border-gray-100 h-14 px-5 rounded-2xl font-black text-sm text-green-950 outline-none focus:border-purple-500 focus:bg-white transition-all appearance-none"
+                                            onChange={(e) => {
+                                                const nextProvider = e.target.value;
+                                                setLocalSettings(prev => ({
+                                                    ...prev,
+                                                    ai_provider: nextProvider,
+                                                    ai_model: nextProvider === 'openai' ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile'
+                                                }));
+                                            }}
+                                            className="w-full bg-gray-50/50 border border-gray-100 h-14 px-5 rounded-2xl font-black text-sm text-green-950 outline-none focus:border-purple-500 focus:bg-white transition-all appearance-none cursor-pointer"
                                         >
-                                            <option value="groq">Groq (Llama 3)</option>
-                                            <option value="openai">OpenAI (GPT-4o)</option>
+                                            <option value="groq">Groq (Llama 3.3)</option>
+                                            <option value="openai">OpenAI (GPT-4o / GPT-4o Mini)</option>
                                         </select>
                                         <p className="text-[9px] font-bold text-text-muted/60 tracking-wide px-1">
                                             Select the primary engine powering the Soko Mtaa autonomous assistant.
@@ -293,10 +300,10 @@ export default function AdminSettingsPage() {
                                     </div>
 
                                     {/* Groq API Key */}
-                                    <div className="space-y-2 px-2">
+                                    <div className={cn("space-y-2 px-2 transition-all", (localSettings['ai_provider'] || 'groq') !== 'groq' && 'opacity-50')}>
                                         <div className="flex justify-between items-center">
                                             <label className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
-                                                Groq API Key
+                                                Groq API Key {(localSettings['ai_provider'] || 'groq') === 'groq' && '(Active)'}
                                             </label>
                                             <Key size={12} className="text-gray-400" />
                                         </div>
@@ -310,10 +317,10 @@ export default function AdminSettingsPage() {
                                     </div>
 
                                     {/* OpenAI API Key */}
-                                    <div className="space-y-2 px-2">
+                                    <div className={cn("space-y-2 px-2 transition-all", localSettings['ai_provider'] === 'openai' && 'ring-2 ring-purple-100 rounded-3xl p-2 bg-purple-50/20')}>
                                         <div className="flex justify-between items-center">
                                             <label className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
-                                                OpenAI API Key
+                                                OpenAI API Key {localSettings['ai_provider'] === 'openai' && '(Active)'}
                                             </label>
                                             <Key size={12} className="text-gray-400" />
                                         </div>
@@ -326,22 +333,44 @@ export default function AdminSettingsPage() {
                                         />
                                     </div>
 
-                                    {/* AI Model Name */}
+                                    {/* AI Model Name - Selectable */}
                                     <div className="space-y-2 px-2">
                                         <div className="flex justify-between items-center">
                                             <label className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
                                                 AI Model Name
                                             </label>
+                                            <span className="text-[8px] font-bold text-purple-700 bg-purple-100/70 px-2 py-0.5 rounded-full">
+                                                {localSettings['ai_provider'] === 'openai' ? 'OpenAI Catalog' : 'Groq Catalog'}
+                                            </span>
                                         </div>
-                                        <input
-                                            type="text"
-                                            value={localSettings['ai_model'] || ''}
+                                        <select
+                                            value={
+                                                localSettings['ai_provider'] === 'openai'
+                                                    ? (['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'].includes(localSettings['ai_model']) ? localSettings['ai_model'] : 'gpt-4o-mini')
+                                                    : (['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'].includes(localSettings['ai_model']) ? localSettings['ai_model'] : 'llama-3.3-70b-versatile')
+                                            }
                                             onChange={(e) => handleSettingChange('ai_model', e.target.value)}
-                                            placeholder="e.g., llama-3.3-70b-versatile"
-                                            className="w-full bg-gray-50/50 border border-gray-100 h-14 px-5 rounded-2xl font-black text-sm text-green-950 outline-none focus:border-purple-500 focus:bg-white transition-all"
-                                        />
+                                            className="w-full bg-gray-50/50 border border-gray-100 h-14 px-5 rounded-2xl font-black text-sm text-green-950 outline-none focus:border-purple-500 focus:bg-white transition-all appearance-none cursor-pointer"
+                                        >
+                                            {localSettings['ai_provider'] === 'openai' ? (
+                                                <>
+                                                    <option value="gpt-4o-mini">GPT-4o Mini (Recommended — Fast, Smart & Economical)</option>
+                                                    <option value="gpt-4o">GPT-4o (Flagship Omni — Highest Intelligence)</option>
+                                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Legacy)</option>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Recommended)</option>
+                                                    <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant (Ultra Fast)</option>
+                                                    <option value="mixtral-8x7b-32768">Mixtral 8x7B (32k context)</option>
+                                                </>
+                                            )}
+                                        </select>
                                         <p className="text-[9px] font-bold text-text-muted/60 tracking-wide px-1">
-                                            Must be a valid model identifier for the selected provider.
+                                            {localSettings['ai_provider'] === 'openai'
+                                                ? 'Selected model will be invoked via the official OpenAI API.'
+                                                : 'Selected model will be accelerated via the Groq LPU engine.'}
                                         </p>
                                     </div>
                                 </div>

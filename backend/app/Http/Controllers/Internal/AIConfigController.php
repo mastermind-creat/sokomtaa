@@ -10,7 +10,11 @@ class AIConfigController extends Controller
 {
     public function getConfig(): JsonResponse
     {
-        $settings = SystemSetting::where('group', 'ai_config')->pluck('value', 'key');
+        try {
+            $settings = SystemSetting::where('group', 'ai_config')->pluck('value', 'key');
+        } catch (\Throwable $e) {
+            $settings = collect();
+        }
 
         // Resolve API keys — DB value first, then .env fallback
         $openaiKey = $settings->get('openai_api_key');

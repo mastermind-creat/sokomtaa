@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 
 class AiService
 {
-    protected string $apiKey;
+    protected ?string $apiKey = null;
     protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
 
     public function __construct()
@@ -20,13 +20,42 @@ class AiService
      */
     public function generate(string $prompt): ?string
     {
+        try {
+            $dbKey = \App\Models\SystemSetting::where('key', 'openai_api_key')->value('value');
+        } catch (\Throwable $e) {
+            $dbKey = null;
+        }
+        $openaiKey = !empty($dbKey) ? $dbKey : env('OPENAI_API_KEY');
+        if (!empty($openaiKey)) {
+            try {
+                $response = Http::withToken($openaiKey)
+                    ->timeout(10)
+                    ->post('https://api.openai.com/v1/chat/completions', [
+                        'model' => 'gpt-4o-mini',
+                        'messages' => [
+                            ['role' => 'user', 'content' => $prompt]
+                        ],
+                        'temperature' => 0.7,
+                        'max_tokens' => 1024,
+                    ]);
+
+                if ($response->successful()) {
+                    return trim($response->json('choices.0.message.content') ?? '');
+                }
+
+                Log::error('OpenAI API Error: ' . $response->body());
+            } catch (\Exception $e) {
+                Log::error('OpenAI API Exception: ' . $e->getMessage());
+            }
+        }
+
         if (!$this->apiKey) {
-            Log::warning('Gemini API key is not configured.');
+            Log::warning('Neither OpenAI nor Gemini API key is configured.');
             return null;
         }
 
         try {
-            $response = Http::timeout(3)->post("{$this->baseUrl}?key={$this->apiKey}", [
+            $response = Http::timeout(5)->post("{$this->baseUrl}?key={$this->apiKey}", [
                 'contents' => [
                     [
                         'parts' => [
