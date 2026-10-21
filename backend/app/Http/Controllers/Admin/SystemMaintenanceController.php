@@ -112,29 +112,61 @@ class SystemMaintenanceController extends Controller
     {
         try {
             set_time_limit(300);
-            $link = public_path('storage');
-            
-            // If it's a symlink, remove it. If it's a directory, don't delete it automatically!
+            $link   = public_path('storage');
+            $target = storage_path('app/public');
+
+            // If it's a symlink, remove it first
             if (is_link($link)) {
                 unlink($link);
             } elseif (file_exists($link) && is_dir($link)) {
-                // If it's a directory, we can't just delete it in production safely
                 return response()->json([
-                    'message' => 'The [public/storage] path exists as a directory. Please remove it manually to create a symlink.',
-                    'hint' => 'Check if you have actual files in public/storage before deleting.'
+                    'message' => 'The [public/storage] path exists as a real directory. Remove it manually first.',
+                    'hint'    => 'Check if you have actual files in public/storage before deleting.',
                 ], 422);
             }
 
-            Artisan::call('storage:link');
-            
+            // Try Artisan first
+            try {
+                Artisan::call('storage:link');
+                $output = Artisan::output();
+                if (is_link($link)) {
+                    return response()->json([
+                        'message' => 'Storage link created successfully.',
+                        'output'  => $output,
+                    ]);
+                }
+            } catch (\Exception $artisanEx) {
+                // Fall through to manual symlink
+            }
+
+            // Fallback: create symlink manually (works on some hosts where Artisan fails)
+            if (!file_exists($target)) {
+                mkdir($target, 0755, true);
+            }
+
+            if (@symlink($target, $link)) {
+                return response()->json([
+                    'message' => 'Storage link created successfully (manual fallback).',
+                    'output'  => "symlink($target, $link) — OK",
+                ]);
+            }
+
+            // symlink() is disabled on this host
             return response()->json([
-                'message' => 'Storage link created successfully.',
-                'output' => Artisan::output()
-            ]);
+                'message' => 'Storage link failed: symlink() is disabled on this server.',
+                'hint'    => 'Your shared hosting blocks symlinks. Use cPanel File Manager to manually create a symlink, or contact Truehost support to enable symlink() for your account. Alternatively, run "php artisan storage:link" via SSH.',
+                'target'  => $target,
+                'link'    => $link,
+            ], 422);
+
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Storage link failed: ' . $e->getMessage()], 500);
+            return response()->json([
+                'message' => 'Storage link failed: ' . $e->getMessage(),
+                'trace'   => config('app.debug') ? $e->getTraceAsString() : null,
+            ], 500);
         }
     }
+
 
     /**
      * Seed initial/missing data.
