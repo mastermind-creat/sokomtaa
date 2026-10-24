@@ -9,6 +9,7 @@ import { Loader2, Phone, Lock, ArrowRight, ShieldCheck, KeyRound, CheckCircle2, 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '@/components/shared/Logo';
 import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
+import TurnstileWidget from '@/components/shared/TurnstileWidget';
 
 interface ForgotPasswordForm {
     phone: string;
@@ -37,6 +38,7 @@ export default function ForgotPasswordPage() {
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
     const router = useRouter();
 
@@ -68,9 +70,15 @@ export default function ForgotPasswordPage() {
         try {
             setIsLoading(true);
             setError(null);
-            await api.post('/auth/forgot-password', data);
+            if (!turnstileToken) {
+                setError('Please complete the security check.');
+                setIsLoading(false);
+                return;
+            }
+            await api.post('/auth/forgot-password', { ...data, cf_turnstile_token: turnstileToken });
             setPhone(data.phone);
             setStep(2);
+            setTurnstileToken(null); // reset for step 2
         } catch (err: unknown) {
             const errObj = err as { message?: string } | string;
             setError(typeof errObj === 'string' ? errObj : errObj?.message ?? 'Failed to send reset code.');
@@ -160,8 +168,14 @@ export default function ForgotPasswordPage() {
                                         </div>
                                     )}
 
+                                    <TurnstileWidget
+                                        onVerify={setTurnstileToken}
+                                        onExpire={() => setTurnstileToken(null)}
+                                        onError={() => setError('Security check failed. Please refresh and try again.')}
+                                    />
+
                                     <button
-                                        disabled={isLoading}
+                                        disabled={isLoading || !turnstileToken}
                                         className="w-full h-[54px] bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-black text-base rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
                                         type="submit"
                                     >

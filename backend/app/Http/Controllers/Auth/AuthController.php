@@ -17,10 +17,12 @@ use Illuminate\Support\Facades\Cache;
 
 class AuthController extends Controller
 {
-    use ApiResponse, \App\Traits\PhoneNormalization;
+    use ApiResponse, \App\Traits\PhoneNormalization, \App\Traits\VerifyTurnstile;
     
     public function register(RegisterRequest $request): JsonResponse
     {
+        if ($fail = $this->checkTurnstile($request)) return $fail;
+
         $phone = $this->normalizePhone($request->phone);
         
         // Check if normalized phone already exists (redundant if FormRequest handles it, but safe)
@@ -76,6 +78,8 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
+        if ($fail = $this->checkTurnstile($request)) return $fail;
+
         $phone = $this->normalizePhone($request->phone);
         $user = User::where('phone', $phone)
             ->orWhere('phone', $request->phone)
@@ -163,6 +167,8 @@ class AuthController extends Controller
 
     public function forgotPassword(Request $request): JsonResponse
     {
+        if ($fail = $this->checkTurnstile($request)) return $fail;
+
         $phone = $this->normalizePhone($request->phone);
         $user = User::where('phone', $phone)->first();
 

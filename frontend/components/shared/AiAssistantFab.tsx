@@ -240,6 +240,22 @@ export default function AiAssistantFab() {
     setMessages(updatedMessages);
     setIsLoading(true);
 
+    // Get browser geolocation for accurate nearby search
+    let browserLocation: { lat: number; lng: number } | null = null;
+    try {
+      if (navigator.geolocation) {
+        browserLocation = await new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => resolve(null),
+            { timeout: 4000, maximumAge: 300000 }
+          );
+        });
+      }
+    } catch {
+      // location unavailable — backend will fall back to profile location
+    }
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -248,6 +264,7 @@ export default function AiAssistantFab() {
           messages: updatedMessages,
           token: token ?? null,
           role: user?.role,
+          location: browserLocation,
         }),
       });
 
@@ -392,7 +409,7 @@ export default function AiAssistantFab() {
                       exit={{ opacity: 0, scale: 1.05 }}
                       className="absolute inset-0 z-20 bg-brand-900 flex flex-col items-center justify-center p-6 text-center"
                     >
-                      <button 
+                      <button
                         onClick={toggleVoiceMode}
                         className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-md transition-colors"
                       >
@@ -409,9 +426,8 @@ export default function AiAssistantFab() {
                         )}
 
                         {/* Central Avatar */}
-                        <div className={`w-32 h-32 rounded-full flex items-center justify-center shadow-2xl relative z-10 transition-colors duration-500 ${
-                          isListening ? 'bg-red-500' : isSpeaking ? 'bg-amber-500' : 'bg-brand-600'
-                        }`}>
+                        <div className={`w-32 h-32 rounded-full flex items-center justify-center shadow-2xl relative z-10 transition-colors duration-500 ${isListening ? 'bg-red-500' : isSpeaking ? 'bg-amber-500' : 'bg-brand-600'
+                          }`}>
                           {isListening ? (
                             <Mic size={50} className="text-white animate-pulse" />
                           ) : isSpeaking ? (
@@ -428,15 +444,15 @@ export default function AiAssistantFab() {
                       <h2 className="text-2xl font-black text-white tracking-wide mb-2">
                         {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : isLoading ? 'Typing...' : 'Ready'}
                       </h2>
-                      
+
                       <p className="text-brand-200 text-sm font-medium max-w-[250px]">
-                        {isListening 
-                          ? 'Go ahead, I am listening to your request.' 
-                          : isSpeaking 
-                          ? 'Listen to the response...' 
-                          : isLoading 
-                          ? 'Processing your request...' 
-                          : 'Tap the microphone to speak.'}
+                        {isListening
+                          ? 'Go ahead, I am listening to your request.'
+                          : isSpeaking
+                            ? 'Listen to the response...'
+                            : isLoading
+                              ? 'Processing your request...'
+                              : 'Tap the microphone to speak.'}
                       </p>
 
                       {/* Manual Trigger */}
@@ -482,11 +498,10 @@ export default function AiAssistantFab() {
 
                   {messages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
-                      <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${
-                        msg.role === 'user'
+                      <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${msg.role === 'user'
                           ? 'bg-brand-600 text-white text-sm font-medium rounded-tr-none'
                           : 'bg-white rounded-tl-none border border-gray-100'
-                      }`}>
+                        }`}>
                         {msg.role === 'assistant'
                           ? <AiMessageRenderer text={msg.content} />
                           : msg.content
@@ -526,11 +541,10 @@ export default function AiAssistantFab() {
                       whileTap={{ scale: 0.9 }}
                       onClick={toggleVoiceMode}
                       disabled={isLoading}
-                      className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all ${
-                        voiceMode
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all ${voiceMode
                           ? 'bg-red-500 text-white shadow-lg shadow-red-200'
                           : 'bg-brand-100 text-brand-600 hover:bg-brand-200'
-                      }`}
+                        }`}
                       aria-label={voiceMode ? 'Exit voice mode' : 'Enter voice mode'}
                     >
                       {voiceMode ? <X size={18} /> : <Mic size={18} />}

@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Traits;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
+trait VerifyTurnstile
+{
+    /**
+     * Verify the Cloudflare Turnstile token from the request.
+     * Returns null on success, or a 422 JsonResponse on failure.
+     *
+     * Usage in a controller:
+     *   if ($fail = $this->checkTurnstile($request)) return $fail;
+     */
+    protected function checkTurnstile(Request $request): ?JsonResponse
+    {
+        // Skip verification in local/testing environments
+        if (app()->environment(['local', 'testing'])) {
+            return null;
+        }
+
+        $token = $request->input('cf_turnstile_token');
+
+        if (empty($token)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Security verification token missing.',
+                'code'    => 'TURNSTILE_MISSING',
+            ], 422);
+        }
+
+        try {
+            $response = Http::timeout(10)->asForm()->post(
+                config('services.turnstile.verify_url'),
+                [
+                    'secret'   => config('services.turnstile.secret'),
+                    'response' => $token,
+                    'remoteip' => $request->ip(),
+                ]
+            );
+
+            $result = $response->json();
+
+            if (!($result['success'] ?? false)) {
+                $codes = implode(', ', $result['error-codes'] ?? []);
+                Log::warning('Turnstile verification failed', ['error_codes' => $codes, 'ip' => $request->ip()]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Security verification failed. Please try again.',
+                    'code'    => 'TURNSTILE_FAILED',
+                ], 422);
+            }
+        } catch (\Exception $e) {
+            Log::error('Turnstile verification error: ' . $e->getMessage());
+            // Fail open in case Cloudflare is unreachable — don't block legitimate users
+            return null;
+        }
+
+        return null;
+    }
+}

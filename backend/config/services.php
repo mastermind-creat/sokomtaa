@@ -16,6 +16,11 @@ return [
 
     'internal_api_secret' => env('INTERNAL_API_SECRET'),
 
+    'turnstile' => [
+        'secret' => env('TURNSTILE_SECRET_KEY'),
+        'verify_url' => 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+    ],
+
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
     ],
