@@ -171,7 +171,7 @@ export default function ForgotPasswordPage() {
                                     <TurnstileWidget
                                         onVerify={setTurnstileToken}
                                         onExpire={() => setTurnstileToken(null)}
-                                        onError={() => setError('Security check failed. Please refresh and try again.')}
+                                        action="forgot-password"
                                     />
 
                                     <button

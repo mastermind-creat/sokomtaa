@@ -23,6 +23,14 @@ trait VerifyTurnstile
             return null;
         }
 
+        $secret = config('services.turnstile.secret');
+
+        // If secret is not configured, skip silently rather than blocking all users
+        if (empty($secret)) {
+            Log::warning('Turnstile secret not configured — skipping verification. Set TURNSTILE_SECRET_KEY in .env');
+            return null;
+        }
+
         $token = $request->input('cf_turnstile_token');
 
         if (empty($token)) {
@@ -37,7 +45,7 @@ trait VerifyTurnstile
             $response = Http::timeout(10)->asForm()->post(
                 config('services.turnstile.verify_url'),
                 [
-                    'secret'   => config('services.turnstile.secret'),
+                    'secret'   => $secret,
                     'response' => $token,
                     'remoteip' => $request->ip(),
                 ]
@@ -47,17 +55,22 @@ trait VerifyTurnstile
 
             if (!($result['success'] ?? false)) {
                 $codes = implode(', ', $result['error-codes'] ?? []);
-                Log::warning('Turnstile verification failed', ['error_codes' => $codes, 'ip' => $request->ip()]);
+                Log::warning('Turnstile verification failed', [
+                    'error_codes' => $codes,
+                    'ip'          => $request->ip(),
+                    'hostname'    => $result['hostname'] ?? 'unknown',
+                ]);
 
                 return response()->json([
                     'success' => false,
                     'message' => 'Security verification failed. Please try again.',
+                    'errors'  => ['turnstile' => [$codes ?: 'Verification failed']],
                     'code'    => 'TURNSTILE_FAILED',
                 ], 422);
             }
         } catch (\Exception $e) {
             Log::error('Turnstile verification error: ' . $e->getMessage());
-            // Fail open in case Cloudflare is unreachable — don't block legitimate users
+            // Fail open — don't block legitimate users on Cloudflare outage
             return null;
         }
 

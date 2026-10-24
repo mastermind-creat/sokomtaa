@@ -298,7 +298,7 @@ export default function RegisterPage() {
                             <TurnstileWidget
                                 onVerify={setTurnstileToken}
                                 onExpire={() => setTurnstileToken(null)}
-                                onError={() => setError('Security check failed. Please refresh and try again.')}
+                                action="register"
                             />
 
                             {/* Error Banner */}

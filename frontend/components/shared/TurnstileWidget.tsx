@@ -58,7 +58,15 @@ export default function TurnstileWidget({
                 theme: 'light',
                 // Use stable wrapper functions that delegate to the current ref
                 callback: (token: string) => onVerifyRef.current(token),
-                'error-callback': () => onErrorRef.current?.(),
+                'error-callback': () => {
+                    // Don't call onError here — it triggers a scary error banner.
+                    // Cloudflare already shows "Verification failed / Troubleshoot".
+                    // Just reset so the user can retry without refreshing.
+                    if (widgetIdRef.current) {
+                        try { window.turnstile.reset(widgetIdRef.current); } catch { }
+                    }
+                    onErrorRef.current?.();
+                },
                 'expired-callback': () => {
                     onExpireRef.current?.();
                     // Auto-reset so user doesn't have to refresh
