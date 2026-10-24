@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, Phone, Lock, ArrowRight, ShieldCheck, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Loader2, Phone, Lock, ArrowRight, ShieldCheck, KeyRound, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '@/components/shared/Logo';
 import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
@@ -19,6 +19,17 @@ interface ResetPasswordForm {
     password: string;
     password_confirmation: string;
 }
+
+const PasswordRequirement = ({ item, met }: { item: string; met: boolean }) => (
+    <div className="flex items-center gap-2">
+        <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-colors ${met ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+            {met ? <CheckCircle2 size={10} /> : <div className="w-1 h-1 rounded-full bg-current" />}
+        </div>
+        <span className={`text-[10px] font-bold tracking-tight transition-colors ${met ? 'text-green-700' : 'text-gray-400'}`}>
+            {item}
+        </span>
+    </div>
+);
 
 export default function ForgotPasswordPage() {
     const [step, setStep] = useState<1 | 2 | 3>(1); // 1: phone, 2: otp+password, 3: success
@@ -43,6 +54,15 @@ export default function ForgotPasswordPage() {
     } = useForm<ResetPasswordForm>();
 
     const password = watch('password');
+
+    const getStrength = (pwd: string) => {
+        let s = 0;
+        if (pwd.length >= 8) s++;
+        if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) s++;
+        if (/\d/.test(pwd)) s++;
+        if (/[@$!%*?&]/.test(pwd)) s++;
+        return s;
+    };
 
     const onForgotSubmit = async (data: ForgotPasswordForm) => {
         try {
@@ -118,7 +138,7 @@ export default function ForgotPasswordPage() {
                                                 <Phone size={18} />
                                             </div>
                                             <input
-                                                {...registerForgot('phone', { 
+                                                {...registerForgot('phone', {
                                                     required: 'Phone number is required',
                                                     pattern: {
                                                         value: /^(?:\+254|254|0)?([17]\d{8})$/,
@@ -198,7 +218,11 @@ export default function ForgotPasswordPage() {
                                             <input
                                                 {...registerReset('password', {
                                                     required: 'Password is required',
-                                                    minLength: { value: 8, message: 'Password must be at least 8 characters' }
+                                                    minLength: { value: 8, message: 'Password must be at least 8 characters' },
+                                                    pattern: {
+                                                        value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+                                                        message: 'Password must include uppercase, lowercase, number and special character'
+                                                    }
                                                 })}
                                                 className="w-full h-[54px] pl-12 pr-12 rounded-xl border border-gray-200 bg-gray-50 text-green-950 placeholder:text-gray-400 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white transition-all"
                                                 placeholder="••••••••"
@@ -207,11 +231,37 @@ export default function ForgotPasswordPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                                             >
-                                                {showPassword ? 'HIDE' : 'SHOW'}
+                                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                             </button>
                                         </div>
+
+                                        {/* Password strength checker */}
+                                        {password && (
+                                            <div className="mt-3 space-y-2">
+                                                <div className="flex gap-1 h-1">
+                                                    {[1, 2, 3, 4].map((level) => {
+                                                        const strength = getStrength(password);
+                                                        const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
+                                                        return (
+                                                            <div
+                                                                key={level}
+                                                                className={`flex-1 rounded-full transition-all duration-500 ${level <= strength ? colors[strength - 1] : 'bg-gray-100'
+                                                                    }`}
+                                                            />
+                                                        );
+                                                    })}
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                                    <PasswordRequirement item="8+ characters" met={password.length >= 8} />
+                                                    <PasswordRequirement item="Upper & lowercase" met={/[a-z]/.test(password) && /[A-Z]/.test(password)} />
+                                                    <PasswordRequirement item="At least one number" met={/\d/.test(password)} />
+                                                    <PasswordRequirement item="Special character" met={/[@$!%*?&]/.test(password)} />
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {resetErrors.password && <p className="text-red-500 text-xs font-medium mt-1.5">{resetErrors.password.message}</p>}
                                     </div>
 
@@ -242,7 +292,7 @@ export default function ForgotPasswordPage() {
                                     )}
 
                                     <button
-                                        disabled={isLoading}
+                                        disabled={isLoading || getStrength(password ?? '') < 4}
                                         className="w-full h-[54px] bg-brand-600 hover:bg-brand-700 active:scale-[0.98] text-white font-black text-base rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-60 disabled:cursor-not-allowed"
                                         type="submit"
                                     >

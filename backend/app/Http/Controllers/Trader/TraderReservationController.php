@@ -93,7 +93,14 @@ class TraderReservationController extends Controller
             'ready'                => Reservation::where('trader_id', $traderId)->where('status', 'ready')->count(),
             'completed_this_week'  => Reservation::where('trader_id', $traderId)
                 ->where('status', 'completed')
-                ->whereBetween('picked_up_at', [now()->startOfWeek(), now()->endOfWeek()])
+                ->where(function ($q) {
+                    // Count completions this week — fall back to updated_at if picked_up_at is null
+                    $q->whereBetween('picked_up_at', [now()->startOfWeek(), now()->endOfWeek()])
+                      ->orWhere(function ($q2) {
+                          $q2->whereNull('picked_up_at')
+                             ->whereBetween('updated_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                      });
+                })
                 ->count(),
         ];
 

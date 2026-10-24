@@ -25,7 +25,7 @@ L.Icon.Default.mergeOptions({
 
 // ─── Custom Icons ─────────────────────────────────────────────────────────────
 const createMarkerIcon = (type: 'market' | 'trader') => {
-    const bg  = type === 'market' ? '#1B6B3A' : '#F5A623';
+    const bg = type === 'market' ? '#1B6B3A' : '#F5A623';
     const svg = type === 'market'
         ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M20 7H4l1-4h14l1 4zm-1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8h14zm-8 2v5h2v-5h-2z"/></svg>`
         : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`;
@@ -86,16 +86,44 @@ type RadiusKm = typeof RADIUS_OPTIONS[number];
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function DiscoveryMap() {
     const router = useRouter();
-    const [userLoc, setUserLoc]         = useState<[number, number] | null>(null);
-    const [flyTarget, setFlyTarget]     = useState<[number, number] | null>(null);
-    const [radiusKm, setRadiusKm]       = useState<RadiusKm>(50);
-    const [showPanel, setShowPanel]     = useState(false);
-    const [showSlider, setShowSlider]   = useState(false);
-    const [locError, setLocError]       = useState<string | null>(null);
-    const [isLocating, setIsLocating]   = useState(false);
+    const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
+    const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null);
+    const [radiusKm, setRadiusKm] = useState<RadiusKm>(50);
+    const [showPanel, setShowPanel] = useState(false);
+    const [showSlider, setShowSlider] = useState(false);
+    const [locError, setLocError] = useState<string | null>(null);
+    const [isLocating, setIsLocating] = useState(true); // start as true — auto-request on mount
+    const [locPermissionDenied, setLocPermissionDenied] = useState(false);
     const marketIcon = useMemo(() => createMarkerIcon('market'), []);
     const traderIcon = useMemo(() => createMarkerIcon('trader'), []);
-    const sliderRef  = useRef<HTMLDivElement>(null);
+    const sliderRef = useRef<HTMLDivElement>(null);
+
+    // ── Auto-request geolocation on mount ────────────────────────────────────
+    useEffect(() => {
+        if (!navigator.geolocation) {
+            setIsLocating(false);
+            setLocError('Your browser does not support location services.');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+                setUserLoc(coords);
+                setFlyTarget(coords);
+                setIsLocating(false);
+            },
+            (err) => {
+                setIsLocating(false);
+                if (err.code === err.PERMISSION_DENIED) {
+                    setLocPermissionDenied(true);
+                } else {
+                    setLocError('Could not get your location. Use the search bar or click "Find Near Me".');
+                }
+            },
+            { timeout: 12000, maximumAge: 60000, enableHighAccuracy: true }
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // ── Location Search Overrides (Nominatim) ─────────────────────────────────
     const [searchLocQuery, setSearchLocQuery] = useState('');
@@ -169,6 +197,7 @@ export default function DiscoveryMap() {
         }
         setIsLocating(true);
         setLocError(null);
+        setLocPermissionDenied(false);
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
@@ -179,7 +208,7 @@ export default function DiscoveryMap() {
             (err) => {
                 setIsLocating(false);
                 if (err.code === err.PERMISSION_DENIED) {
-                    setLocError('Location access denied. Please allow it in browser settings.');
+                    setLocPermissionDenied(true);
                 } else {
                     setLocError('Could not get your location. Try again.');
                 }
@@ -280,8 +309,8 @@ export default function DiscoveryMap() {
                 zoomControl={false}
             >
                 <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     maxZoom={19}
                 />
 
@@ -446,11 +475,10 @@ export default function DiscoveryMap() {
                                         <button
                                             key={r}
                                             onClick={() => { setRadiusKm(r); setShowSlider(false); }}
-                                            className={`w-full py-2.5 rounded-xl text-xs font-black transition-all ${
-                                                radiusKm === r
-                                                    ? 'bg-brand-600 text-white'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}
+                                            className={`w-full py-2.5 rounded-xl text-xs font-black transition-all ${radiusKm === r
+                                                ? 'bg-brand-600 text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
                                         >
                                             {r} km
                                         </button>

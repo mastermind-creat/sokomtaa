@@ -47,7 +47,14 @@ class ReservationController extends Controller
             return $this->error('Unauthorized. You cannot update this reservation.', 'UNAUTHORIZED', 403);
         }
 
-        $reservation->update(['status' => $request->status]);
+        $updates = ['status' => $request->status];
+
+        // Set picked_up_at timestamp when a reservation is marked as completed
+        if ($request->status === 'completed') {
+            $updates['picked_up_at'] = now();
+        }
+
+        $reservation->update($updates);
 
         // Trigger Notification
         $this->notificationService->notifyReservationUpdate(

@@ -3,26 +3,50 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class SystemMaintenanceController extends Controller
 {
+    /**
+     * Resolve the correct PHP binary and artisan path for this environment.
+     * On production (Truehost): php at /usr/bin/php, artisan at the Laravel root.
+     * On local (XAMPP): php is on PATH.
+     */
+    private function artisanCmd(string $command): string
+    {
+        $artisan = base_path('artisan');
+        $php     = PHP_BINARY;      // Always use the same PHP that's running this request
+        return escapeshellarg($php) . ' ' . escapeshellarg($artisan) . ' ' . $command . ' 2>&1';
+    }
+
+    private function runArtisan(string $command): string
+    {
+        $cmd    = $this->artisanCmd($command);
+        $output = [];
+        $code   = 0;
+        exec($cmd, $output, $code);
+        $result = implode("\n", $output);
+        return $result ?: "(no output)";
+    }
+
     /**
      * Get system status and environment info.
      */
     public function status()
     {
         return response()->json([
-            'php_version' => PHP_VERSION,
-            'laravel_version' => app()->version(),
-            'environment' => app()->environment(),
-            'db_connection' => config('database.default'),
-            'cache_driver' => config('cache.default'),
-            'storage_link_exists' => $this->public_exists('storage'),
-            'last_migration' => $this->getLastMigration(),
+            'php_version'         => PHP_VERSION,
+            'laravel_version'     => app()->version(),
+            'environment'         => app()->environment(),
+            'db_connection'       => config('database.default'),
+            'cache_driver'        => config('cache.default'),
+            'storage_link_exists' => file_exists(public_path('storage')),
+            'last_migration'      => $this->getLastMigration(),
+            'php_binary'          => PHP_BINARY,
+            'artisan_path'        => base_path('artisan'),
         ]);
     }
 
@@ -36,8 +60,11 @@ class SystemMaintenanceController extends Controller
     }
 
     /**
-     * Run migrations safely — fakes missing migration records before running
-     * to prevent "table already exists" crashes, then clears all caches.
+     * Run migrations safely:
+     * 1. Reconcile orphaned tables (insert missing migration records so
+     *    "table already exists" errors cannot occur)
+     * 2. Run migrate --force via shell using the same PHP binary as this request
+     * 3. Clear all caches
      */
     public function migrate()
     {
@@ -47,56 +74,33 @@ class SystemMaintenanceController extends Controller
 
             // ── Step 1: Ensure migrations table exists ────────────────────────
             try {
-                Artisan::call('migrate:install', ['--quiet' => true]);
+                Artisan::call('migrate:install');
             } catch (\Exception $e) {
-                // Already exists — ignore
+                // Already exists — fine
             }
 
-            // ── Step 2: Reconcile orphaned tables (fake missing records) ──────
-            // For each table that exists in the DB but has no migration record,
-            // we fake the record so migrate --force won't crash with "already exists".
-            $faked  = [];
-            $migrationsPath = database_path('migrations');
-            $files  = glob($migrationsPath . '/*.php');
-
-            foreach ($files as $file) {
-                $migrationName = basename($file, '.php');
-                $alreadyRan    = DB::table('migrations')->where('migration', $migrationName)->exists();
-
-                if ($alreadyRan) {
-                    continue;
-                }
-
-                // Derive expected table name from migration filename heuristic
-                // e.g. 2024_01_01_000001_create_users_table -> users
-                if (preg_match('/create_(\w+)_table/', $migrationName, $matches)) {
-                    $tableName = $matches[1];
-                    if (\Illuminate\Support\Facades\Schema::hasTable($tableName)) {
-                        $maxBatch = (int) DB::table('migrations')->max('batch');
-                        DB::table('migrations')->insert([
-                            'migration' => $migrationName,
-                            'batch'     => $maxBatch ?: 1,
-                        ]);
-                        $faked[] = $migrationName;
-                    }
-                }
+            // ── Step 2: Reconcile orphaned tables ────────────────────────────
+            // If a table already exists in the DB but has no entry in the
+            // migrations table, insert the record so migrate --force won't crash.
+            $reconciled = $this->reconcileMigrations();
+            if ($reconciled) {
+                $output .= "Reconciled orphaned migration records:\n";
+                $output .= implode("\n", $reconciled) . "\n\n";
+            } else {
+                $output .= "Migration records are in sync — nothing to reconcile.\n\n";
             }
 
-            if ($faked) {
-                $output .= "--- Faked orphaned migration records ---\n";
-                $output .= implode("\n", $faked) . "\n\n";
-            }
+            // ── Step 3: Run pending migrations via shell ──────────────────────
+            $output .= "Running migrations...\n";
+            $output .= $this->runArtisan('migrate --force') . "\n";
 
-            // ── Step 3: Run pending migrations ────────────────────────────────
-            Artisan::call('migrate', ['--force' => true]);
-            $output .= Artisan::output() ?: "No pending migrations.\n";
-
-            // ── Step 4: Clear all caches so new tables/columns are visible ────
-            Artisan::call('config:clear');
-            Artisan::call('route:clear');
-            Artisan::call('cache:clear');
-            Artisan::call('view:clear');
-            $output .= "\n--- Caches cleared ---\n" . Artisan::output();
+            // ── Step 4: Clear all caches ──────────────────────────────────────
+            $output .= "\nClearing caches...\n";
+            $output .= $this->runArtisan('config:clear') . "\n";
+            $output .= $this->runArtisan('route:clear') . "\n";
+            $output .= $this->runArtisan('cache:clear') . "\n";
+            $output .= $this->runArtisan('view:clear') . "\n";
+            $output .= "\n✓ Migrations complete and all caches cleared.";
 
             return response()->json([
                 'message' => 'Migrations completed and caches cleared.',
@@ -107,27 +111,27 @@ class SystemMaintenanceController extends Controller
             Log::error('Maintenance Migration Error: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Migration failed: ' . $e->getMessage(),
-                'hint'    => 'Try "Clear Cache" first, then run migrations again. If the error persists, check the System Logs.',
-                'error'   => $e->getMessage(),
+                'hint'    => 'Try "Clear Cache" first, then run migrations again.',
             ], 500);
         }
     }
 
     /**
-     * Clear all caches.
+     * Clear all caches via shell using the correct PHP binary.
      */
     public function clearCache()
     {
         try {
             set_time_limit(300);
-            Artisan::call('cache:clear');
-            Artisan::call('config:clear');
-            Artisan::call('route:clear');
-            Artisan::call('view:clear');
-            
+            $output  = $this->runArtisan('cache:clear') . "\n";
+            $output .= $this->runArtisan('config:clear') . "\n";
+            $output .= $this->runArtisan('route:clear') . "\n";
+            $output .= $this->runArtisan('view:clear') . "\n";
+            $output .= "\n✓ All caches cleared.";
+
             return response()->json([
                 'message' => 'All caches cleared successfully.',
-                'output' => Artisan::output()
+                'output'  => $output,
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Cache clear failed: ' . $e->getMessage()], 500);
@@ -135,16 +139,19 @@ class SystemMaintenanceController extends Controller
     }
 
     /**
-     * Optimize the application.
+     * Optimize the application via shell.
      */
     public function optimize()
     {
         try {
             set_time_limit(300);
-            Artisan::call('optimize');
+            $output = $this->runArtisan('config:cache') . "\n";
+            $output .= $this->runArtisan('route:cache') . "\n";
+            $output .= "\n✓ Application optimized.";
+
             return response()->json([
                 'message' => 'Application optimized successfully.',
-                'output' => Artisan::output()
+                'output'  => $output,
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Optimization failed: ' . $e->getMessage()], 500);
@@ -152,8 +159,11 @@ class SystemMaintenanceController extends Controller
     }
 
     /**
-     * Recreate storage link, clear all caches, and reconcile migration state —
-     * equivalent to running the rescue.php file.
+     * Full rescue sequence (equivalent to running rescue.php):
+     * 1. Fix storage symlink
+     * 2. Reconcile orphaned migration records
+     * 3. Run pending migrations
+     * 4. Clear all caches
      */
     public function storageLink()
     {
@@ -166,94 +176,61 @@ class SystemMaintenanceController extends Controller
             // ── Step 1: Fix the storage symlink ──────────────────────────────
             if (is_link($link)) {
                 unlink($link);
-                $output .= "[1/4] Removed existing symlink.\n";
+                $output .= "[1/4] Removed stale symlink.\n";
             } elseif (file_exists($link) && is_dir($link)) {
                 $backup = public_path('storage_old_' . time());
                 rename($link, $backup);
-                $output .= "[1/4] Moved real directory to: $backup\n";
+                $output .= "[1/4] Moved real directory to backup: $backup\n";
             }
 
             if (!file_exists($target)) {
                 mkdir($target, 0755, true);
             }
 
-            $linked = false;
-            try {
-                Artisan::call('storage:link');
-                if (is_link($link)) {
-                    $linked = true;
-                    $output .= "[1/4] Storage link created via Artisan.\n";
-                }
-            } catch (\Exception $e) {
-                // Fall through to manual
-            }
-
-            if (!$linked) {
-                if (@symlink($target, $link)) {
-                    $linked = true;
-                    $output .= "[1/4] Storage link created manually.\n";
-                } else {
-                    $output .= "[1/4] WARNING: symlink() disabled on this host. Create manually via SSH or cPanel.\n";
-                }
+            // Try via shell artisan first (most reliable on shared hosting)
+            $linkOut = $this->runArtisan('storage:link --force');
+            if (is_link($link)) {
+                $output .= "[1/4] Storage symlink created. $linkOut\n";
+            } elseif (@symlink($target, $link)) {
+                $output .= "[1/4] Storage symlink created (manual fallback).\n";
+            } else {
+                $output .= "[1/4] WARNING: Could not create symlink — symlink() may be disabled. Create it via SSH:\n";
+                $output .= "      ln -s $target $link\n";
             }
 
             // ── Step 2: Reconcile orphaned migration records ──────────────────
-            $faked = [];
-            try {
-                $migrationsPath = database_path('migrations');
-                $files = glob($migrationsPath . '/*.php');
-                foreach ($files as $file) {
-                    $migrationName = basename($file, '.php');
-                    $alreadyRan = DB::table('migrations')->where('migration', $migrationName)->exists();
-                    if ($alreadyRan) continue;
-                    if (preg_match('/create_(\w+)_table/', $migrationName, $matches)) {
-                        if (\Illuminate\Support\Facades\Schema::hasTable($matches[1])) {
-                            $maxBatch = (int) DB::table('migrations')->max('batch');
-                            DB::table('migrations')->insert([
-                                'migration' => $migrationName,
-                                'batch'     => $maxBatch ?: 1,
-                            ]);
-                            $faked[] = $migrationName;
-                        }
-                    }
-                }
-                $output .= count($faked)
-                    ? "[2/4] Faked " . count($faked) . " orphaned migration record(s).\n"
-                    : "[2/4] Migration state is clean.\n";
-            } catch (\Exception $e) {
-                $output .= "[2/4] Migration reconcile skipped: " . $e->getMessage() . "\n";
+            $reconciled = $this->reconcileMigrations();
+            if ($reconciled) {
+                $output .= "[2/4] Reconciled " . count($reconciled) . " orphaned migration record(s):\n";
+                $output .= implode("\n", $reconciled) . "\n";
+            } else {
+                $output .= "[2/4] Migration records are in sync.\n";
             }
 
-            // ── Step 3: Run any pending migrations ────────────────────────────
-            try {
-                Artisan::call('migrate', ['--force' => true]);
-                $migrateOut = trim(Artisan::output());
-                $output .= "[3/4] " . ($migrateOut ?: "No pending migrations.") . "\n";
-            } catch (\Exception $e) {
-                $output .= "[3/4] Migration skipped: " . $e->getMessage() . "\n";
-            }
+            // ── Step 3: Run pending migrations ────────────────────────────────
+            $migrateOut = $this->runArtisan('migrate --force');
+            $output .= "[3/4] " . $migrateOut . "\n";
 
             // ── Step 4: Clear all caches ──────────────────────────────────────
-            Artisan::call('config:clear');
-            Artisan::call('route:clear');
-            Artisan::call('cache:clear');
-            Artisan::call('view:clear');
-            $output .= "[4/4] All caches cleared.\n";
-            $output .= "\n✓ Rescue complete. Storage link, migration state, and caches are all fixed.";
+            $output .= "[4/4] Clearing all caches...\n";
+            $output .= $this->runArtisan('config:clear') . "\n";
+            $output .= $this->runArtisan('route:clear') . "\n";
+            $output .= $this->runArtisan('cache:clear') . "\n";
+            $output .= $this->runArtisan('view:clear') . "\n";
+            $output .= "\n✓ Rescue complete — storage, migrations, and caches all fixed.";
 
             return response()->json([
-                'message' => 'Fix Storage Link completed — caches cleared and migration state reconciled.',
+                'message' => 'Full rescue completed successfully.',
                 'output'  => $output,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Storage link / rescue failed: ' . $e->getMessage(),
+                'message' => 'Rescue failed: ' . $e->getMessage(),
                 'trace'   => config('app.debug') ? $e->getTraceAsString() : null,
             ], 500);
         }
     }
-
 
     /**
      * Seed initial/missing data.
@@ -262,10 +239,10 @@ class SystemMaintenanceController extends Controller
     {
         try {
             set_time_limit(300);
-            Artisan::call('db:seed', ['--force' => true]);
+            $output = $this->runArtisan('db:seed --force');
             return response()->json([
                 'message' => 'Database seeding completed.',
-                'output' => Artisan::output()
+                'output'  => $output,
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Seeding failed: ' . $e->getMessage()], 500);
@@ -279,82 +256,117 @@ class SystemMaintenanceController extends Controller
     {
         try {
             $logPath = storage_path('logs/laravel.log');
-            
+
             if (!file_exists($logPath)) {
                 return response()->json(['message' => 'Log file not found.', 'logs' => 'No logs yet.'], 404);
             }
 
-            // More robust tail implementation for large files
-            $lines = 100;
-            $data = [];
-            $fp = fopen($logPath, 'r');
+            $lines  = 100;
+            $data   = [];
+            $fp     = fopen($logPath, 'r');
             fseek($fp, 0, SEEK_END);
-            $pos = ftell($fp);
-            $buffer = "";
-            
+            $pos    = ftell($fp);
+            $buffer = '';
+
             while ($pos > 0 && count($data) <= $lines) {
                 $readSize = min($pos, 4096);
-                $pos -= $readSize;
+                $pos     -= $readSize;
                 fseek($fp, $pos);
-                $buffer = fread($fp, $readSize) . $buffer;
-                
+                $buffer    = fread($fp, $readSize) . $buffer;
                 $linesArray = explode("\n", $buffer);
                 if (count($linesArray) > $lines + 1) {
                     $data = array_slice($linesArray, -$lines);
                     break;
                 }
             }
-            
+
             if (empty($data)) {
-                $data = explode("\n", $buffer);
-                $data = array_slice($data, -$lines);
+                $data = array_slice(explode("\n", $buffer), -$lines);
             }
-            
+
             fclose($fp);
 
-            $content = implode("\n", $data);
-            
-            // Ensure UTF-8 validity for JSON response
-            $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
+            $content = mb_convert_encoding(implode("\n", $data), 'UTF-8', 'UTF-8');
 
             return response()->json([
                 'message' => 'Logs retrieved successfully',
-                'logs' => $content ?: 'Log file is empty.'
+                'logs'    => $content ?: 'Log file is empty.',
             ]);
         } catch (\Exception $e) {
-            Log::error('Log retrieval failed: ' . $e->getMessage());
             return response()->json(['message' => 'Failed to read logs: ' . $e->getMessage()], 500);
         }
     }
 
     /**
-     * Debug AI configuration — shows whether INTERNAL_API_SECRET is set
-     * and what the middleware sees, without exposing the actual secret value.
+     * Debug AI configuration — shows whether INTERNAL_API_SECRET is correctly
+     * loaded without exposing the actual value.
      */
     public function debugAiConfig()
     {
-        $secretFromConfig = config('services.internal_api_secret');
-        $secretFromEnv    = env('INTERNAL_API_SECRET');
+        $fromConfig = config('services.internal_api_secret');
+        $fromEnv    = env('INTERNAL_API_SECRET');
+
+        $lines = [
+            'PHP binary:                              ' . PHP_BINARY,
+            'Artisan path:                            ' . base_path('artisan'),
+            '',
+            'config(services.internal_api_secret):   ' . (!empty($fromConfig) ? 'SET (length: ' . strlen($fromConfig) . ')' : 'MISSING — run Clear Cache after adding to .env'),
+            'env(INTERNAL_API_SECRET):               ' . (!empty($fromEnv)    ? 'SET (length: ' . strlen($fromEnv)    . ')' : 'MISSING — not in .env'),
+            '',
+            'Action required if missing:',
+            '  1. Add INTERNAL_API_SECRET=<value> to your server .env',
+            '  2. Add the same value to Vercel environment variables',
+            '  3. Click "Clear Cache" on this page',
+            '  4. Redeploy on Vercel',
+        ];
 
         return response()->json([
-            'message' => 'AI config debug (secret values are masked)',
-            'output'  => implode("\n", [
-                'config(services.internal_api_secret) set: ' . (!empty($secretFromConfig) ? 'YES (length: ' . strlen($secretFromConfig) . ')' : 'NO — missing from config cache'),
-                'env(INTERNAL_API_SECRET) set:            ' . (!empty($secretFromEnv) ? 'YES (length: ' . strlen($secretFromEnv) . ')' : 'NO — not in .env or not cached'),
-                '',
-                'Fix: Make sure INTERNAL_API_SECRET is set in your .env AND in',
-                'your Vercel environment variables, then run "Clear Cache" here.',
-                '',
-                'The value in .env and Vercel MUST be identical.',
-            ]),
+            'message' => 'AI config diagnostics',
+            'output'  => implode("\n", $lines),
         ]);
     }
 
     /**
-     * Helper to check if public path exists.
+     * Scan all migration files and insert a record for any that are missing
+     * from the migrations table but whose target table already exists in the DB.
+     * This prevents "table already exists" errors when running migrate --force.
+     *
+     * @return array List of migration names that were reconciled.
      */
-    private function public_exists($path)
+    private function reconcileMigrations(): array
     {
-        return file_exists(public_path($path));
+        $reconciled     = [];
+        $migrationsPath = database_path('migrations');
+        $files          = glob($migrationsPath . '/*.php') ?: [];
+
+        foreach ($files as $file) {
+            $migrationName = basename($file, '.php');
+
+            // Skip if already recorded
+            if (DB::table('migrations')->where('migration', $migrationName)->exists()) {
+                continue;
+            }
+
+            // Derive table name from filename: create_<table>_table pattern
+            if (!preg_match('/create_(\w+)_table/', $migrationName, $matches)) {
+                continue;
+            }
+
+            $tableName = $matches[1];
+
+            // Only reconcile if the table genuinely exists (no false positives)
+            if (!Schema::hasTable($tableName)) {
+                continue;
+            }
+
+            $maxBatch = (int) DB::table('migrations')->max('batch');
+            DB::table('migrations')->insert([
+                'migration' => $migrationName,
+                'batch'     => $maxBatch ?: 1,
+            ]);
+            $reconciled[] = $migrationName;
+        }
+
+        return $reconciled;
     }
 }

@@ -1,0 +1,19 @@
+fix: AI 401 in production + maintenance page improvements
+
+Root cause: INTERNAL_API_SECRET was missing from .env.production,
+causing every call to /internal/ai-config to return 401.
+
+Changes:
+- backend/.env.production: add INTERNAL_API_SECRET and OPENAI_API_KEY
+- backend/config/services.php: wire INTERNAL_API_SECRET into config cache
+- backend/app/Http/Middleware/InternalApiAuth.php: use config() not env()
+- backend/app/Http/Controllers/Admin/SystemMaintenanceController.php:
+  - migrate(): reconcile orphaned migration records before running to
+    prevent "table already exists" crashes, then clear all caches
+  - storageLink(): now runs the full rescue sequence — fix symlink,
+    reconcile migration records, run pending migrations, clear caches
+  - debugAiConfig(): new endpoint to diagnose INTERNAL_API_SECRET in prod
+- backend/routes/api.php: add GET /maintenance/debug-ai-config route
+- frontend/app/admin/maintenance/page.tsx:
+  - Fix Storage Link description updated to reflect full rescue behavior
+  - Added Debug AI Config card (GET)

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Download, X, ScanFace, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
-import api from '@/lib/api';
 
 interface ReceiptModalProps {
     reservation: any;
@@ -11,26 +10,44 @@ interface ReceiptModalProps {
 
 export default function ReceiptModal({ reservation, onClose, userRole = 'resident' }: ReceiptModalProps) {
     const [isDownloading, setIsDownloading] = useState(false);
-    
+
     const isTrader = userRole === 'trader';
-    const displayTotal = isTrader 
+    const displayTotal = isTrader
         ? (reservation.trader_amount ?? (reservation.unit_price * reservation.quantity))
         : reservation.total_amount;
 
     const handleDownload = async () => {
         try {
             setIsDownloading(true);
-            const response = await api.get(`/reservations/${reservation.id}/receipt?action=download`, {
-                responseType: 'blob', // Important for downloading files
-            });
 
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            // Use fetch directly — the axios interceptor unwraps response.data which
+            // corrupts binary blob downloads (produces text/plain instead of application/pdf).
+            const token = typeof window !== 'undefined' ? localStorage.getItem('soko_token') : null;
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
+
+            const response = await fetch(
+                `${apiUrl}/reservations/${reservation.id}/receipt?action=download`,
+                {
+                    headers: {
+                        Authorization: token ? `Bearer ${token}` : '',
+                        Accept: 'application/pdf',
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', `Receipt_${reservation.reservation_code}.pdf`);
             document.body.appendChild(link);
             link.click();
             link.remove();
+            window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Error downloading receipt:', error);
             alert('Failed to download receipt. Please try again.');
@@ -45,14 +62,14 @@ export default function ReceiptModal({ reservation, onClose, userRole = 'residen
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                
+
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <div>
                         <h3 className="font-black text-gray-900 text-lg tracking-tight">E-Receipt</h3>
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-0.5">#{reservation.reservation_code}</p>
                     </div>
-                    <button 
+                    <button
                         onClick={onClose}
                         className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors"
                     >
@@ -62,7 +79,7 @@ export default function ReceiptModal({ reservation, onClose, userRole = 'residen
 
                 {/* Receipt Content (Scrollable) */}
                 <div className="p-6 overflow-y-auto flex-1">
-                    
+
                     {/* Status & QR */}
                     <div className="flex flex-col items-center justify-center mb-8">
                         <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
@@ -102,7 +119,7 @@ export default function ReceiptModal({ reservation, onClose, userRole = 'residen
                                 <div className="text-xs text-gray-500 font-normal">{reservation.trader?.market?.name}</div>
                             </div>
                         </div>
-                        
+
                         {!isTrader && reservation.delivery_option ? (
                             <div className="flex justify-between items-end border-b border-gray-100 pb-3">
                                 <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">Delivery Fee</div>
