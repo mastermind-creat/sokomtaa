@@ -59,7 +59,7 @@ export default function MaintenancePage() {
     const runAction = useMutation({
         mutationFn: async (item: { action: string, method?: string }) => {
             setCommandOutput(null);
-            const res = item.method === 'get' 
+            const res = item.method === 'get'
                 ? await api.get<{ message?: string; output?: string; logs?: string }>(`/admin/maintenance/${item.action}`)
                 : await api.post<{ message?: string; output?: string; logs?: string }>(`/admin/maintenance/${item.action}`);
             return res;
@@ -110,7 +110,7 @@ export default function MaintenancePage() {
         {
             id: 'storage-link',
             title: 'Fix Storage Link',
-            description: 'Recreate the symlink for public file access.',
+            description: 'Recreate symlink, reconcile migration records, run pending migrations, and clear all caches.',
             icon: HardDrive,
             color: 'text-green-600',
             bgColor: 'bg-green-50',
@@ -125,6 +125,16 @@ export default function MaintenancePage() {
             bgColor: 'bg-rose-50',
             action: 'seed',
             danger: true
+        },
+        {
+            id: 'debug-ai',
+            title: 'Debug AI Config',
+            description: 'Check if INTERNAL_API_SECRET and AI keys are correctly set in the production environment.',
+            icon: Activity,
+            color: 'text-indigo-600',
+            bgColor: 'bg-indigo-50',
+            action: 'debug-ai-config',
+            method: 'get'
         },
         {
             id: 'logs',
@@ -253,7 +263,7 @@ export default function MaintenancePage() {
                                 <p className="font-black uppercase tracking-widest">Waiting for command...</p>
                             </div>
                         )}
- 
+
                         {runAction.isPending && (
                             <div className="flex items-center gap-2 text-green-400 animate-pulse">
                                 <span className="w-2 h-2 bg-green-400 rounded-full" />

@@ -399,6 +399,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::post('/storage-link', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'storageLink']);
             Route::post('/seed', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'seed']);
             Route::get('/logs', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'logs']);
+            Route::get('/debug-ai-config', [\App\Http\Controllers\Admin\SystemMaintenanceController::class, 'debugAiConfig']);
         });
 
         // System Settings
