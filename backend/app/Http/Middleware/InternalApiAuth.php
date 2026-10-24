@@ -15,7 +15,7 @@ class InternalApiAuth
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $secret = env('INTERNAL_API_SECRET');
+        $secret = config('services.internal_api_secret', env('INTERNAL_API_SECRET'));
         
         if (empty($secret) || $request->header('X-Internal-Secret') !== $secret) {
             return response()->json(['message' => 'Unauthorized. Invalid internal secret.'], 401);

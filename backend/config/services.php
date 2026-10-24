@@ -14,6 +14,8 @@ return [
     |
     */
 
+    'internal_api_secret' => env('INTERNAL_API_SECRET'),
+
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
     ],
