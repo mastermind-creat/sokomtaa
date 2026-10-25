@@ -24,7 +24,7 @@ jobs:
         # Always use ./ prefix for local-dir to avoid path resolution errors
         local-dir: ./backend/
         # Use absolute path or ./ prefix for server-dir, ensuring it ends in a trailing slash
-        server-dir: /domains/api.sokomtaa.co.ke/public_html/laravel_app/
+        server-dir: domains/api.sokomtaa.co.ke/public_html/laravel_app/
         state-name: .ftp-deploy-sync-state.json
         port: 21
         timeout: 300000 # 5 minutes

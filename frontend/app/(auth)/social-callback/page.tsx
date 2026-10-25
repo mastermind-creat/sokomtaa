@@ -9,6 +9,7 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
 
 // Force dynamic rendering — this page reads URL search params set by OAuth redirect
+// v2 — Suspense boundary added for Next.js 15 SSG compatibility
 export const dynamic = 'force-dynamic';
 
 function SocialCallbackInner() {
