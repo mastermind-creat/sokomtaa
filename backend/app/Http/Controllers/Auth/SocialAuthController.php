@@ -18,6 +18,8 @@ class SocialAuthController extends Controller
 {
     use ApiResponse, \App\Traits\PhoneNormalization;
 
+    // Last deployed: v1.1 — added provider config validation
+
     public function redirect($provider)
     {
         if (!in_array($provider, ['google', 'apple'])) {
