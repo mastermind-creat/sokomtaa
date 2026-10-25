@@ -8,6 +8,9 @@ import { ApiResponse } from '@/types';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
 
+// Force dynamic rendering — this page reads URL search params set by OAuth redirect
+export const dynamic = 'force-dynamic';
+
 function SocialCallbackInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
