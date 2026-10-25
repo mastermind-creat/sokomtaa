@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/lib/api';
@@ -8,7 +8,7 @@ import { ApiResponse } from '@/types';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Logo } from '@/components/shared/Logo';
 
-export default function SocialCallbackPage() {
+function SocialCallbackInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { setAuth } = useAuthStore();
@@ -33,10 +33,8 @@ export default function SocialCallbackPage() {
             return;
         }
 
-        // Temporarily store the token so the api client can use it
         localStorage.setItem('sokomtaa_token', token);
 
-        // Fetch the user profile with this token
         api.get<never, ApiResponse<unknown>>('/auth/me')
             .then((res) => {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,5 +90,17 @@ export default function SocialCallbackPage() {
             <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
             <p className="text-sm font-medium text-gray-500">Signing you in...</p>
         </div>
+    );
+}
+
+export default function SocialCallbackPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
+                <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
+            </div>
+        }>
+            <SocialCallbackInner />
+        </Suspense>
     );
 }
