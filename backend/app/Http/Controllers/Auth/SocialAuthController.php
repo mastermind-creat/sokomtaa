@@ -31,8 +31,10 @@ class SocialAuthController extends Controller
 
     public function callback($provider)
     {
+        $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:3000'), '/');
+
         if (!in_array($provider, ['google', 'apple'])) {
-            return $this->error('Provider not supported.', 'VALIDATION_FAILED', 422);
+            return redirect("{$frontendUrl}/auth/social-callback?error=unsupported_provider");
         }
 
         try {
@@ -40,7 +42,8 @@ class SocialAuthController extends Controller
             $driver = Socialite::driver($provider);
             $socialUser = $driver->stateless()->user();
         } catch (\Exception $e) {
-            return $this->error('Authentication failed.', 'AUTH_FAILED', 401);
+            Log::error("Social auth callback failed for {$provider}: " . $e->getMessage());
+            return redirect("{$frontendUrl}/auth/social-callback?error=auth_failed");
         }
 
         $user = User::where('provider_name', $provider)
@@ -58,25 +61,23 @@ class SocialAuthController extends Controller
                     'provider_id' => $socialUser->getId(),
                 ]);
             } else {
-                // Create a new user
+                // Create a new user — phone/role will be completed in next step
                 $user = User::create([
-                    'name' => $socialUser->getName(),
+                    'name' => $socialUser->getName() ?? 'User',
                     'email' => $socialUser->getEmail(),
                     'provider_name' => $provider,
                     'provider_id' => $socialUser->getId(),
-                    'password' => Hash::make(Str::random(24)), // Random dummy password
+                    'password' => Hash::make(Str::random(24)),
+                    'avatar_url' => $socialUser->getAvatar(),
                     'phone_verified' => false,
                 ]);
             }
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        $requiresCompletion = is_null($user->phone) || is_null($user->role) ? '1' : '0';
 
-        return $this->success([
-            'user' => $user,
-            'token' => $token,
-            'requires_profile_completion' => is_null($user->phone),
-        ], 'Social login successful.');
+        return redirect("{$frontendUrl}/auth/social-callback?token={$token}&requires_completion={$requiresCompletion}");
     }
 
     public function completeProfile(Request $request): JsonResponse

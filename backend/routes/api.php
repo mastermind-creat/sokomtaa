@@ -228,6 +228,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::put('/', [\App\Http\Controllers\Trader\TraderSettingsController::class, 'update']);
         });
 
+        // Trader Account Deletion
+        Route::delete('/trader/account', [\App\Http\Controllers\Trader\TraderProfileController::class, 'deleteAccount']);
+
         // Custom M-Pesa Daraja Integration (trader's own credentials)
         Route::prefix('trader/mpesa-integration')->group(function () {
             Route::get('/',    [\App\Http\Controllers\Trader\TraderMpesaController::class, 'show']);

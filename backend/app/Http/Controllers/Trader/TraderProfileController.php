@@ -457,6 +457,42 @@ class TraderProfileController extends Controller
     }
 
     /**
+     * Permanently delete the trader's account and all associated data.
+     */
+    public function deleteAccount(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $request->validate(['password' => 'required|string']);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!\Hash::check($request->password, $user->password)) {
+            return $this->error('Incorrect password.', 'UNAUTHORIZED', 403);
+        }
+
+        \DB::transaction(function () use ($user) {
+            // Free up the stall if the trader occupies one
+            if ($user->trader && $user->trader->stall_id) {
+                Stall::where('id', $user->trader->stall_id)
+                    ->update(['status' => 'available']);
+            }
+
+            // Revoke all tokens
+            $user->tokens()->delete();
+
+            // Soft-delete the user (cascades to trader via model events if softDeletes set)
+            Log::warning('Trader Account Deletion', [
+                'user_id' => $user->id,
+                'trader_id' => $user->trader?->id,
+            ]);
+
+            $user->delete();
+        });
+
+        return $this->success(null, 'Your account has been deleted successfully.');
+    }
+
+    /**
      * Normalize time to HH:mm format.
      */
     private function normalizeTime(?string $time): ?string

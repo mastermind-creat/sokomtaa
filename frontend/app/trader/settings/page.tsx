@@ -13,6 +13,8 @@ import { ApiResponse } from '@/types';
 import { useUIStore } from '@/store/uiStore';
 import { useWebPush } from '@/hooks/useWebPush';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/store/authStore';
+import { useRouter } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -131,12 +133,12 @@ function CustomMpesaSection() {
 
     const [formOpen, setFormOpen] = useState(false);
     const [form, setForm] = useState<MpesaFormData>({
-        consumer_key:     '',
-        consumer_secret:  '',
-        passkey:          '',
-        shortcode:        '',
+        consumer_key: '',
+        consumer_secret: '',
+        passkey: '',
+        shortcode: '',
         transaction_type: 'CustomerPayBillOnline',
-        environment:      'sandbox',
+        environment: 'sandbox',
     });
     const [error, setError] = useState<string | null>(null);
 
@@ -173,7 +175,7 @@ function CustomMpesaSection() {
     };
 
     const isVerified = !!mpesa?.verified_at;
-    const isActive   = !!mpesa?.enabled && !!mpesa?.has_credentials;
+    const isActive = !!mpesa?.enabled && !!mpesa?.has_credentials;
 
     if (isLoading) {
         return <div className="h-16 bg-gray-100 animate-pulse rounded-xl mx-5 my-4" />;
@@ -184,11 +186,10 @@ function CustomMpesaSection() {
             {/* Status Row */}
             <div className="flex items-center justify-between py-4 px-5 border-b border-gray-50">
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                        isActive
-                            ? isVerified ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
-                            : 'bg-gray-100 text-gray-400'
-                    }`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isActive
+                        ? isVerified ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+                        : 'bg-gray-100 text-gray-400'
+                        }`}>
                         {isActive
                             ? isVerified ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />
                             : <Zap className="w-4 h-4" />
@@ -224,13 +225,12 @@ function CustomMpesaSection() {
                     )}
                     <button
                         onClick={() => setFormOpen(v => !v)}
-                        className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-bold transition-all ${
-                            formOpen
-                                ? 'bg-gray-100 text-text-secondary'
-                                : isActive
-                                    ? 'bg-brand-600/10 text-brand-600 hover:bg-brand-600/20'
-                                    : 'bg-brand-600 text-white hover:bg-brand-500 shadow-sm'
-                        }`}
+                        className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-bold transition-all ${formOpen
+                            ? 'bg-gray-100 text-text-secondary'
+                            : isActive
+                                ? 'bg-brand-600/10 text-brand-600 hover:bg-brand-600/20'
+                                : 'bg-brand-600 text-white hover:bg-brand-500 shadow-sm'
+                            }`}
                     >
                         {formOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         {isActive ? 'Edit' : 'Setup'}
@@ -242,7 +242,7 @@ function CustomMpesaSection() {
             <div className="mx-5 mt-4 mb-2 p-3 bg-blue-50 rounded-xl flex gap-2.5">
                 <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
                 <p className="text-xs text-blue-700 leading-relaxed">
-                    When enabled, <strong>reservation payments</strong> go directly to your M-Pesa shortcode. 
+                    When enabled, <strong>reservation payments</strong> go directly to your M-Pesa shortcode.
                     Market fees &amp; platform service charges are always collected by Soko Mtaa separately.
                 </p>
             </div>
@@ -280,13 +280,12 @@ function CustomMpesaSection() {
                                             key={env}
                                             type="button"
                                             onClick={() => setForm(f => ({ ...f, environment: env }))}
-                                            className={`flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all capitalize ${
-                                                form.environment === env
-                                                    ? env === 'production'
-                                                        ? 'border-amber-500 bg-amber-50 text-amber-700'
-                                                        : 'border-brand-600 bg-brand-600/5 text-brand-600'
-                                                    : 'border-gray-200 text-text-secondary hover:border-gray-300'
-                                            }`}
+                                            className={`flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all capitalize ${form.environment === env
+                                                ? env === 'production'
+                                                    ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                                    : 'border-brand-600 bg-brand-600/5 text-brand-600'
+                                                : 'border-gray-200 text-text-secondary hover:border-gray-300'
+                                                }`}
                                         >
                                             {env}
                                         </button>
@@ -312,11 +311,10 @@ function CustomMpesaSection() {
                                             key={opt.value}
                                             type="button"
                                             onClick={() => setForm(f => ({ ...f, transaction_type: opt.value as MpesaFormData['transaction_type'] }))}
-                                            className={`flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all ${
-                                                form.transaction_type === opt.value
-                                                    ? 'border-brand-600 bg-brand-600/5 text-brand-600'
-                                                    : 'border-gray-200 text-text-secondary hover:border-gray-300'
-                                            }`}
+                                            className={`flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all ${form.transaction_type === opt.value
+                                                ? 'border-brand-600 bg-brand-600/5 text-brand-600'
+                                                : 'border-gray-200 text-text-secondary hover:border-gray-300'
+                                                }`}
                                         >
                                             {opt.label}
                                         </button>
@@ -467,6 +465,10 @@ function WebPushSettingsRow() {
 export default function TraderSettingsPage() {
     const [saved, setSaved] = useState(false);
     const { setPageTitle } = useUIStore();
+    const { logout } = useAuthStore();
+    const router = useRouter();
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showChangePassword, setShowChangePassword] = useState(false);
 
     React.useEffect(() => {
         setPageTitle('Settings');
@@ -503,99 +505,256 @@ export default function TraderSettingsPage() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto px-4 lg:px-8 py-6 lg:py-8 space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-black text-green-950 tracking-tight">Settings</h1>
-                    <p className="text-sm text-text-muted mt-1">Manage your store preferences and integrations</p>
+        <>
+            <div className="max-w-5xl mx-auto px-4 lg:px-8 py-6 lg:py-8 space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-black text-green-950 tracking-tight">Settings</h1>
+                        <p className="text-sm text-text-muted mt-1">Manage your store preferences and integrations</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        {local && (
+                            <motion.button
+                                whileTap={{ scale: 0.97 }}
+                                onClick={() => save(current)}
+                                disabled={isPending}
+                                className="px-6 py-3 bg-brand-600 text-white rounded-xl font-bold text-sm hover:bg-brand-500 transition-colors disabled:opacity-60 shadow-lg shadow-brand-600/20 flex items-center gap-2"
+                            >
+                                {saved ? <CheckCircle2 className="w-4 h-4" /> : null}
+                                {saved ? 'Saved' : isPending ? 'Saving...' : 'Save Changes'}
+                            </motion.button>
+                        )}
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    {local && (
-                        <motion.button
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => save(current)}
-                            disabled={isPending}
-                            className="px-6 py-3 bg-brand-600 text-white rounded-xl font-bold text-sm hover:bg-brand-500 transition-colors disabled:opacity-60 shadow-lg shadow-brand-600/20 flex items-center gap-2"
-                        >
-                            {saved ? <CheckCircle2 className="w-4 h-4" /> : null}
-                            {saved ? 'Saved' : isPending ? 'Saving...' : 'Save Changes'}
-                        </motion.button>
-                    )}
-                </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                {/* Column 1 */}
-                <div className="space-y-6">
-                    {/* Notifications */}
-                    <Section title="Notifications" icon={<Bell className="w-4 h-4" />}>
-                        {/* Web Push Hook Integration */}
-                        <WebPushSettingsRow />
-                        <div className="h-px w-full bg-gray-50 my-1"></div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    {/* Column 1 */}
+                    <div className="space-y-6">
+                        {/* Notifications */}
+                        <Section title="Notifications" icon={<Bell className="w-4 h-4" />}>
+                            {/* Web Push Hook Integration */}
+                            <WebPushSettingsRow />
+                            <div className="h-px w-full bg-gray-50 my-1"></div>
 
-                        <ToggleRow label="New Orders (SMS)" description="Get an SMS when a new order is placed" checked={current.notifications.new_order_sms} onChange={v => update('notifications.new_order_sms', v)} />
-                        <ToggleRow label="New Orders (In-App)" checked={current.notifications.new_order_app} onChange={v => update('notifications.new_order_app', v)} />
-                        <ToggleRow label="Market Fee Reminder (SMS)" checked={current.notifications.fee_reminder_sms} onChange={v => update('notifications.fee_reminder_sms', v)} />
-                        <ToggleRow label="New Reviews (In-App)" checked={current.notifications.new_review_app} onChange={v => update('notifications.new_review_app', v)} />
-                        <ToggleRow label="Daily Summary (In-App)" description="Evening summary of today's orders" checked={current.notifications.daily_summary_app} onChange={v => update('notifications.daily_summary_app', v)} />
-                        <ToggleRow label="Market Updates (SMS)" checked={current.notifications.market_updates_sms} onChange={v => update('notifications.market_updates_sms', v)} />
-                    </Section>
+                            <ToggleRow label="New Orders (SMS)" description="Get an SMS when a new order is placed" checked={current.notifications.new_order_sms} onChange={v => update('notifications.new_order_sms', v)} />
+                            <ToggleRow label="New Orders (In-App)" checked={current.notifications.new_order_app} onChange={v => update('notifications.new_order_app', v)} />
+                            <ToggleRow label="Market Fee Reminder (SMS)" checked={current.notifications.fee_reminder_sms} onChange={v => update('notifications.fee_reminder_sms', v)} />
+                            <ToggleRow label="New Reviews (In-App)" checked={current.notifications.new_review_app} onChange={v => update('notifications.new_review_app', v)} />
+                            <ToggleRow label="Daily Summary (In-App)" description="Evening summary of today's orders" checked={current.notifications.daily_summary_app} onChange={v => update('notifications.daily_summary_app', v)} />
+                            <ToggleRow label="Market Updates (SMS)" checked={current.notifications.market_updates_sms} onChange={v => update('notifications.market_updates_sms', v)} />
+                        </Section>
 
-                    {/* Language */}
-                    <Section title="Display" icon={<Globe className="w-4 h-4" />}>
-                        <div className="py-4">
-                            <p className="text-sm font-bold text-text-primary mb-3">Language</p>
-                            <div className="flex gap-3">
-                                {[{ key: 'en', label: 'English' }, { key: 'sw', label: 'Kiswahili' }].map(l => (
-                                    <button
-                                        key={l.key}
-                                        onClick={() => update('language', l.key)}
-                                        className={`flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all ${
-                                            current.language === l.key
+                        {/* Language */}
+                        <Section title="Display" icon={<Globe className="w-4 h-4" />}>
+                            <div className="py-4">
+                                <p className="text-sm font-bold text-text-primary mb-3">Language</p>
+                                <div className="flex gap-3">
+                                    {[{ key: 'en', label: 'English' }, { key: 'sw', label: 'Kiswahili' }].map(l => (
+                                        <button
+                                            key={l.key}
+                                            onClick={() => update('language', l.key)}
+                                            className={`flex-1 py-3 rounded-xl font-bold text-sm border-2 transition-all ${current.language === l.key
                                                 ? 'border-brand-600 bg-brand-600/5 text-brand-600'
                                                 : 'border-gray-200 text-text-secondary hover:border-gray-300'
-                                        }`}
-                                    >
-                                        {l.label}
-                                    </button>
-                                ))}
+                                                }`}
+                                        >
+                                            {l.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    </Section>
-                </div>
-
-                {/* Column 2 */}
-                <div className="space-y-6">
-                    {/* Custom M-Pesa Integration */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-                            <div className="w-8 h-8 bg-brand-600/10 rounded-xl flex items-center justify-center text-brand-600">
-                                <Zap className="w-4 h-4" />
-                            </div>
-                            <h2 className="font-black text-text-primary text-sm uppercase tracking-wider">M-Pesa Integration</h2>
-                        </div>
-                        <CustomMpesaSection />
+                        </Section>
                     </div>
 
-                    {/* Privacy */}
-                    <Section title="Privacy" icon={<Eye className="w-4 h-4" />}>
-                        <ToggleRow label="Show Phone Number to Customers" description="Customers can see your M-Pesa number on your profile" checked={current.privacy.show_phone_to_customers} onChange={v => update('privacy.show_phone_to_customers', v)} />
-                        <ToggleRow label="Show Order Count on Profile" checked={current.privacy.show_order_count_on_profile} onChange={v => update('privacy.show_order_count_on_profile', v)} />
-                    </Section>
+                    {/* Column 2 */}
+                    <div className="space-y-6">
+                        {/* Custom M-Pesa Integration */}
+                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+                                <div className="w-8 h-8 bg-brand-600/10 rounded-xl flex items-center justify-center text-brand-600">
+                                    <Zap className="w-4 h-4" />
+                                </div>
+                                <h2 className="font-black text-text-primary text-sm uppercase tracking-wider">M-Pesa Integration</h2>
+                            </div>
+                            <CustomMpesaSection />
+                        </div>
 
-                    {/* Account */}
-                    <Section title="Account" icon={<Lock className="w-4 h-4" />}>
-                        <button className="flex items-center gap-3 w-full py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors rounded-xl px-1 min-h-[56px]">
-                            <Key className="w-4 h-4 text-text-secondary" />
-                            <span className="text-sm font-semibold text-text-primary">Change Password</span>
-                        </button>
-                        <button className="flex items-center gap-3 w-full py-4 hover:bg-red-50 transition-colors rounded-xl px-1 min-h-[56px]">
-                            <LogOut className="w-4 h-4 text-red-500" />
-                            <span className="text-sm font-semibold text-red-600">Request Account Deletion</span>
-                        </button>
-                    </Section>
+                        {/* Privacy */}
+                        <Section title="Privacy" icon={<Eye className="w-4 h-4" />}>
+                            <ToggleRow label="Show Phone Number to Customers" description="Customers can see your M-Pesa number on your profile" checked={current.privacy.show_phone_to_customers} onChange={v => update('privacy.show_phone_to_customers', v)} />
+                            <ToggleRow label="Show Order Count on Profile" checked={current.privacy.show_order_count_on_profile} onChange={v => update('privacy.show_order_count_on_profile', v)} />
+                        </Section>
+
+                        {/* Account */}
+                        <Section title="Account" icon={<Lock className="w-4 h-4" />}>
+                            <button
+                                onClick={() => setShowChangePassword(true)}
+                                className="flex items-center gap-3 w-full py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors rounded-xl px-1 min-h-[56px]"
+                            >
+                                <Key className="w-4 h-4 text-text-secondary" />
+                                <span className="text-sm font-semibold text-text-primary">Change Password</span>
+                            </button>
+                            <button
+                                onClick={() => setShowDeleteModal(true)}
+                                className="flex items-center gap-3 w-full py-4 hover:bg-red-50 transition-colors rounded-xl px-1 min-h-[56px]"
+                            >
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                                <span className="text-sm font-semibold text-red-600">Request Account Deletion</span>
+                            </button>
+                        </Section>
+                    </div>
                 </div>
             </div>
+
+            {/* Delete Account Modal */}
+            <AnimatePresence>
+                {showDeleteModal && (
+                    <DeleteAccountModal
+                        onClose={() => setShowDeleteModal(false)}
+                        onDeleted={() => { logout(); router.push('/login'); }}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Change Password Modal */}
+            <AnimatePresence>
+                {showChangePassword && (
+                    <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+                )}
+            </AnimatePresence>
+        </>
+    );
+}
+
+// ─── Delete Account Modal ─────────────────────────────────────────────────────
+
+function DeleteAccountModal({ onClose, onDeleted }: { onClose: () => void; onDeleted: () => void }) {
+    const [password, setPassword] = useState('');
+    const [show, setShow] = useState(false);
+    const [error, setError] = useState('');
+    const [step, setStep] = useState<'confirm' | 'verify'>('confirm');
+
+    const { mutate: deleteAccount, isPending } = useMutation({
+        mutationFn: () => api.delete('/trader/account', { data: { password } }),
+        onSuccess: () => onDeleted(),
+        onError: (err: unknown) => setError((err as { message?: string })?.message || 'Incorrect password. Please try again.'),
+    });
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8"
+            >
+                {step === 'confirm' ? (
+                    <>
+                        <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                            <AlertTriangle className="w-7 h-7 text-red-600" />
+                        </div>
+                        <h2 className="text-xl font-black text-center text-green-950 mb-2">Delete Account</h2>
+                        <p className="text-sm text-text-secondary text-center mb-6 leading-relaxed">
+                            This will permanently delete your trader profile, products, and all associated data. This action <strong>cannot be undone</strong>.
+                        </p>
+                        <div className="flex gap-3">
+                            <button onClick={onClose} className="flex-1 h-12 border-2 border-gray-200 rounded-xl font-bold text-sm text-text-secondary hover:bg-gray-50 transition-colors">
+                                Cancel
+                            </button>
+                            <button onClick={() => setStep('verify')} className="flex-1 h-12 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-colors">
+                                Continue
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <h2 className="text-xl font-black text-green-950 mb-2">Confirm with Password</h2>
+                        <p className="text-sm text-text-secondary mb-5">Enter your password to confirm account deletion.</p>
+                        <div className="relative mb-4">
+                            <input
+                                type={show ? 'text' : 'password'}
+                                value={password}
+                                onChange={e => { setPassword(e.target.value); setError(''); }}
+                                placeholder="Your password"
+                                className="w-full h-12 px-4 pr-12 rounded-xl border-2 border-gray-200 text-sm font-medium focus:outline-none focus:border-red-400 transition-colors"
+                                autoFocus
+                            />
+                            <button type="button" onClick={() => setShow(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                {show ? <EyeOff className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                            </button>
+                        </div>
+                        {error && <p className="text-red-500 text-xs font-medium mb-4">{error}</p>}
+                        <div className="flex gap-3">
+                            <button onClick={onClose} className="flex-1 h-12 border-2 border-gray-200 rounded-xl font-bold text-sm text-text-secondary hover:bg-gray-50 transition-colors">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => deleteAccount()}
+                                disabled={!password || isPending}
+                                className="flex-1 h-12 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                {isPending ? 'Deleting...' : 'Delete My Account'}
+                            </button>
+                        </div>
+                    </>
+                )}
+            </motion.div>
+        </div>
+    );
+}
+
+// ─── Change Password Modal ────────────────────────────────────────────────────
+
+function ChangePasswordModal({ onClose }: { onClose: () => void }) {
+    const [current, setCurrent] = useState('');
+    const [newPw, setNewPw] = useState('');
+    const [confirm, setConfirm] = useState('');
+    const [error, setError] = useState('');
+
+    const { mutate: changePassword, isPending } = useMutation({
+        mutationFn: () => api.post('/profile/password', {
+            current_password: current,
+            password: newPw,
+            password_confirmation: confirm,
+        }),
+        onSuccess: () => { toast.success('Password changed successfully.'); onClose(); },
+        onError: (err: unknown) => setError((err as { message?: string })?.message || 'Failed to change password.'),
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        if (newPw !== confirm) { setError('Passwords do not match.'); return; }
+        if (newPw.length < 8) { setError('Password must be at least 8 characters.'); return; }
+        changePassword();
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8"
+            >
+                <h2 className="text-xl font-black text-green-950 mb-6">Change Password</h2>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <PasswordField id="current" label="Current Password" value={current} onChange={setCurrent} />
+                    <PasswordField id="new" label="New Password" value={newPw} onChange={setNewPw} placeholder="Min. 8 characters" />
+                    <PasswordField id="confirm" label="Confirm New Password" value={confirm} onChange={setConfirm} />
+                    {error && <p className="text-red-500 text-xs font-medium">{error}</p>}
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={onClose} className="flex-1 h-12 border-2 border-gray-200 rounded-xl font-bold text-sm text-text-secondary hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={isPending || !current || !newPw || !confirm} className="flex-1 h-12 bg-brand-600 text-white rounded-xl font-bold text-sm hover:bg-brand-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                            {isPending ? 'Saving...' : 'Update Password'}
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
         </div>
     );
 }

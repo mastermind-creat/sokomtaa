@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 
-const SITE_KEY = '0x4AAAAAAFjtM3qAwJWMGAhT';
+const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '1x00000000000000000000AA';
 
 interface TurnstileWidgetProps {
     onVerify: (token: string) => void;
