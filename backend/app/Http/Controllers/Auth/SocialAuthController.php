@@ -24,9 +24,23 @@ class SocialAuthController extends Controller
             return $this->error('Provider not supported.', 'VALIDATION_FAILED', 422);
         }
 
-        /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
-        $driver = Socialite::driver($provider);
-        return $driver->stateless()->redirect();
+        $clientId = config("services.{$provider}.client_id");
+        if (empty($clientId)) {
+            return $this->error(
+                ucfirst($provider) . ' sign-in is not configured yet.',
+                'PROVIDER_NOT_CONFIGURED',
+                503
+            );
+        }
+
+        try {
+            /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+            $driver = Socialite::driver($provider);
+            return $driver->stateless()->redirect();
+        } catch (\Exception $e) {
+            Log::error("Social redirect failed for {$provider}: " . $e->getMessage());
+            return $this->error('Sign-in is temporarily unavailable. Please try again.', 'AUTH_FAILED', 503);
+        }
     }
 
     public function callback($provider)
