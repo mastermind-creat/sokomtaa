@@ -151,7 +151,11 @@ LANGUAGE & INTERACTION RULES:
 CAPABILITIES:
 1. Resident:
    - Find nearby traders using find_nearby_traders (use when user asks for "near me", "available", "karibu").
-   - Search products by name using search_products.
+   - Search products by name using search_products (global search across all traders).
+   - Get all products from a SPECIFIC trader using get_trader_products:
+     - First call search_traders to find the trader and get their ID.
+     - Then call get_trader_products with that trader_id.
+     - Use this whenever the user mentions a specific trader name or stall (e.g. "Mali Safi", "Tech Safi Store").
    - Discover top traders using get_featured_traders or search_traders.
    - Create reservations using create_reservation — always returns a reservation_id needed for payment.
    - PAYMENT FLOW (MUST follow this exact order):
@@ -274,6 +278,44 @@ CAPABILITIES:
               market: p.trader?.market?.name ?? 'N/A',
               distance_km: p.distance_km ?? null,
             })),
+          };
+        },
+      }),
+
+      get_trader_products: tool({
+        description: 'Get all products listed by a specific trader. Use this when the user asks about products at a named stall or trader, e.g. "what does Mali Safi sell", "products from Tech Safi Store", "look in Mali Safi stall". First call search_traders to get the trader_id, then call this tool.',
+        inputSchema: jsonSchema<{ trader_id: number; trader_name: string }>({
+          type: 'object',
+          properties: {
+            trader_id: { type: 'number', description: 'The numeric ID of the trader (get this from search_traders first)' },
+            trader_name: { type: 'string', description: 'The business name of the trader, used for display in the response' },
+          },
+          required: ['trader_id', 'trader_name'],
+        }),
+        execute: async ({ trader_id, trader_name }: { trader_id: number; trader_name: string }) => {
+          const res = await fetch(`${apiUrl}/traders/${trader_id}/products`, {
+            headers: { 'Accept': 'application/json' },
+          });
+          if (!res.ok) return { error: `Could not load products for ${trader_name}.` };
+          const data = await res.json();
+          const products = data.data?.data || data.data || [];
+          if (!products.length) return { message: `${trader_name} has no active products listed right now.` };
+          return {
+            trader: trader_name,
+            trader_id,
+            product_count: products.length,
+            products: products
+              .filter((p: any) => p.is_active)
+              .slice(0, 12)
+              .map((p: any) => ({
+                id: p.id,
+                name: p.name,
+                name_sw: p.name_sw ?? null,
+                price: `KES ${p.price} per ${p.unit}`,
+                stock_status: p.stock_status,
+                stock_quantity: p.stock_quantity ?? null,
+                image_url: p.image_url ?? null,
+              })),
           };
         },
       }),
@@ -615,7 +657,7 @@ CAPABILITIES:
       system: systemInstruction,
       prompt: historyPrompt,
       tools,
-      stopWhen: stepCountIs(5), // Allow up to 5 tool-call cycles (search → reserve → pay)
+      stopWhen: stepCountIs(6), // Allow up to 6 tool-call cycles (search trader → get products → reserve → pay)
     });
 
     return Response.json({ response: result.text });
