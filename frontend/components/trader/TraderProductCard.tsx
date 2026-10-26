@@ -2,17 +2,18 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { 
-    MoreVertical, 
-    Edit3, 
-    Trash2, 
-    Package, 
-    CheckCircle2, 
-    AlertTriangle, 
+import {
+    MoreVertical,
+    Edit3,
+    Trash2,
+    Package,
+    CheckCircle2,
+    AlertTriangle,
     XCircle,
     TrendingUp,
     Tag,
-    Zap
+    Zap,
+    Sparkles
 } from 'lucide-react';
 import { Product } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -29,10 +30,10 @@ interface TraderProductCardProps {
     isBoosting?: boolean;
 }
 
-export default function TraderProductCard({ 
+export default function TraderProductCard({
     product,
-    onEdit, 
-    onDelete, 
+    onEdit,
+    onDelete,
     onToggleStatus,
     onBoost,
     isUpdating,
@@ -82,11 +83,11 @@ export default function TraderProductCard({
             {/* Image Section */}
             <div className="relative aspect-square w-full rounded-[1.5rem] bg-neutral-100 overflow-hidden mb-4 shadow-inner group-hover:shadow-none transition-shadow">
                 {product.image_url ? (
-                    <Image 
-                        src={product.image_url} 
-                        alt={product.name} 
+                    <Image
+                        src={product.image_url}
+                        alt={product.name}
                         fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-110" 
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-neutral-300 gap-2">
@@ -102,8 +103,8 @@ export default function TraderProductCard({
                 )}>
                     {getStatusIcon(product.stock_status)}
                     <span className="text-[10px] font-black uppercase tracking-wider">
-                        {product.stock_status === 'available' ? 'In Stock' : 
-                         product.stock_status === 'low' ? 'Low' : 'Out'}
+                        {product.stock_status === 'available' ? 'In Stock' :
+                            product.stock_status === 'low' ? 'Low' : 'Out'}
                     </span>
                 </div>
 
@@ -144,7 +145,7 @@ export default function TraderProductCard({
                     </div>
 
                     <div className="relative">
-                        <button 
+                        <button
                             onClick={() => setShowMenu(!showMenu)}
                             className="p-2 bg-neutral-50 rounded-xl text-neutral-400 hover:text-green-950 hover:bg-neutral-100 transition-all active:scale-90"
                         >
@@ -154,9 +155,9 @@ export default function TraderProductCard({
                         <AnimatePresence>
                             {showMenu && (
                                 <>
-                                    <div 
-                                        className="fixed inset-0 z-10" 
-                                        onClick={() => setShowMenu(false)} 
+                                    <div
+                                        className="fixed inset-0 z-10"
+                                        onClick={() => setShowMenu(false)}
                                     />
                                     <motion.div
                                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -164,21 +165,21 @@ export default function TraderProductCard({
                                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                                         className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-2xl shadow-2xl border border-neutral-100 z-20 py-2 overflow-hidden"
                                     >
-                                        <button 
+                                        <button
                                             onClick={() => { onEdit(product); setShowMenu(false); }}
                                             className="w-full px-4 py-3 text-left flex items-center gap-3 text-sm font-bold text-green-950 hover:bg-neutral-50 transition-colors"
                                         >
                                             <Edit3 size={18} className="text-brand-600" />
                                             Edit Product
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => { onBoost(product.id); setShowMenu(false); }}
                                             className="w-full px-4 py-3 text-left flex items-center gap-3 text-sm font-bold text-amber-600 hover:bg-amber-50 transition-colors"
                                         >
                                             <Zap size={18} />
                                             Boost Visibility (KES 20)
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => { onDelete(product.id); setShowMenu(false); }}
                                             className="w-full px-4 py-3 text-left flex items-center gap-3 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors"
                                         >
@@ -191,6 +192,15 @@ export default function TraderProductCard({
                         </AnimatePresence>
                     </div>
                 </div>
+
+                {product.ai_insight ? (
+                    <div className="flex items-start gap-1.5 py-1">
+                        <Sparkles size={12} className="text-brand-500 mt-0.5 shrink-0" />
+                        <p className="text-[11px] italic text-text-secondary leading-snug">
+                            {product.ai_insight}
+                        </p>
+                    </div>
+                ) : null}
 
                 <div className="pt-2 flex justify-between items-end border-t border-neutral-50">
                     <div>
@@ -208,15 +218,15 @@ export default function TraderProductCard({
                     </div>
 
                     <div className="relative">
-                        <select 
+                        <select
                             value={product.stock_status}
                             onChange={(e) => onToggleStatus(product.id, e.target.value)}
                             disabled={isUpdating}
                             className={cn(
                                 "text-[10px] font-black uppercase tracking-[0.15em] px-3 py-2.5 rounded-xl border-2 appearance-none transition-all cursor-pointer shadow-sm disabled:opacity-50 min-w-[110px] text-center",
-                                product.stock_status === 'available' ? 'border-brand-100 bg-brand-50 text-brand-700' : 
-                                product.stock_status === 'low' ? 'border-amber-100 bg-amber-50 text-amber-700' : 
-                                'border-rose-100 bg-rose-50 text-rose-700'
+                                product.stock_status === 'available' ? 'border-brand-100 bg-brand-50 text-brand-700' :
+                                    product.stock_status === 'low' ? 'border-amber-100 bg-amber-50 text-amber-700' :
+                                        'border-rose-100 bg-rose-50 text-rose-700'
                             )}
                         >
                             <option value="available">In Stock</option>
@@ -231,6 +241,6 @@ export default function TraderProductCard({
                     </div>
                 </div>
             </div>
-        </motion.div>
+        </motion.div >
     );
 }

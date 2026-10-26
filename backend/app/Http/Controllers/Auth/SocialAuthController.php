@@ -8,6 +8,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\AbstractProvider;
 use App\Services\TalkSasaService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -18,11 +19,9 @@ class SocialAuthController extends Controller
 {
     use ApiResponse, \App\Traits\PhoneNormalization;
 
-    // Last deployed: v1.1 — added provider config validation
-
-    public function redirect($provider)
+    public function redirect(string $provider)
     {
-        if (!in_array($provider, ['google', 'apple'])) {
+        if (!\in_array($provider, ['google', 'apple'])) {
             return $this->error('Provider not supported.', 'VALIDATION_FAILED', 422);
         }
 
@@ -36,7 +35,7 @@ class SocialAuthController extends Controller
         }
 
         try {
-            /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+            /** @var AbstractProvider $driver */
             $driver = Socialite::driver($provider);
             return $driver->stateless()->redirect();
         } catch (\Exception $e) {
@@ -45,21 +44,21 @@ class SocialAuthController extends Controller
         }
     }
 
-    public function callback($provider)
+    public function callback(string $provider)
     {
         $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:3000'), '/');
 
-        if (!in_array($provider, ['google', 'apple'])) {
-            return redirect("{$frontendUrl}/auth/social-callback?error=unsupported_provider");
+        if (!\in_array($provider, ['google', 'apple'])) {
+            return redirect("{$frontendUrl}/social-callback?error=unsupported_provider");
         }
 
         try {
-            /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+            /** @var AbstractProvider $driver */
             $driver = Socialite::driver($provider);
             $socialUser = $driver->stateless()->user();
         } catch (\Exception $e) {
             Log::error("Social auth callback failed for {$provider}: " . $e->getMessage());
-            return redirect("{$frontendUrl}/auth/social-callback?error=auth_failed");
+            return redirect("{$frontendUrl}/social-callback?error=auth_failed");
         }
 
         $user = User::where('provider_name', $provider)
@@ -67,40 +66,37 @@ class SocialAuthController extends Controller
             ->first();
 
         if (!$user) {
-            // Check if user exists by email
             $user = User::where('email', $socialUser->getEmail())->first();
 
             if ($user) {
-                // Link the account
                 $user->update([
                     'provider_name' => $provider,
-                    'provider_id' => $socialUser->getId(),
+                    'provider_id'   => $socialUser->getId(),
                 ]);
             } else {
-                // Create a new user — phone/role will be completed in next step
                 $user = User::create([
-                    'name' => $socialUser->getName() ?? 'User',
-                    'email' => $socialUser->getEmail(),
+                    'name'          => $socialUser->getName() ?? 'User',
+                    'email'         => $socialUser->getEmail(),
                     'provider_name' => $provider,
-                    'provider_id' => $socialUser->getId(),
-                    'password' => Hash::make(Str::random(24)),
-                    'avatar_url' => $socialUser->getAvatar(),
+                    'provider_id'   => $socialUser->getId(),
+                    'password'      => Hash::make(Str::random(24)),
+                    'avatar_url'    => $socialUser->getAvatar(),
                     'phone_verified' => false,
                 ]);
             }
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
-        $requiresCompletion = is_null($user->phone) || is_null($user->role) ? '1' : '0';
+        $token              = $user->createToken('auth_token')->plainTextToken;
+        $requiresCompletion = ($user->phone === null || $user->role === null) ? '1' : '0';
 
-        return redirect("{$frontendUrl}/auth/social-callback?token={$token}&requires_completion={$requiresCompletion}");
+        return redirect("{$frontendUrl}/social-callback?token={$token}&requires_completion={$requiresCompletion}");
     }
 
     public function completeProfile(Request $request): JsonResponse
     {
         $request->validate([
-            'phone' => 'required|string',
-            'role' => 'required|in:trader,resident,delivery',
+            'phone'       => 'required|string',
+            'role'        => 'required|in:trader,resident,delivery',
             'national_id' => 'nullable|string',
         ]);
 
@@ -110,41 +106,36 @@ class SocialAuthController extends Controller
             return $this->error('Profile is already complete.', 'VALIDATION_FAILED', 422);
         }
 
-        $phone = $this->normalizePhone($request->phone);
+        $phone = $this->normalizePhone($request->input('phone'));
 
         if (User::where('phone', $phone)->exists()) {
             return $this->error('The phone number has already been taken.', 'VALIDATION_FAILED', 422);
         }
 
         $user->update([
-            'phone' => $phone,
-            'role' => $request->role,
-            'national_id' => $request->national_id,
+            'phone'       => $phone,
+            'role'        => $request->input('role'),
+            'national_id' => $request->input('national_id'),
         ]);
 
         if ($user->role === 'delivery') {
             $user->riderProfile()->create([
-                'vehicle_type' => 'motorcycle',
+                'vehicle_type'        => 'motorcycle',
                 'verification_status' => 'not_submitted',
-                'is_available' => false,
-                'earnings_balance' => 0.00,
+                'is_available'        => false,
+                'earnings_balance'    => 0.00,
             ]);
         }
 
-        // Generate a 6-digit OTP to verify the newly attached phone number
         $otp = rand(100000, 999999);
         Cache::put("otp_{$user->id}", $otp, now()->addMinutes(config('otp.expiry_minutes', 10)));
 
         $smsService = app(TalkSasaService::class);
-        $message = "Soko Mtaa: Your verification code is {$otp}. Please do not share it with anyone.";
-        $smsService->sendSms($user->phone, $message);
-        
+        $smsService->sendSms($user->phone, "Soko Mtaa: Your verification code is {$otp}. Do not share it.");
+
         Log::info("OTP for {$user->phone}: {$otp}");
 
-        $data = [
-            'user' => $user,
-        ];
-
+        $data = ['user' => $user];
         if (config('app.debug')) {
             $data['debug_otp'] = $otp;
         }

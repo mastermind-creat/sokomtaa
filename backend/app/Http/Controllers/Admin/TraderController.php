@@ -25,6 +25,9 @@ class TraderController extends Controller
         $search = $request->query('search');
 
         $traders = Trader::with(['user', 'stall', 'market'])
+            // Exclude traders whose user account has been soft-deleted
+            // (e.g. account deletion requests that were actioned)
+            ->whereHas('user')
             ->when($statusFilter, function ($query, $status) {
                 return $query->where('verification_status', $status);
             })

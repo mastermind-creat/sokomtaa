@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             MarketSeeder::class,
             CategorySeeder::class,
             AdminUserSeeder::class,
+            SearchAliasSeeder::class,
         ]);
     }
 }

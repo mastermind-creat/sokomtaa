@@ -18,6 +18,7 @@ class User extends Authenticatable
         'name',
         'phone',
         'email',
+        'email_verified_at',
         'password',
         'provider_name',
         'provider_id',
@@ -41,10 +42,11 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'password' => 'hashed',
-        'phone_verified' => 'boolean',
+        'password'          => 'hashed',
+        'phone_verified'    => 'boolean',
         'phone_verified_at' => 'datetime',
-        'is_active' => 'boolean',
+        'email_verified_at' => 'datetime',
+        'is_active'         => 'boolean',
     ];
 
     public function trader(): HasOne
@@ -95,5 +97,13 @@ class User extends Authenticatable
     public function wallet(): HasOne
     {
         return $this->hasOne(Wallet::class, 'user_id');
+    }
+
+    /**
+     * Returns true when this user registered via email (phone is null).
+     */
+    public function isEmailRegistered(): bool
+    {
+        return $this->phone === null && $this->email !== null;
     }
 }

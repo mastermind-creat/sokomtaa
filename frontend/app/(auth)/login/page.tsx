@@ -9,13 +9,10 @@ import Link from 'next/link';
 import {
     Loader2,
     Phone,
+    Mail,
     Lock,
     ArrowRight,
     ShieldCheck,
-    Store,
-    TrendingUp,
-    Users,
-    ShoppingBag,
     Eye,
     EyeOff
 } from 'lucide-react';
@@ -26,20 +23,24 @@ import { AuthCinematicSide } from '@/components/auth/AuthCinematicSide';
 import { normalizePhoneNumber, handleApiError } from '@/lib/utils';
 import TurnstileWidget from '@/components/shared/TurnstileWidget';
 import { SocialAuthButtons } from '@/components/auth/SocialAuthButtons';
+import { cn } from '@/lib/utils';
+
+type LoginMode = 'phone' | 'email';
 
 interface LoginFormData {
-    phone: string;
+    identifier: string;
     password: string;
 }
 
 export default function LoginPage() {
-    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>();
+    const { register, handleSubmit, formState: { errors, isSubmitting }, setValue, clearErrors } = useForm<LoginFormData>();
     const { user, isAuthenticated, setAuth } = useAuthStore();
     const router = useRouter();
     const [error, setError] = React.useState<string | null>(null);
     const [showPassword, setShowPassword] = React.useState(false);
     const [isRedirecting, setIsRedirecting] = React.useState(false);
     const [turnstileToken, setTurnstileToken] = React.useState<string | null>(null);
+    const [loginMode, setLoginMode] = React.useState<LoginMode>('phone');
 
     React.useEffect(() => {
         if (isAuthenticated && user) {
@@ -51,6 +52,13 @@ export default function LoginPage() {
         }
     }, [isAuthenticated, user, router]);
 
+    const switchMode = (mode: LoginMode) => {
+        setLoginMode(mode);
+        setValue('identifier', '');
+        clearErrors('identifier');
+        setError(null);
+    };
+
     const onSubmit = async (data: LoginFormData) => {
         try {
             setError(null);
@@ -58,20 +66,26 @@ export default function LoginPage() {
                 setError('Please complete the security check.');
                 return;
             }
-            const normalizedData = {
-                ...data,
-                phone: normalizePhoneNumber(data.phone),
+
+            const payload: Record<string, string> = {
+                password: data.password,
                 cf_turnstile_token: turnstileToken,
             };
 
-            const response = await api.post('/auth/login', normalizedData) as unknown as ApiResponse<AuthResponse>;
+            if (loginMode === 'phone') {
+                payload.phone = normalizePhoneNumber(data.identifier);
+            } else {
+                payload.email = data.identifier;
+            }
+
+            const response = await api.post('/auth/login', payload) as unknown as ApiResponse<AuthResponse>;
             const { user, token } = response.data;
 
             setAuth(user, token);
-            setIsRedirecting(true); // Keep loading state active during Next.js router transition
+            setIsRedirecting(true);
 
-            if (!user.phone_verified) {
-                router.push('/verify');
+            if (!user.phone_verified && !user.email_verified) {
+                router.push(user.email ? '/verify-email' : '/verify');
             } else if (user.role === 'admin') {
                 router.push('/admin/dashboard');
             } else if (user.role === 'trader') {
@@ -88,7 +102,6 @@ export default function LoginPage() {
             setIsRedirecting(false);
         }
     };
-
 
     return (
         <div className="bg-white">
@@ -110,7 +123,7 @@ export default function LoginPage() {
                             <h1 className="text-2xl font-black text-green-950">Soko Mtaa</h1>
                         </div>
 
-                        <div className="mb-10">
+                        <div className="mb-8">
                             <div className="flex items-center gap-2 mb-2">
                                 <ShieldCheck size={16} className="text-brand-600" />
                                 <span className="text-xs font-bold text-brand-600 uppercase tracking-widest">Secure Login</span>
@@ -119,31 +132,81 @@ export default function LoginPage() {
                             <p className="text-text-secondary">Sign in to your Soko Mtaa account to continue.</p>
                         </div>
 
+                        {/* Phone / Email toggle */}
+                        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6" role="group" aria-label="Login method">
+                            <button
+                                type="button"
+                                onClick={() => switchMode('phone')}
+                                className={cn(
+                                    "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all min-h-[48px]",
+                                    loginMode === 'phone'
+                                        ? "bg-white text-green-950 shadow-sm"
+                                        : "text-text-muted hover:text-text-primary"
+                                )}
+                            >
+                                <Phone size={14} />
+                                Phone Number
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => switchMode('email')}
+                                className={cn(
+                                    "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all min-h-[48px]",
+                                    loginMode === 'email'
+                                        ? "bg-white text-green-950 shadow-sm"
+                                        : "text-text-muted hover:text-text-primary"
+                                )}
+                            >
+                                <Mail size={14} />
+                                Email Address
+                            </button>
+                        </div>
+
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-                            {/* Phone Field */}
+                            {/* Identifier Field */}
                             <div>
                                 <label className="block text-sm font-bold text-green-900 mb-2">
-                                    Phone Number
+                                    {loginMode === 'phone' ? 'Phone Number' : 'Email Address'}
                                 </label>
                                 <div className="relative">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 text-brand-500">
-                                        <Phone size={18} />
+                                        {loginMode === 'phone' ? <Phone size={18} /> : <Mail size={18} />}
                                     </div>
-                                    <input
-                                        {...register('phone', {
-                                            required: 'Phone number is required',
-                                            pattern: {
-                                                value: /^(?:\+254|254|0)?([17]\d{8})$/,
-                                                message: 'Invalid Kenyan phone number format'
-                                            }
-                                        })}
-                                        className="w-full h-[54px] pl-12 pr-4 rounded-xl border border-gray-200 bg-gray-50 text-green-950 placeholder:text-gray-400 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white transition-all"
-                                        placeholder="07XXXXXXXX or +254..."
-                                        type="tel"
-                                        autoComplete="tel"
-                                    />
+                                    {loginMode === 'phone' ? (
+                                        <input
+                                            {...register('identifier', {
+                                                required: 'Phone number is required',
+                                                pattern: {
+                                                    value: /^(?:\+254|254|0)?([17]\d{8})$/,
+                                                    message: 'Invalid Kenyan phone number format'
+                                                }
+                                            })}
+                                            key="phone-input"
+                                            className="w-full h-[54px] pl-12 pr-4 rounded-xl border border-gray-200 bg-gray-50 text-green-950 placeholder:text-gray-400 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white transition-all"
+                                            placeholder="07XXXXXXXX or +254..."
+                                            type="tel"
+                                            autoComplete="tel"
+                                        />
+                                    ) : (
+                                        <input
+                                            {...register('identifier', {
+                                                required: 'Email address is required',
+                                                pattern: {
+                                                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                                                    message: 'Enter a valid email address'
+                                                }
+                                            })}
+                                            key="email-input"
+                                            className="w-full h-[54px] pl-12 pr-4 rounded-xl border border-gray-200 bg-gray-50 text-green-950 placeholder:text-gray-400 text-base font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:bg-white transition-all"
+                                            placeholder="you@example.com"
+                                            type="email"
+                                            autoComplete="email"
+                                        />
+                                    )}
                                 </div>
-                                {errors.phone && <p className="text-red-500 text-xs font-medium mt-1.5">{errors.phone.message}</p>}
+                                {errors.identifier && (
+                                    <p className="text-red-500 text-xs font-medium mt-1.5">{errors.identifier.message}</p>
+                                )}
                             </div>
 
                             {/* Password Field */}
@@ -169,11 +232,14 @@ export default function LoginPage() {
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-600 transition-colors"
+                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                                     >
                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 </div>
-                                {errors.password && <p className="text-red-500 text-xs font-medium mt-1.5">{errors.password.message}</p>}
+                                {errors.password && (
+                                    <p className="text-red-500 text-xs font-medium mt-1.5">{errors.password.message}</p>
+                                )}
                             </div>
 
                             {/* Cloudflare Turnstile */}

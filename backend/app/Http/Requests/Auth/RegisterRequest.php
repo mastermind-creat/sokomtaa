@@ -4,6 +4,7 @@ namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Validator;
 
 class RegisterRequest extends FormRequest
 {
@@ -26,21 +27,44 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:20', 'unique:users'],
-            'email' => ['nullable', 'email', 'max:255', 'unique:users'],
-            'password' => [
-                'required', 
-                'confirmed', 
+            'name'               => ['required', 'string', 'max:255'],
+            'phone'              => ['nullable', 'string', 'max:20', 'unique:users'],
+            'email'              => ['nullable', 'email', 'max:255'],
+            'password'           => [
+                'required',
+                'confirmed',
                 Password::min(8)
                     ->letters()
                     ->numbers()
                     ->symbols()
-                    ->mixedCase()
+                    ->mixedCase(),
             ],
-            'role' => ['required', 'string', 'in:trader,resident,delivery'],
-            'national_id' => ['nullable', 'string', 'max:50'],
+            'role'               => ['required', 'string', 'in:trader,resident,delivery'],
+            'national_id'        => ['nullable', 'string', 'max:50'],
             'preferred_language' => ['nullable', 'string', 'in:en,sw'],
         ];
+    }
+
+    /**
+     * Add mutual-exclusivity check: exactly one of phone or email must be provided.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $hasPhone = filled($this->input('phone'));
+            $hasEmail = filled($this->input('email'));
+
+            if ($hasPhone && $hasEmail) {
+                $validator->errors()->add(
+                    'phone',
+                    'Please provide either a phone number or an email address, not both.'
+                );
+            } elseif (!$hasPhone && !$hasEmail) {
+                $validator->errors()->add(
+                    'phone',
+                    'Please provide either a phone number or an email address.'
+                );
+            }
+        });
     }
 }

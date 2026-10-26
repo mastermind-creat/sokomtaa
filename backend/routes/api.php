@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\VerificationController;
+use App\Http\Controllers\Admin\SearchAliasController;
 use App\Http\Controllers\Trader\TraderProfileController;
 use App\Http\Controllers\Trader\ProductController;
 use Illuminate\Http\Request;
@@ -24,6 +26,9 @@ Route::prefix('auth')->group(function () {
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth');
     Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth');
 
+    // Email verification — public (no auth required)
+    Route::get('/email/verify/{id}/{token}', [VerificationController::class, 'verify']);
+
     // Social Authentication Routes
     Route::get('/{provider}/redirect', [\App\Http\Controllers\Auth\SocialAuthController::class, 'redirect']);
     Route::get('/{provider}/callback', [\App\Http\Controllers\Auth\SocialAuthController::class, 'callback']);
@@ -34,6 +39,9 @@ Route::prefix('auth')->group(function () {
         Route::post('/verify-phone', [AuthController::class, 'verifyPhone'])->middleware('throttle:otp');
         Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->middleware('throttle:otp');
         Route::post('/complete-profile', [\App\Http\Controllers\Auth\SocialAuthController::class, 'completeProfile']);
+
+        // Email verification resend — requires authentication, rate-limited in controller
+        Route::post('/email/resend', [VerificationController::class, 'resend']);
     });
 });
 
@@ -410,6 +418,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/stats', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'stats']);
             Route::post('/security', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'updateSecurity']);
         });
+
+        // Search Alias Management
+        Route::get('/search-aliases', [SearchAliasController::class, 'index']);
+        Route::post('/search-aliases', [SearchAliasController::class, 'store']);
+        Route::put('/search-aliases/{id}', [SearchAliasController::class, 'update']);
+        Route::delete('/search-aliases/{id}', [SearchAliasController::class, 'destroy']);
     });
 });
 

@@ -229,7 +229,7 @@ class UserController extends Controller
     /**
      * Send an SMS to a specific user.
      */
-    public function sendSms(Request $request, User $user, \App\Services\AfricasTalkingService $smsService): JsonResponse
+    public function sendSms(Request $request, User $user): JsonResponse
     {
         $request->validate([
             'message' => 'required|string|max:160',
@@ -238,22 +238,25 @@ class UserController extends Controller
         if (!$user->phone) {
             return response()->json([
                 'success' => false,
-                'message' => 'User does not have a valid phone number.'
+                'message' => 'User does not have a valid phone number.',
+                'code'    => 'VALIDATION_ERROR',
             ], 422);
         }
 
+        $smsService = app(\App\Services\TalkSasaService::class);
         $result = $smsService->sendSms($user->phone, $request->message);
 
         if ($result['status'] === 'success') {
             return response()->json([
                 'success' => true,
-                'message' => 'SMS sent successfully.'
+                'message' => 'SMS sent successfully.',
             ]);
         }
 
         return response()->json([
             'success' => false,
-            'message' => $result['message'] ?? 'Failed to send SMS.'
+            'message' => $result['message'] ?? 'Failed to send SMS.',
+            'code'    => 'SMS_FAILED',
         ], 500);
     }
 }

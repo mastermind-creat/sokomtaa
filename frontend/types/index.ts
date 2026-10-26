@@ -1,8 +1,9 @@
 export interface User {
     id: number;
     name: string;
-    phone: string;
-    email?: string;
+    phone: string | null;
+    email?: string | null;
+    email_verified?: boolean | null;
     role: 'trader' | 'resident' | 'admin' | 'delivery';
     preferred_language: string;
     phone_verified: boolean;
@@ -187,6 +188,7 @@ export interface Product {
     is_active: boolean;
     is_boosted?: boolean;
     total_reservations: number;
+    ai_insight?: string | null;
     category?: Category;
     trader?: Trader;
 }
