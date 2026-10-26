@@ -260,6 +260,11 @@ class AuthController extends Controller
     {
         if ($fail = $this->checkTurnstile($request)) return $fail;
 
+        // Support both email and phone for password reset
+        if ($request->filled('email')) {
+            return $this->forgotPasswordByEmail($request);
+        }
+
         $phone = $this->normalizePhone($request->phone);
         $user  = User::where('phone', $phone)->first();
 
@@ -284,8 +289,73 @@ class AuthController extends Controller
         return $this->success($data, 'Password reset code sent to your phone.');
     }
 
+    private function forgotPasswordByEmail(Request $request): JsonResponse
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $user = User::where('email', $request->email)->first();
+
+        // Always return success to prevent email enumeration
+        if (!$user) {
+            return $this->success(null, 'If that email is registered, a reset code has been sent.');
+        }
+
+        $otp = rand(100000, 999999);
+        Cache::put("pwd_reset_otp_email_{$user->id}", $otp, now()->addMinutes(10));
+
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)
+                ->send(new \App\Mail\PasswordResetMailable($user, (string) $otp));
+        } catch (\Throwable $e) {
+            Log::error('Password reset email failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+            // Non-blocking — still return success so the user can retry
+        }
+
+        Log::info("Password reset OTP emailed to user #{$user->id}");
+
+        $data = [];
+        if (config('app.debug')) {
+            $data['debug_otp'] = $otp;
+        }
+
+        return $this->success($data, 'If that email is registered, a reset code has been sent.');
+    }
+
     public function resetPassword(Request $request): JsonResponse
     {
+        // Email path
+        if ($request->filled('email')) {
+            $request->validate([
+                'email'    => 'required|email|exists:users,email',
+                'otp'      => 'required|string|size:6',
+                'password' => [
+                    'required',
+                    'string',
+                    'confirmed',
+                    \Illuminate\Validation\Rules\Password::min(8)
+                        ->letters()
+                        ->numbers()
+                        ->symbols()
+                        ->mixedCase(),
+                ],
+            ]);
+
+            $user      = User::where('email', $request->email)->firstOrFail();
+            $cacheKey  = "pwd_reset_otp_email_{$user->id}";
+            $cachedOtp = Cache::get($cacheKey);
+
+            if (!$cachedOtp || $cachedOtp != $request->otp) {
+                return $this->error('The reset code is incorrect or has expired.', 'INVALID_OTP', 422);
+            }
+
+            $user->update(['password' => Hash::make($request->password)]);
+            Cache::forget($cacheKey);
+            $user->tokens()->delete();
+
+            return $this->success(null, 'Password has been reset successfully. You can now login.');
+        }
+
+        // Phone path
         $phone = $this->normalizePhone($request->phone);
         $request->merge(['phone' => $phone]);
 

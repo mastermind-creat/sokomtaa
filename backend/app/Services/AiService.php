@@ -121,24 +121,137 @@ class AiService
     }
 
     /**
-     * Interactive chat with Soko AI.
+     * Interactive chat with Soko AI — grounded with real marketplace data.
+     *
+     * Builds a context block from the database so the AI never has to guess
+     * about traders, products, or availability. The user's message is analysed
+     * for intent (trader lookup, product search, general question) and the
+     * relevant data is injected into the prompt before calling the model.
      */
     public function chat(string $message, $user = null): ?string
     {
-        $roleInfo = $user ? "The user is a {$user->role} on Soko Mtaa." : "";
-        $prompt = "You are 'Soko AI', a helpful and knowledgeable assistant for Soko Mtaa, a Kenyan neighbourhood marketplace. 
-        Your goal is to assist traders, residents, and administrators with marketplace-related questions.
-        Keep responses concise, friendly, and relevant to the Kenyan context.
-        {$roleInfo}
-        
-        Formatting instructions:
-        - Do NOT use markdown asterisks (*) for bullet points. Use clean dashes (-) or numbers.
-        - Do NOT use double asterisks (**) for bolding. Just use plain text or capitalize key words if necessary.
-        - Ensure the output is clean, easy to read, and professional.
-        
-        User says: '{$message}'";
+        $roleInfo    = $user ? "The user is a {$user->role} on Soko Mtaa." : "";
+        $contextBlock = $this->buildMarketplaceContext($message);
+
+        $prompt = "You are 'Soko AI', a helpful assistant for Soko Mtaa, a Kenyan neighbourhood marketplace platform.
+{$roleInfo}
+
+IMPORTANT RULES:
+- You have access to LIVE marketplace data provided below. Always use this data to answer questions.
+- NEVER say you cannot find traders or products if they appear in the marketplace data below.
+- If a trader or product is listed below, confirm it exists and share the details.
+- If the marketplace data is empty (no traders/products found), say so honestly and suggest the user browse the marketplace directly.
+- Keep responses concise, friendly, and grounded in the data provided.
+- Do NOT use markdown asterisks (*) for bullet points. Use dashes (-) or numbers.
+- Do NOT use double asterisks (**) for bold. Capitalise key words instead.
+
+{$contextBlock}
+
+User message: '{$message}'";
 
         return $this->generate($prompt);
+    }
+
+    /**
+     * Query the database and build a context block relevant to the user's message.
+     * Detects intent from the message to fetch trader info, product lists, or general traders.
+     */
+    private function buildMarketplaceContext(string $message): string
+    {
+        $lower = strtolower($message);
+        $lines = [];
+
+        try {
+            // ── Intent: looking for a specific trader by name ──────────────────
+            $traderMatches = \App\Models\Trader::with(['market', 'stall', 'products' => function ($q) {
+                $q->where('is_active', true)->limit(5);
+            }])
+            ->where('verification_status', 'verified')
+            ->where(function ($q) use ($lower) {
+                $q->whereRaw('LOWER(business_name) LIKE ?', ["%{$lower}%"])
+                  ->orWhereRaw('LOWER(business_name_sw) LIKE ?', ["%{$lower}%"]);
+            })
+            ->limit(3)
+            ->get();
+
+            if ($traderMatches->isNotEmpty()) {
+                $lines[] = "TRADERS FOUND IN MARKETPLACE:";
+                foreach ($traderMatches as $t) {
+                    $status  = $t->is_currently_open ? 'Open now' : 'Currently closed';
+                    $market  = $t->market?->name ?? 'Unknown market';
+                    $stall   = $t->stall?->stall_number ? "Stall {$t->stall->stall_number}" : 'No stall assigned';
+                    $rating  = number_format((float)$t->average_rating, 1);
+                    $lines[] = "- {$t->business_name} | {$market} | {$stall} | Rating: {$rating}/5 | {$status}";
+
+                    if ($t->products->isNotEmpty()) {
+                        $lines[] = "  Products: " . $t->products->pluck('name')->implode(', ');
+                    }
+                }
+                $lines[] = "";
+            }
+
+            // ── Intent: looking for products / generic search ──────────────────
+            // Extract potential product keywords (words 3+ chars that aren't stop words)
+            $stopWords = ['the', 'for', 'from', 'with', 'and', 'can', 'you', 'are', 'trader', 'products', 'shop', 'store', 'find', 'show', 'check', 'please', 'what', 'how', 'any', 'all'];
+            $words     = array_filter(
+                explode(' ', preg_replace('/[^a-z0-9 ]/', '', $lower)),
+                fn ($w) => strlen($w) >= 3 && !in_array($w, $stopWords)
+            );
+
+            if (!empty($words)) {
+                $productQ = \App\Models\Product::with(['trader.market'])
+                    ->where('is_active', true)
+                    ->where(function ($q) use ($words) {
+                        foreach ($words as $word) {
+                            $q->orWhereRaw('LOWER(products.name) LIKE ?', ["%{$word}%"])
+                              ->orWhereRaw('LOWER(products.name_sw) LIKE ?', ["%{$word}%"]);
+                        }
+                    })
+                    ->limit(6)
+                    ->get();
+
+                if ($productQ->isNotEmpty()) {
+                    $lines[] = "PRODUCTS FOUND IN MARKETPLACE:";
+                    foreach ($productQ as $p) {
+                        $traderName = $p->trader?->business_name ?? 'Unknown trader';
+                        $market     = $p->trader?->market?->name ?? 'Unknown market';
+                        $price      = 'KES ' . number_format((float)$p->price, 0);
+                        $stock      = $p->stock_status === 'available' ? 'In stock' : ($p->stock_status === 'low' ? 'Low stock' : 'Out of stock');
+                        $lines[]    = "- {$p->name}" . ($p->name_sw ? " ({$p->name_sw})" : '') . " | {$price}/{$p->unit} | {$stock} | Sold by: {$traderName} at {$market}";
+                    }
+                    $lines[] = "";
+                }
+            }
+
+            // ── Always append a general overview of available traders ──────────
+            if (empty($lines)) {
+                $allTraders = \App\Models\Trader::with('market')
+                    ->where('verification_status', 'verified')
+                    ->orderByDesc('average_rating')
+                    ->limit(5)
+                    ->get();
+
+                if ($allTraders->isNotEmpty()) {
+                    $lines[] = "VERIFIED TRADERS ON SOKO MTAA:";
+                    foreach ($allTraders as $t) {
+                        $status  = $t->is_currently_open ? 'Open' : 'Closed';
+                        $market  = $t->market?->name ?? 'Unknown';
+                        $rating  = number_format((float)$t->average_rating, 1);
+                        $lines[] = "- {$t->business_name} | {$market} | Rating: {$rating}/5 | {$status}";
+                    }
+                    $lines[] = "";
+                }
+            }
+
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('AiService: context build failed', ['error' => $e->getMessage()]);
+        }
+
+        if (empty($lines)) {
+            return "MARKETPLACE DATA: No specific data found for this query. Answer based on general Soko Mtaa knowledge.";
+        }
+
+        return "LIVE MARKETPLACE DATA (use this to answer the user):\n" . implode("\n", $lines);
     }
 
     /**

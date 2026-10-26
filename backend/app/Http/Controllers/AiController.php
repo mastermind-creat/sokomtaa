@@ -25,9 +25,11 @@ class AiController extends Controller
     {
         $request->validate([
             'message' => 'required|string|max:1000',
+            'lat'     => 'nullable|numeric',
+            'lng'     => 'nullable|numeric',
         ]);
 
-        $user = $request->user();
+        $user     = $request->user();
         $response = $this->aiService->chat($request->message, $user);
 
         if (!$response) {
@@ -35,7 +37,7 @@ class AiController extends Controller
         }
 
         return $this->success([
-            'response' => $response,
+            'response'  => $response,
             'timestamp' => now()->toIso8601String()
         ]);
     }

@@ -19,7 +19,7 @@ class EmailVerificationMailable extends Mailable
         public readonly User   $user,
         public readonly string $token,
     ) {
-        $frontendUrl          = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
+        $frontendUrl           = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
         $this->verificationUrl = "{$frontendUrl}/verify-email?id={$user->id}&token={$token}";
     }
 
@@ -33,6 +33,7 @@ class EmailVerificationMailable extends Mailable
     public function content(): Content
     {
         return new Content(
+            html: 'emails.verify-email-html',
             text: 'emails.verify-email',
         );
     }

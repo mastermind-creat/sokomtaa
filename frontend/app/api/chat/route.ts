@@ -146,14 +146,20 @@ LANGUAGE & INTERACTION RULES:
 - Never make up information (products, ratings, fees, or complaints) — only use real data returned by the tools.
 - If a tool returns an error, apologize and explain what went wrong.
 - When showing products or traders, always show price, stock status, and distance if available.
+- For trader or product images: if an image URL is available, include it as a markdown image ![name](url) so it renders inline. Do NOT paste raw URLs as text.
 
 CAPABILITIES:
 1. Resident:
    - Find nearby traders using find_nearby_traders (use when user asks for "near me", "available", "karibu").
    - Search products by name using search_products.
    - Discover top traders using get_featured_traders or search_traders.
-   - Create reservations using create_reservation.
-   - Initiate M-Pesa payments using trigger_mpesa_payment.
+   - Create reservations using create_reservation — always returns a reservation_id needed for payment.
+   - PAYMENT FLOW (MUST follow this exact order):
+     a. Call create_reservation to create the reservation and get the reservation_id.
+     b. ALWAYS ask the user: "What M-Pesa number should I send the payment prompt to?" — never skip this step.
+     c. Wait for the user to reply with their phone number.
+     d. Only then call trigger_mpesa_payment with the reservation_id and the phone number they provided.
+     e. Tell the user to check their phone and enter their M-Pesa PIN to complete payment.
    - Track reservations using track_reservation.
 2. Trader:
    - View sales/revenue insights using get_sales_insights.
@@ -222,6 +228,7 @@ CAPABILITIES:
               reviews_count: t.total_reviews,
               market: t.market?.name,
               stall: t.stall?.stall_number,
+              avatar_url: t.avatar_url ?? null,
             })),
           };
         },
@@ -309,13 +316,14 @@ CAPABILITIES:
               distance_km: t.distance_km ?? null,
               stall: t.stall?.stall_number ?? 'N/A',
               market: t.market?.name ?? 'N/A',
+              avatar_url: t.avatar_url ?? null,
             })),
           };
         },
       }),
 
       create_reservation: tool({
-        description: 'Create a reservation for a product on behalf of the user. The user must be authenticated.',
+        description: 'Create a reservation for a product on behalf of the user. The user must be authenticated. Call this BEFORE trigger_mpesa_payment.',
         inputSchema: jsonSchema<{ product_id: number; quantity: number; notes: string }>({
           type: 'object',
           properties: {
@@ -335,35 +343,40 @@ CAPABILITIES:
           if (!res.ok) return { error: data.message ?? 'Reservation failed.' };
           return {
             success: true,
+            reservation_id: data.data?.id ?? data.id,
             reservation_code: data.data?.reservation_code ?? data.reservation_code,
             total_amount: data.data?.total_amount ?? data.total_amount,
-            message: 'Reservation created successfully! Proceed to pay via M-Pesa.',
+            message: 'Reservation created! Now ask the user for their M-Pesa phone number to send the payment prompt.',
           };
         },
       }),
 
       trigger_mpesa_payment: tool({
-        description: 'Initiates an M-Pesa STK push to the user\'s phone to pay for a reservation. The user will receive a PIN prompt on their phone.',
+        description: 'Initiates an M-Pesa STK push to the user\'s phone to pay for a reservation. The user will receive a PIN prompt on their phone. IMPORTANT: Always ask the user for their M-Pesa phone number before calling this tool — never assume or guess it.',
         inputSchema: jsonSchema<{ reservation_id: number; phone_number: string }>({
           type: 'object',
           properties: {
-            reservation_id: { type: 'number', description: 'The reservation ID to pay for' },
-            phone_number: { type: 'string', description: 'Kenyan phone number to send STK push to, e.g. 0712345678' },
+            reservation_id: { type: 'number', description: 'The reservation ID returned by create_reservation' },
+            phone_number: { type: 'string', description: 'The M-Pesa phone number the user provided, e.g. 0712345678 or 254712345678' },
           },
           required: ['reservation_id', 'phone_number'],
         }),
         execute: async ({ reservation_id, phone_number }: { reservation_id: number; phone_number: string }) => {
           if (!token) return { error: 'You must be logged in to make a payment.' };
-          const res = await laravelFetch(`/reservations/${reservation_id}/pay`, token, {
+          const res = await laravelFetch('/payments/mpesa/stkpush', token, {
             method: 'POST',
-            body: JSON.stringify({ phone_number }),
+            body: JSON.stringify({
+              phone_number,
+              type: 'reservation',
+              target_ids: [reservation_id],
+            }),
           });
           const data = await res.json();
-          if (!res.ok) return { error: data.message ?? 'Payment initiation failed.' };
+          if (!res.ok) return { error: data.message ?? 'Payment initiation failed. Please check the phone number and try again.' };
           return {
             success: true,
-            message: `M-Pesa STK push sent to ${phone_number}. Please enter your PIN on your phone to complete payment.`,
             checkout_request_id: data.data?.checkout_request_id,
+            message: `M-Pesa STK push sent to ${phone_number}. Ask the user to enter their PIN on their phone to complete the payment. The reservation will be confirmed automatically once paid.`,
           };
         },
       }),

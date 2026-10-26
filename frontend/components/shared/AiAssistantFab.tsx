@@ -18,11 +18,27 @@ interface ChatMessage {
 function AiMessageRenderer({ text }: { text: string }) {
   const lines = text.split('\n');
 
+  // Render inline markdown: bold, italic, inline images, and plain text
   const parseInline = (line: string, key: number) => {
-    const parts = line.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+    // Split on bold, italic, and markdown images  ![alt](url)
+    const parts = line.split(/(\!\[[^\]]*\]\([^)]+\)|\*\*[^*]+\*\*|\*[^*]+\*)/g);
     return (
       <span key={key}>
         {parts.map((part, i) => {
+          // Markdown image: ![alt](url)
+          const imgMatch = part.match(/^\!\[([^\]]*)\]\(([^)]+)\)$/);
+          if (imgMatch) {
+            const [, alt, src] = imgMatch;
+            return (
+              <img
+                key={i}
+                src={src}
+                alt={alt}
+                className="rounded-xl max-w-full mt-2 mb-1 border border-gray-100 shadow-sm"
+                style={{ maxHeight: 160, objectFit: 'cover' }}
+              />
+            );
+          }
           if (part.startsWith('**') && part.endsWith('**')) {
             return <strong key={i} className="font-bold text-green-900">{part.slice(2, -2)}</strong>;
           }
@@ -67,17 +83,21 @@ function AiMessageRenderer({ text }: { text: string }) {
       );
       continue;
     } else if (/^\d+\.\s/.test(line)) {
-      const items: string[] = [];
+      // Collect all consecutive numbered lines into one list, preserving true numbers
+      const items: Array<{ num: number; text: string }> = [];
       while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) {
-        items.push(lines[i].trim().replace(/^\d+\.\s/, ''));
+        const m = lines[i].trim().match(/^(\d+)\.\s(.*)/);
+        if (m) items.push({ num: parseInt(m[1], 10), text: m[2] });
         i++;
       }
+      // Use the actual numbers from the AI output (don't reset to idx+1)
+      const startNum = items[0]?.num ?? 1;
       elements.push(
-        <ol key={`ol-${i}`} className="space-y-1 mt-1">
-          {items.map((item, idx) => (
+        <ol key={`ol-${i}`} className="space-y-1 mt-1" start={startNum}>
+          {items.map((item: { num: number; text: string }, idx: number) => (
             <li key={idx} className="flex items-start gap-2 text-[13px] leading-relaxed">
-              <span className="font-black text-green-600 text-[11px] mt-0.5 shrink-0 w-4">{idx + 1}.</span>
-              <span>{parseInline(item, idx)}</span>
+              <span className="font-black text-green-600 text-[11px] mt-0.5 shrink-0 w-4">{item.num}.</span>
+              <span>{parseInline(item.text, idx)}</span>
             </li>
           ))}
         </ol>
@@ -499,8 +519,8 @@ export default function AiAssistantFab() {
                   {messages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
                       <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${msg.role === 'user'
-                          ? 'bg-brand-600 text-white text-sm font-medium rounded-tr-none'
-                          : 'bg-white rounded-tl-none border border-gray-100'
+                        ? 'bg-brand-600 text-white text-sm font-medium rounded-tr-none'
+                        : 'bg-white rounded-tl-none border border-gray-100'
                         }`}>
                         {msg.role === 'assistant'
                           ? <AiMessageRenderer text={msg.content} />
@@ -542,8 +562,8 @@ export default function AiAssistantFab() {
                       onClick={toggleVoiceMode}
                       disabled={isLoading}
                       className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all ${voiceMode
-                          ? 'bg-red-500 text-white shadow-lg shadow-red-200'
-                          : 'bg-brand-100 text-brand-600 hover:bg-brand-200'
+                        ? 'bg-red-500 text-white shadow-lg shadow-red-200'
+                        : 'bg-brand-100 text-brand-600 hover:bg-brand-200'
                         }`}
                       aria-label={voiceMode ? 'Exit voice mode' : 'Enter voice mode'}
                     >
