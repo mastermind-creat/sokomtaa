@@ -46,7 +46,7 @@ class SendVerificationEmail implements ShouldQueue
             now()->addMinutes(60)
         );
 
-        Mail::to($this->user)->send(new EmailVerificationMailable($this->user, $token));
+        Mail::to($this->user->email)->send(new EmailVerificationMailable($this->user, $token));
     }
 
     /**

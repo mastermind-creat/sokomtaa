@@ -57,8 +57,23 @@ class AuthController extends Controller
             'email_verified_at'  => null,
         ]);
 
-        // Dispatch verification email as a queued job (fire-and-forget)
-        SendVerificationEmail::dispatch($user);
+        // Send verification email synchronously — registration-critical, must not depend on queue worker
+        try {
+            $token = \Illuminate\Support\Str::random(64);
+            \Illuminate\Support\Facades\Cache::put(
+                "email_verify_{$user->id}",
+                $token,
+                now()->addMinutes(60)
+            );
+            \Illuminate\Support\Facades\Mail::to($user->email)
+                ->send(new \App\Mail\EmailVerificationMailable($user, $token));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Email verification send failed', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+            // Non-blocking — user can resend from the verify-email page
+        }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\SendVerificationEmail;
+use App\Mail\EmailVerificationMailable;
 use App\Models\User;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class VerificationController extends Controller
 {
@@ -90,9 +93,25 @@ class VerificationController extends Controller
         // Increment counter — TTL 60 min (reset window each hour)
         Cache::put($countKey, $count + 1, now()->addMinutes(60));
 
-        // Invalidate old token and dispatch a fresh job
+        // Invalidate old token and send a fresh email synchronously
         Cache::forget("email_verify_{$user->id}");
-        SendVerificationEmail::dispatch($user);
+
+        try {
+            $token = Str::random(64);
+            Cache::put("email_verify_{$user->id}", $token, now()->addMinutes(60));
+            Mail::to($user->email)
+                ->send(new EmailVerificationMailable($user, $token));
+        } catch (\Throwable $e) {
+            Log::error('Email verification resend failed', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+            return $this->error(
+                'Failed to send verification email. Please try again shortly.',
+                'SERVER_ERROR',
+                500
+            );
+        }
 
         return $this->success(null, 'A new verification email has been sent.');
     }
