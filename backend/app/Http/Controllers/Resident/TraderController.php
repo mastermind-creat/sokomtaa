@@ -80,11 +80,15 @@ class TraderController extends Controller
 
         $tradersQuery = Trader::query()
             ->when($query, function ($q) use ($query) {
-                $q->where('business_name', 'like', "%{$query}%")
-                  ->orWhere('business_name_sw', 'like', "%{$query}%");
+                // Grouped so the OR cannot escape the other filters (and the
+                // soft-delete scope) once markets is joined below.
+                $q->where(function ($sub) use ($query) {
+                    $sub->where('traders.business_name', 'like', "%{$query}%")
+                        ->orWhere('traders.business_name_sw', 'like', "%{$query}%");
+                });
             })
             ->when($marketId, function ($q) use ($marketId) {
-                $q->where('market_id', $marketId);
+                $q->where('traders.market_id', $marketId);
             })
             ->when($categoryId, function ($q) use ($categoryId) {
                 $q->whereHas('products', function ($p) use ($categoryId) {
@@ -94,13 +98,23 @@ class TraderController extends Controller
 
         // Distance filtering logic
         if ($lat !== null && $lng !== null) {
-            $tradersQuery->selectRaw(
-                "*, ROUND(( 6371 * acos( cos( radians(?) ) * cos( radians( COALESCE(traders.latitude, markets.latitude) ) ) * cos( radians( COALESCE(traders.longitude, markets.longitude) ) - radians(?) ) + sin( radians(?) ) * sin( radians( COALESCE(traders.latitude, markets.latitude) ) ) ) ), 2) AS distance_km",
-                [$lat, $lng, $lat]
-            )
-            ->join('markets', 'traders.market_id', '=', 'markets.id')
-            ->having('distance_km', '<=', $radius)
-            ->orderBy('distance_km');
+            // Haversine distance, defined once and reused for selecting and
+            // filtering. Trader coordinates win, falling back to the market.
+            $haversine = '( 6371 * acos( cos( radians(?) ) * cos( radians( COALESCE(traders.latitude, markets.latitude) ) ) * cos( radians( COALESCE(traders.longitude, markets.longitude) ) - radians(?) ) + sin( radians(?) ) * sin( radians( COALESCE(traders.latitude, markets.latitude) ) ) ) )';
+
+            // The select must be qualified: a bare "*" also pulls in markets'
+            // columns, and the duplicate "id" makes paginate()'s count subquery
+            // fail with "Duplicate column name 'id'" (SQLSTATE 42S21).
+            //
+            // The radius filter is a WHERE rather than a HAVING on the alias:
+            // HAVING without GROUP BY is MySQL-only. The "+ 0" forces the bound
+            // radius to a number — PDO binds floats as text, and SQLite sorts
+            // every number before every string, which would make any distance
+            // compare true there.
+            $tradersQuery->selectRaw("traders.*, ROUND({$haversine}, 2) AS distance_km", [$lat, $lng, $lat])
+                ->join('markets', 'traders.market_id', '=', 'markets.id')
+                ->whereRaw("{$haversine} <= (? + 0)", [$lat, $lng, $lat, $radius])
+                ->orderBy('distance_km');
         }
 
         $traders = $tradersQuery->with(['market', 'stall'])

@@ -20,7 +20,7 @@ class EmailVerificationMailable extends Mailable
         public readonly string $token,
     ) {
         $frontendUrl           = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
-        $this->verificationUrl = "{$frontendUrl}/verify-email?id={$user->id}&token={$token}";
+        $this->verificationUrl = "{$frontendUrl}/verify-email/confirm?id={$user->id}&token={$token}";
     }
 
     public function envelope(): Envelope

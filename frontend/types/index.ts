@@ -342,3 +342,15 @@ export interface Report {
     generated_at: string | null;
     created_at: string;
 }
+
+/**
+ * Side effect of a Soko AI turn. Tools run server-side, but the cart lives in
+ * the browser and the order history is cached by React Query, so the chat
+ * response carries the effects for the client to replay — making an AI action
+ * show up exactly like the resident did it themselves.
+ */
+export type ChatAction =
+    | { type: 'cart_add'; product: Product; quantity: number }
+    | { type: 'reservation_created'; reservation_id?: number; reservation_code?: string; total_amount?: string }
+    | { type: 'payment_initiated'; reservation_id?: number }
+    | { type: 'products_changed' };

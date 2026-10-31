@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    ShoppingBag, 
-    Plus, 
-    Minus, 
-    Phone, 
-    AlertCircle, 
-    Loader2, 
-    CheckCircle2, 
-    ChevronRight, 
+import {
+    ShoppingBag,
+    Plus,
+    Minus,
+    Phone,
+    AlertCircle,
+    Loader2,
+    CheckCircle2,
+    ChevronRight,
     TrendingUp,
     ShieldCheck,
     Smartphone
@@ -43,7 +43,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
     const [reservationCode, setReservationCode] = useState<string>('');
     const [localError, setLocalError] = useState<string | null>(null);
     const [checkoutId, setCheckoutId] = useState<string | null>(null);
-    
+
     const { user } = useAuthStore();
     const router = useRouter();
     const { initiateStk, isPolling, status, error, stopPolling } = useMpesa();
@@ -66,7 +66,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
 
     const feeAmount = parseFloat(settings?.fees?.find(s => s.key === 'resident_service_fee')?.value || '10');
     const threshold = parseFloat(settings?.fees?.find(s => s.key === 'service_fee_threshold')?.value || '200');
-    
+
     const activePrice = Number(product.active_price ?? product.price);
     const subtotal = activePrice * quantity;
     const activeFee = subtotal > threshold ? feeAmount : 0;
@@ -81,12 +81,8 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
         return () => clearInterval(timer);
     }, [step, secondsLeft]);
 
-    // Track status from useMpesa
-    useEffect(() => {
-        if (status === 'completed') {
-            setStep('success');
-        }
-    }, [status]);
+    // Track status from useMpesa — callback-based for reliability
+    // The onComplete callback fires synchronously when polling detects the final status
 
     const handleNextToPayment = async () => {
         setStep('payment');
@@ -101,7 +97,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                 quantity: quantity,
                 trader_id: traderId
             });
-            
+
             // The axios interceptor returns response.data, so response IS {success, data, message}
             const reservation = (response as any).data as Reservation;
             if (!reservation?.id) {
@@ -109,15 +105,22 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
             }
             setReservationId(reservation.id);
             setReservationCode(reservation.reservation_code);
-            
-            // 2. Initiate STK
-            const id = await initiateStk(phoneNumber, 'reservation', reservation.id);
+
+            // 2. Initiate STK — pass as array so backend sums exactly this one reservation
+            const id = await initiateStk(phoneNumber, 'reservation', [reservation.id], (finalStatus) => {
+                if (finalStatus === 'completed') {
+                    setStep('success');
+                } else {
+                    setLocalError('Payment was not completed. Please try again.');
+                    setStep('payment');
+                }
+            });
             setCheckoutId(id);
             setStep('processing');
             setSecondsLeft(60);
         } catch (err: any) {
             console.error('Reservation creation failed', err);
-            setLocalError(err.message || 'Failed to complete reservation. Please try again.');
+            setLocalError(err.response?.data?.message || err.message || 'Failed to complete reservation. Please try again.');
         }
     };
 
@@ -133,15 +136,15 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
 
     return (
         <div className="fixed inset-0 z-[100] flex flex-col justify-end">
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={onClose}
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
-            
-            <motion.div 
+
+            <motion.div
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
@@ -155,7 +158,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                 <AnimatePresence mode="wait">
                     {/* STEP 1: REVIEW ORDER */}
                     {step === 'review' && (
-                        <motion.div 
+                        <motion.div
                             key="review"
                             initial={{ x: 20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
@@ -189,21 +192,21 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     </div>
                                 </div>
                             </div>
- 
+
                             <div className="bg-neutral-50 p-6 rounded-[2.5rem] border border-gray-100 flex items-center justify-between">
                                 <div className="text-left">
                                     <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Quantity ({product.unit}s)</p>
                                     <h4 className="text-lg font-black text-green-950">Select Quantity</h4>
                                 </div>
                                 <div className="flex items-center gap-4 bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
-                                    <button 
+                                    <button
                                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
                                         className="w-12 h-12 flex items-center justify-center rounded-xl hover:bg-neutral-50 active:scale-90 transition-all text-green-950"
                                     >
                                         <Minus size={20} />
                                     </button>
                                     <span className="text-xl font-black font-mono w-6 text-center">{quantity}</span>
-                                    <button 
+                                    <button
                                         onClick={() => setQuantity(quantity + 1)}
                                         className="w-12 h-12 flex items-center justify-center rounded-xl hover:bg-neutral-50 active:scale-90 transition-all text-green-950"
                                     >
@@ -211,7 +214,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     </button>
                                 </div>
                             </div>
- 
+
                             <div className="space-y-4 pt-4 border-t border-neutral-100">
                                 <div className="flex items-center justify-between px-4">
                                     <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Subtotal</span>
@@ -235,7 +238,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     <span className="text-sm font-black text-green-950 uppercase tracking-widest">Total Amount</span>
                                     <span className="text-2xl font-black text-green-950 font-mono">KES {totalWithFee.toFixed(2)}</span>
                                 </div>
-                                <button 
+                                <button
                                     onClick={handleNextToPayment}
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-between px-8 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 group"
                                 >
@@ -245,10 +248,10 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                             </div>
                         </motion.div>
                     )}
- 
+
                     {/* STEP 2: PAYMENT INFO */}
                     {step === 'payment' && (
-                        <motion.div 
+                        <motion.div
                             key="payment"
                             initial={{ x: 20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
@@ -262,11 +265,11 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                 <h3 className="text-2xl font-black text-green-950">M-Pesa Payment</h3>
                                 <p className="text-sm text-text-secondary font-medium px-4">Enter your phone number to receive the payment prompt.</p>
                             </div>
- 
+
                             <div className="space-y-4">
                                 <div className="relative group">
                                     <Smartphone className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-brand-600" size={20} />
-                                    <input 
+                                    <input
                                         type="tel"
                                         value={phoneNumber}
                                         onChange={(e) => setPhoneNumber(e.target.value)}
@@ -274,7 +277,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                         placeholder="07XXXXXXXX or +254..."
                                     />
                                 </div>
- 
+
                                 <div className="flex gap-4 items-start bg-amber-50 p-5 rounded-[2rem] border border-amber-100 text-left">
                                     <AlertCircle className="text-amber-500 shrink-0" size={24} />
                                     <p className="text-[11px] text-amber-900 leading-relaxed font-bold uppercase tracking-tight">
@@ -289,9 +292,9 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     </div>
                                 )}
                             </div>
- 
+
                             <div className="flex flex-col gap-3 pt-4">
-                                <button 
+                                <button
                                     onClick={handleConfirmPayment}
                                     disabled={!phoneNumber || isPolling}
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100 active:scale-95 transition-all"
@@ -299,7 +302,7 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     {isPolling ? <Loader2 className="animate-spin" /> : <ShieldCheck size={20} />}
                                     Confirm Order (Pay KES {totalWithFee.toFixed(2)})
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => setStep('review')}
                                     className="w-full py-4 text-[10px] font-black text-text-muted uppercase tracking-widest hover:text-brand-600 transition-colors"
                                 >
@@ -308,10 +311,10 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                             </div>
                         </motion.div>
                     )}
- 
+
                     {/* STEP 3: PROCESSING / POLLING */}
                     {step === 'processing' && (
-                        <motion.div 
+                        <motion.div
                             key="processing"
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -324,19 +327,19 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     <Smartphone size={48} className="animate-bounce" />
                                 </div>
                             </div>
- 
+
                             <div className="space-y-3">
                                 <h3 className="text-2xl font-black text-green-950">Processing Payment...</h3>
                                 <p className="text-sm text-text-secondary font-medium px-8 leading-relaxed">
                                     Please check your phone and enter your <strong>M-Pesa PIN</strong> to complete the payment.
                                 </p>
                             </div>
- 
+
                             <div className="bg-neutral-50 px-6 py-4 rounded-2xl inline-flex items-center gap-3">
                                 <div className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
                                 <span className="font-mono font-black text-brand-600">{secondsLeft}s left</span>
                             </div>
- 
+
                             {error && (
                                 <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-xs font-bold border border-red-100 mt-4">
                                     {error}
@@ -345,14 +348,14 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
 
                             {/* Simulation Button for Dev */}
                             <div className="pt-4 space-y-4">
-                                <button 
+                                <button
                                     onClick={handleSimulateSuccess}
                                     className="w-full py-3 bg-amber-50 text-amber-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-200 hover:bg-amber-100 transition-colors"
                                 >
                                     I have paid (Simulate Success)
                                 </button>
-                                
-                                <button 
+
+                                <button
                                     onClick={onClose}
                                     className="text-[10px] font-black text-text-muted uppercase tracking-widest block mx-auto underline"
                                 >
@@ -361,17 +364,17 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                             </div>
                         </motion.div>
                     )}
- 
+
                     {/* STEP 4: SUCCESS */}
                     {step === 'success' && (
-                        <motion.div 
+                        <motion.div
                             key="success"
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             className="text-center py-6 space-y-8"
                         >
                             <div className="w-24 h-24 bg-green-50 rounded-full mx-auto flex items-center justify-center text-green-600 shadow-inner border-4 border-white overflow-hidden relative">
-                                <motion.div 
+                                <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
                                     className="z-10"
@@ -381,8 +384,8 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                 {/* Simple CSS Confetti representation */}
                                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                                     {[...Array(8)].map((_, i) => (
-                                        <div 
-                                            key={i} 
+                                        <div
+                                            key={i}
                                             className="absolute w-2 h-2 rounded-full animate-ping"
                                             style={{
                                                 backgroundColor: ['#10b981', '#f59e0b', '#3b82f6'][i % 3],
@@ -394,25 +397,25 @@ export default function ReservationFlow({ product, traderId, onClose }: Reservat
                                     ))}
                                 </div>
                             </div>
- 
+
                             <div className="space-y-2">
                                 <h3 className="text-3xl font-black text-green-950 leading-tight">Order Received!</h3>
                                 <p className="text-sm text-text-secondary font-medium">Thank you for using Soko Mtaa. Your items have been successfully reserved.</p>
                             </div>
- 
+
                             <div className="bg-neutral-50 p-6 rounded-[2.5rem] border-2 border-dashed border-neutral-200">
                                 <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-2">Reservation Code</p>
                                 <h4 className="text-4xl font-black text-green-950 font-mono tracking-tighter">{reservationCode}</h4>
                             </div>
- 
+
                             <div className="flex flex-col gap-3 pt-4">
-                                <button 
+                                <button
                                     onClick={() => router.push('/reservations')}
                                     className="w-full h-16 bg-brand-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-brand-100"
                                 >
                                     View My Reservations
                                 </button>
-                                <button 
+                                <button
                                     onClick={onClose}
                                     className="w-full py-4 text-[10px] font-black text-text-muted uppercase tracking-widest"
                                 >

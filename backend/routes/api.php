@@ -84,6 +84,9 @@ Route::prefix('traders')->group(function () {
     Route::get('/{trader}/reviews', [\App\Http\Controllers\Resident\TraderController::class, 'reviews']);
 });
 
+// Product detail (Public) — residents read one product by id (AI adds to cart)
+Route::get('/products/{product}/public', [\App\Http\Controllers\Public\ProductCatalogController::class, 'show']);
+
 // M-Pesa Public Callbacks
 Route::post('/payments/mpesa/callback',        [\App\Http\Controllers\Payment\MpesaController::class, 'callback']);
 Route::post('/payments/mpesa/b2c-callback',    [\App\Http\Controllers\Trader\WithdrawalController::class, 'b2cCallback']);

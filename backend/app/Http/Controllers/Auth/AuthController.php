@@ -19,90 +19,29 @@ class AuthController extends Controller
 {
     use ApiResponse, \App\Traits\PhoneNormalization, \App\Traits\VerifyTurnstile;
 
-    // -------------------------------------------------------------------------
-    // Registration
-    // -------------------------------------------------------------------------
-
     public function register(RegisterRequest $request): JsonResponse
     {
         if ($fail = $this->checkTurnstile($request)) return $fail;
 
-        // Branch: email path vs phone path
-        if ($request->filled('email') && !$request->filled('phone')) {
-            return $this->registerWithEmail($request);
+        $phone = $this->normalizePhone($request->phone);
+
+        if (User::where('phone', $phone)->exists()) {
+            return $this->error('This phone number is already registered.', 'ALREADY_EXISTS', 422);
         }
-
-        return $this->registerWithPhone($request);
-    }
-
-    // -------------------------------------------------------------------------
-    // Email registration path
-    // -------------------------------------------------------------------------
-
-    private function registerWithEmail(RegisterRequest $request): JsonResponse
-    {
-        if (User::where('email', $request->email)->exists()) {
-            return $this->error('The email address has already been taken.', 'ALREADY_EXISTS', 422);
+        if ($request->filled('email') && User::where('email', $request->email)->exists()) {
+            return $this->error('This email address is already registered.', 'ALREADY_EXISTS', 422);
         }
 
         $user = User::create([
             'name'               => $request->name,
-            'phone'              => null,
-            'email'              => $request->email,
+            'phone'              => $phone,
+            'email'              => $request->filled('email') ? $request->email : null,
             'password'           => Hash::make($request->password),
             'role'               => $request->role,
             'national_id'        => $request->national_id,
             'preferred_language' => $request->preferred_language ?? 'en',
             'phone_verified'     => false,
             'email_verified_at'  => null,
-        ]);
-
-        // Send verification email synchronously — registration-critical, must not depend on queue worker
-        try {
-            $token = \Illuminate\Support\Str::random(64);
-            \Illuminate\Support\Facades\Cache::put(
-                "email_verify_{$user->id}",
-                $token,
-                now()->addMinutes(60)
-            );
-            \Illuminate\Support\Facades\Mail::to($user->email)
-                ->send(new \App\Mail\EmailVerificationMailable($user, $token));
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Email verification send failed', [
-                'user_id' => $user->id,
-                'error'   => $e->getMessage(),
-            ]);
-            // Non-blocking — user can resend from the verify-email page
-        }
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return $this->success([
-            'user'  => $this->formatUser($user),
-            'token' => $token,
-        ], 'Account created successfully. Please check your email to verify your address.');
-    }
-
-    // -------------------------------------------------------------------------
-    // Phone registration path (unchanged logic)
-    // -------------------------------------------------------------------------
-
-    private function registerWithPhone(RegisterRequest $request): JsonResponse
-    {
-        $phone = $this->normalizePhone($request->phone);
-
-        if (User::where('phone', $phone)->exists()) {
-            return $this->error('The phone number has already been taken.', 'ALREADY_EXISTS', 422);
-        }
-
-        $user = User::create([
-            'name'               => $request->name,
-            'phone'              => $phone,
-            'email'              => $request->email,
-            'password'           => Hash::make($request->password),
-            'role'               => $request->role,
-            'national_id'        => $request->national_id,
-            'preferred_language' => $request->preferred_language ?? 'en',
         ]);
 
         if ($user->role === 'delivery') {
@@ -114,79 +53,84 @@ class AuthController extends Controller
             ]);
         }
 
-        // Generate and cache a 6-digit OTP for phone verification
-        $otp = rand(100000, 999999);
-        Cache::put("otp_{$user->id}", $otp, now()->addMinutes(config('otp.expiry_minutes', 10)));
+        $verificationMethod = $request->verification_method;
+        $debugData = [];
 
-        $smsService = app(TalkSasaService::class);
-        $message = "Soko Mtaa: Your verification code is {$otp}. Please do not share it with anyone.";
-        $smsService->sendSms($user->phone, $message);
-
-        Log::info("OTP for {$user->phone}: {$otp}");
-
-        $data = [
-            'user'  => $this->formatUser($user),
-            'token' => $user->createToken('auth_token')->plainTextToken,
-        ];
-
-        if (config('app.debug')) {
-            $data['debug_otp'] = $otp;
+        if ($verificationMethod === 'email') {
+            try {
+                $token = \Illuminate\Support\Str::random(64);
+                \Illuminate\Support\Facades\Cache::put("email_verify_{$user->id}", $token, now()->addMinutes(60));
+                \Illuminate\Support\Facades\Mail::to($user->email)
+                    ->send(new \App\Mail\EmailVerificationMailable($user, $token));
+            } catch (\Throwable $e) {
+                Log::error('Email verification send failed on registration', [
+                    'user_id' => $user->id,
+                    'error'   => $e->getMessage(),
+                ]);
+            }
+            $message = 'Account created! Please check your email to verify your account.';
+        } else {
+            // SMS OTP
+            $otp = rand(100000, 999999);
+            Cache::put("otp_{$user->id}", $otp, now()->addMinutes(config('otp.expiry_minutes', 10)));
+            $smsService = app(TalkSasaService::class);
+            $smsService->sendSms($user->phone, "Soko Mtaa: Your verification code is {$otp}. Please do not share it with anyone.");
+            Log::info("OTP for {$user->phone}: {$otp}");
+            if (config('app.debug')) { $debugData['debug_otp'] = $otp; }
+            $message = 'Account created! Please enter the OTP sent to your phone number.';
         }
 
-        return $this->success($data, 'Account created successfully. Please verify your phone number.');
+        $data = array_merge([
+            'user'                => $this->formatUser($user),
+            'token'               => $user->createToken('auth_token')->plainTextToken,
+            'verification_method' => $verificationMethod,
+        ], $debugData);
+
+        return $this->success($data, $message, 201);
     }
 
     // -------------------------------------------------------------------------
-    // Login — phone OR email path
+    // Login — single smart identifier field (auto-detects phone vs email)
     // -------------------------------------------------------------------------
 
     public function login(LoginRequest $request): JsonResponse
     {
         if ($fail = $this->checkTurnstile($request)) return $fail;
 
-        if ($request->filled('email')) {
-            return $this->loginWithEmail($request);
+        $identifier = trim($request->input('identifier', ''));
+
+        // Detect email vs phone — if it contains @ treat as email
+        if (str_contains($identifier, '@')) {
+            $user = User::where('email', $identifier)->first();
+            if (!$user) {
+                return $this->error('No account found with that email address.', 'AUTH_FAILED', 422);
+            }
+        } else {
+            $phone = $this->normalizePhone($identifier);
+            $user  = User::where('phone', $phone)->first();
+            if (!$user) {
+                return $this->error('No account found with that phone number.', 'AUTH_FAILED', 422);
+            }
         }
 
-        return $this->loginWithPhone($request);
+        if (!Hash::check($request->password, $user->password)) {
+            return $this->error('Incorrect password. Please try again.', 'AUTH_FAILED', 422);
+        }
+
+        return $this->success([
+            'user'  => $this->formatUser($user),
+            'token' => $user->createToken('auth_token')->plainTextToken,
+        ], 'Login successful.');
     }
 
     private function loginWithEmail(LoginRequest $request): JsonResponse
     {
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user) {
-            return $this->error('No account found with that email address.', 'AUTH_FAILED', 422);
-        }
-
-        if (!Hash::check($request->password, $user->password)) {
-            return $this->error('Incorrect password. Please try again.', 'AUTH_FAILED', 422);
-        }
-
-        return $this->success([
-            'user'  => $this->formatUser($user),
-            'token' => $user->createToken('auth_token')->plainTextToken,
-        ], 'Login successful.');
+        return $this->login($request);
     }
 
     private function loginWithPhone(LoginRequest $request): JsonResponse
     {
-        $phone = $this->normalizePhone($request->phone);
-
-        $user = User::where('phone', $phone)->first();
-
-        if (!$user) {
-            return $this->error('The phone number is not registered.', 'AUTH_FAILED', 422);
-        }
-
-        if (!Hash::check($request->password, $user->password)) {
-            return $this->error('Incorrect password. Please try again.', 'AUTH_FAILED', 422);
-        }
-
-        return $this->success([
-            'user'  => $this->formatUser($user),
-            'token' => $user->createToken('auth_token')->plainTextToken,
-        ], 'Login successful.');
+        return $this->login($request);
     }
 
     // -------------------------------------------------------------------------
@@ -197,10 +141,8 @@ class AuthController extends Controller
     {
         $data = $user->toArray();
 
-        // Surface email_verified as an explicit boolean flag on the user object
-        $data['email_verified'] = $user->isEmailRegistered()
-            ? ($user->email_verified_at !== null)
-            : null; // null = not applicable (phone user)
+        // email_verified: true/false based on email_verified_at
+        $data['email_verified'] = $user->email_verified_at !== null;
 
         return $data;
     }

@@ -1,8 +1,12 @@
 import { generateText, tool, stepCountIs, jsonSchema } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
 import { createOpenAI } from '@ai-sdk/openai';
+import type { ChatAction, Product } from '@/types';
 
-export const maxDuration = 30;
+// A resident payment turn chains search → products → reserve → pay, which can
+// exceed 30s and surface to the user as a generic "technical difficulties"
+// message. 60s is the ceiling on Vercel's Hobby plan.
+export const maxDuration = 60;
 
 // ── Helper: call Laravel API with user token ──────────────────────────────────
 async function laravelFetch(path: string, token: string, options: RequestInit = {}) {
@@ -17,6 +21,60 @@ async function laravelFetch(path: string, token: string, options: RequestInit = 
       ...(options.headers ?? {}),
     },
   });
+}
+
+// ── Replay tool side effects in the browser ──────────────────────────────────
+// The cart is a persisted Zustand store and the order history is React Query
+// cache, so nothing a tool does on the server is visible until the client
+// applies it. Every mutating tool reports an action; they are collected here
+// and returned with the reply so an AI action lands where a tap would.
+type ToolStepLike = {
+  toolResults?: Array<{ toolName?: string; output?: Record<string, unknown> | null }>;
+};
+
+function collectActions(steps: unknown): ChatAction[] {
+  const actions: ChatAction[] = [];
+
+  for (const step of (steps as ToolStepLike[] | undefined) ?? []) {
+    for (const result of step?.toolResults ?? []) {
+      const output = result?.output;
+      // Failed tools answer with { error }, which the model has already seen.
+      if (!output || output.error || output.success !== true) continue;
+
+      switch (result.toolName) {
+        case 'add_to_cart':
+          if (output.product) {
+            const quantity = Number(output.quantity);
+            actions.push({
+              type: 'cart_add',
+              product: output.product as Product,
+              quantity: quantity > 0 ? quantity : 1,
+            });
+          }
+          break;
+        case 'create_reservation':
+          actions.push({
+            type: 'reservation_created',
+            reservation_id: output.reservation_id as number | undefined,
+            reservation_code: output.reservation_code as string | undefined,
+            total_amount: output.total_amount as string | undefined,
+          });
+          break;
+        case 'trigger_mpesa_payment':
+          actions.push({
+            type: 'payment_initiated',
+            reservation_id: output.reservation_id as number | undefined,
+          });
+          break;
+        case 'add_product':
+        case 'update_stock':
+          actions.push({ type: 'products_changed' });
+          break;
+      }
+    }
+  }
+
+  return actions;
 }
 
 export async function POST(req: Request) {
@@ -126,6 +184,29 @@ export async function POST(req: Request) {
       }
     }
 
+    // ── Pending reservations ──────────────────────────────────────────────────
+    // Tool results do not survive between turns (history is flattened to text
+    // below), so the model has no memory of the reservation it just created.
+    // Without this it guesses an id — which the payment endpoint rejects — or
+    // creates a duplicate reservation for the same item.
+    let pendingReservations = '';
+    if (token && role !== 'trader' && role !== 'admin') {
+      try {
+        const res = await laravelFetch('/reservations?status=pending', token);
+        if (res.ok) {
+          const payload = await res.json();
+          const rows = payload.data?.data ?? payload.data ?? [];
+          if (Array.isArray(rows) && rows.length) {
+            pendingReservations = rows.slice(0, 5).map((r: any) =>
+              `- reservation_id=${r.id} | code=${r.reservation_code} | item=${r.product?.name ?? 'item'} | qty=${r.quantity} | total=KES ${r.total_amount}`
+            ).join('\n');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch pending reservations:', err);
+      }
+    }
+
     // ── System prompt ─────────────────────────────────────────────────────────
     const systemInstruction = `You are Soko AI, the intelligent assistant for Soko Mtaa — a neighbourhood digital marketplace in Kenya.
 You have full access to all resident, trader, and admin capabilities. Assist the user based on their context and role (${role || 'resident'}), but feel free to utilize any tool if relevant.
@@ -157,14 +238,21 @@ CAPABILITIES:
      - Then call get_trader_products with that trader_id.
      - Use this whenever the user mentions a specific trader name or stall (e.g. "Mali Safi", "Tech Safi Store").
    - Discover top traders using get_featured_traders or search_traders.
-   - Create reservations using create_reservation — always returns a reservation_id needed for payment.
+   - Add items to the shopping cart with add_to_cart when the user says "add to cart", "add to my basket", "weka kikapuni", or wants to keep shopping before paying. The item appears in their cart badge immediately — tell them so, and only after the tool returned success: true.
+   - Create reservations using create_reservation — this places the order straight away and it shows up in the resident's order history. Never claim an item was reserved unless the tool returned success: true, and never say it is in the cart. Always returns a reservation_id needed for payment.
    - PAYMENT FLOW (MUST follow this exact order):
-     a. Call create_reservation to create the reservation and get the reservation_id.
-     b. ALWAYS ask the user: "What M-Pesa number should I send the payment prompt to?" — never skip this step.
-     c. Wait for the user to reply with their phone number.
-     d. Only then call trigger_mpesa_payment with the reservation_id and the phone number they provided.
-     e. Tell the user to check their phone and enter their M-Pesa PIN to complete payment.
+     a. If PENDING RESERVATIONS below already lists the item the user wants to pay for, reuse that reservation_id. Otherwise call create_reservation and take the reservation_id it returns.
+     b. NEVER create a second reservation for an item the user already has pending — ask which one to pay for instead.
+     c. ALWAYS ask the user: "What M-Pesa number should I send the payment prompt to?" — never skip this step.
+     d. Wait for the user to reply with their phone number.
+     e. Only then call trigger_mpesa_payment with the reservation_id and the phone number they provided.
+     f. Only say the prompt was sent if trigger_mpesa_payment returned success: true. If it returned an error, tell the user that error and do not claim a prompt was sent.
+     g. Tell the user to check their phone and enter their M-Pesa PIN to complete payment.
    - Track reservations using track_reservation.
+
+PENDING RESERVATIONS (awaiting payment):
+${pendingReservations || '- None. The user has no reservation awaiting payment.'}
+
 2. Trader:
    - View sales/revenue insights using get_sales_insights.
    - Analyze inventory/stock levels using analyze_stock.
@@ -364,6 +452,48 @@ CAPABILITIES:
         },
       }),
 
+      add_to_cart: tool({
+        description: 'Add a product to the resident\'s shopping cart on their behalf. Use this when the user wants the item kept in the cart ("add to cart", "weka kikapuni", "niletee") rather than ordered immediately. The item appears in their cart badge straight away and they can check out normally.',
+        inputSchema: jsonSchema<{ product_id: number; quantity: number }>({
+          type: 'object',
+          properties: {
+            product_id: { type: 'number', description: 'The ID of the product to add' },
+            quantity: { type: 'number', description: 'How many units to add (default 1)' },
+          },
+          required: ['product_id', 'quantity'],
+        }),
+        execute: async ({ product_id, quantity }: { product_id: number; quantity: number }) => {
+          if (!token) return { error: 'You must be logged in to add items to a cart.' };
+          if (role && role !== 'resident') return { error: 'Only residents have a shopping cart.' };
+          if (!product_id) return { error: 'No product was specified.' };
+
+          const qty = Math.max(1, Math.floor(Number(quantity) || 1));
+
+          try {
+            // The trader product route is owner-scoped, so residents read the
+            // public one instead. The cart needs the whole product payload.
+            const res = await laravelFetch(`/products/${product_id}/public`, token);
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok || !data?.data) {
+              return {
+                error: data?.message ?? `Product ${product_id} could not be found.`,
+              };
+            }
+
+            return {
+              success: true,
+              product: data.data,
+              quantity: qty,
+              message: `Added ${data.data.name} x${qty} to the cart. Tell the user it is in their cart and they can check out from the cart icon whenever they are ready.`,
+            };
+          } catch (err) {
+            console.error('[chat] add_to_cart failed:', err);
+            return { error: 'Could not reach the market right now. Please try again shortly.' };
+          }
+        },
+      }),
+
       create_reservation: tool({
         description: 'Create a reservation for a product on behalf of the user. The user must be authenticated. Call this BEFORE trigger_mpesa_payment.',
         inputSchema: jsonSchema<{ product_id: number; quantity: number; notes: string }>({
@@ -405,21 +535,39 @@ CAPABILITIES:
         }),
         execute: async ({ reservation_id, phone_number }: { reservation_id: number; phone_number: string }) => {
           if (!token) return { error: 'You must be logged in to make a payment.' };
-          const res = await laravelFetch('/payments/mpesa/stkpush', token, {
-            method: 'POST',
-            body: JSON.stringify({
-              phone_number,
-              type: 'reservation',
-              target_ids: [reservation_id],
-            }),
-          });
-          const data = await res.json();
-          if (!res.ok) return { error: data.message ?? 'Payment initiation failed. Please check the phone number and try again.' };
-          return {
-            success: true,
-            checkout_request_id: data.data?.checkout_request_id,
-            message: `M-Pesa STK push sent to ${phone_number}. Ask the user to enter their PIN on their phone to complete the payment. The reservation will be confirmed automatically once paid.`,
-          };
+          if (!reservation_id) return { error: 'No reservation to pay for. Create a reservation first.' };
+
+          try {
+            const res = await laravelFetch('/payments/mpesa/stkpush', token, {
+              method: 'POST',
+              body: JSON.stringify({
+                phone_number,
+                type: 'reservation',
+                target_ids: [reservation_id],
+              }),
+            });
+
+            // The endpoint can answer with HTML (framework error page) rather
+            // than JSON; parsing blind here would reject the whole chat turn.
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok) {
+              return {
+                error: data?.message
+                  ?? `Payment initiation failed (HTTP ${res.status}). Please check the phone number and try again.`,
+              };
+            }
+
+            return {
+              success: true,
+              reservation_id,
+              checkout_request_id: data?.data?.checkout_request_id,
+              message: `M-Pesa STK push sent to ${phone_number}. Ask the user to enter their PIN on their phone to complete the payment. The reservation will be confirmed automatically once paid.`,
+            };
+          } catch (err) {
+            console.error('[chat] trigger_mpesa_payment failed:', err);
+            return { error: 'Could not reach the payment service. Please try again shortly.' };
+          }
         },
       }),
 
@@ -432,7 +580,7 @@ CAPABILITIES:
         }),
         execute: async () => {
           if (!token) return { error: 'You must be logged in.' };
-          const res = await laravelFetch('/resident/reservations', token);
+          const res = await laravelFetch('/reservations', token);
           if (!res.ok) return { error: 'Failed to fetch reservations.' };
           const data = await res.json();
           const reservations = data.data?.data || data.data || [];
@@ -475,7 +623,7 @@ CAPABILITIES:
         }),
         execute: async () => {
           if (!token) return { error: 'You must be logged in as a trader.' };
-          const res = await laravelFetch('/trader/products', token);
+          const res = await laravelFetch('/products', token);
           if (!res.ok) return { error: 'Failed to fetch inventory data.' };
           const data = await res.json();
           const products = data.data?.data || data.data || [];
@@ -527,7 +675,7 @@ CAPABILITIES:
         }),
         execute: async (payload: { name: string; category_id: number; price: number; stock_quantity: number; unit: string; description?: string }) => {
           if (!token) return { error: 'You must be logged in as a trader.' };
-          const res = await laravelFetch('/trader/products', token, {
+          const res = await laravelFetch('/products', token, {
             method: 'POST',
             body: JSON.stringify(payload),
           });
@@ -555,7 +703,7 @@ CAPABILITIES:
           if (!token) return { error: 'You must be logged in as a trader.' };
 
           // First, get the product so we don't overwrite other required fields
-          const getRes = await laravelFetch(`/trader/products/${product_id}`, token);
+          const getRes = await laravelFetch(`/products/${product_id}`, token);
           if (!getRes.ok) return { error: 'Product not found.' };
           const productData = await getRes.json();
           const p = productData.data || productData;
@@ -569,7 +717,7 @@ CAPABILITIES:
             stock_quantity: stock_quantity,
           };
 
-          const res = await laravelFetch(`/trader/products/${product_id}`, token, {
+          const res = await laravelFetch(`/products/${product_id}`, token, {
             method: 'PUT',
             body: JSON.stringify(payload),
           });
@@ -660,7 +808,7 @@ CAPABILITIES:
       stopWhen: stepCountIs(6), // Allow up to 6 tool-call cycles (search trader → get products → reserve → pay)
     });
 
-    return Response.json({ response: result.text });
+    return Response.json({ response: result.text, actions: collectActions(result.steps) });
   } catch (error: unknown) {
     console.error('Chat API Error:', error);
     const msg = error instanceof Error ? error.message : 'Unknown error';

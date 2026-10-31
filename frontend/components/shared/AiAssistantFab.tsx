@@ -3,7 +3,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { BrainCircuit, X, Send, Loader2, MessagesSquare, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
+import { useCartStore } from '@/store/cartStore';
+import { ChatAction } from '@/types';
 import { toast } from 'sonner';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -133,8 +136,61 @@ export default function AiAssistantFab() {
   const [speechSupported, setSpeechSupported] = useState(false);
 
   const { user, token } = useAuthStore();
+  const queryClient = useQueryClient();
+  const addToCart = useCartStore((state) => state.addItem);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // ── Replay what the assistant did, as if the resident had tapped it ──────
+  // The tools run on the server, but the cart lives in this browser and the
+  // order history is React Query cache. Applying the returned actions is what
+  // makes an AI reservation show up in "My Orders" and an AI cart add bump the
+  // cart badge — no page refresh, no manual checkout step.
+  const applyActions = useCallback((actions: ChatAction[] = []) => {
+    let addedToCart = 0;
+    let cartItemName = '';
+
+    for (const action of actions) {
+      switch (action.type) {
+        case 'cart_add': {
+          const quantity = Math.max(1, Math.floor(Number(action.quantity) || 1));
+          for (let i = 0; i < quantity; i++) addToCart(action.product);
+          addedToCart += quantity;
+          cartItemName = action.product?.name ?? 'Item';
+          break;
+        }
+        case 'reservation_created':
+          queryClient.invalidateQueries({ queryKey: ['reservations'] });
+          queryClient.invalidateQueries({ queryKey: ['my-reservations-dashboard'] });
+          queryClient.invalidateQueries({ queryKey: ['resident-dashboard-stats'] });
+          queryClient.invalidateQueries({ queryKey: ['resident-menu-counts'] });
+          queryClient.invalidateQueries({ queryKey: ['resident-menu-counts-mobile'] });
+          toast.success(
+            action.reservation_code
+              ? `Reservation ${action.reservation_code} added to your orders`
+              : 'Reservation added to your orders'
+          );
+          break;
+        case 'payment_initiated':
+          // The callback flips the reservation to paid server-side; refresh so
+          // the list matches as soon as it lands.
+          queryClient.invalidateQueries({ queryKey: ['reservations'] });
+          queryClient.invalidateQueries({ queryKey: ['my-reservations-dashboard'] });
+          break;
+        case 'products_changed':
+          queryClient.invalidateQueries({ queryKey: ['my-products'] });
+          queryClient.invalidateQueries({ queryKey: ['product'] });
+          queryClient.invalidateQueries({ queryKey: ['trader-menu-counts'] });
+          break;
+      }
+    }
+
+    if (addedToCart > 0) {
+      toast.success(
+        `${cartItemName}${addedToCart > 1 ? ` ×${addedToCart}` : ''} added to your cart`
+      );
+    }
+  }, [addToCart, queryClient]);
 
   // ── Speech Support Detection ──────────────────────────────────────────────
   useEffect(() => {
@@ -294,6 +350,9 @@ export default function AiAssistantFab() {
 
       const aiMessage: ChatMessage = { role: 'assistant', content: data.response };
       setMessages(prev => [...prev, aiMessage]);
+
+      // Make the assistant's own writes visible in the UI (cart badge, orders).
+      applyActions(data.actions ?? []);
 
       // Speak the response if voice is enabled or we are in voice mode
       if (voiceEnabled || voiceMode) {

@@ -62,7 +62,8 @@ class ProductController extends Controller
             return $this->error('Please complete your trader profile setup first.', 'PROFILE_INCOMPLETE', 403);
         }
 
-        if (!$trader->stall_id) {
+        // Independent traders manage their own location — they don't need a stall_id
+        if ($trader->stall_type !== 'independent' && !$trader->stall_id) {
             return $this->error('Your stall has not been allocated by the admin yet.', 'STALL_PENDING', 403);
         }
 

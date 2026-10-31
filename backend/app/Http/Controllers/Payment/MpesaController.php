@@ -13,6 +13,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -67,8 +68,23 @@ class MpesaController extends Controller
 
         // ── Calculate amount per payment type ─────────────────────────────────
         if ($request->type === 'reservation') {
-            $reservationIds = $request->target_ids;
-            $reservations   = Reservation::whereIn('id', $reservationIds)->get();
+            $reservationIds = array_values(array_unique((array) $request->target_ids));
+            $reservations   = Reservation::whereIn('id', $reservationIds)
+                ->where('resident_id', $user->id)
+                ->get();
+
+            // Guard the empty case explicitly: the totals below dereference the
+            // first reservation, which fatals (and returns HTML/500) when the
+            // ids exist only in the caller's imagination. Scoping to the
+            // authenticated resident also stops one resident paying for, and
+            // reading the codes of, another resident's reservations.
+            if (count($reservationIds) === 0 || $reservations->count() !== count($reservationIds)) {
+                return $this->error(
+                    'These reservations were not found or do not belong to you. Please check the reservation and try again.',
+                    'RESERVATION_NOT_FOUND',
+                    422
+                );
+            }
 
             foreach ($reservations as $reservation) {
                 if ($reservation->status !== 'pending') {
@@ -224,12 +240,29 @@ class MpesaController extends Controller
      */
     protected function processSuccessfulPayment(Payment $payment, $checkoutRequestId, $transactionId, $responseData = [])
     {
-        $payment->update([
-            'status'              => 'completed',
-            'mpesa_transaction_id' => $transactionId,
-            'mpesa_response'      => empty($responseData) ? null : collect($responseData)->toJson(),
-            'paid_at'             => now(),
-        ]);
+        // Atomically claim the payment. Only the request that flips it out of a
+        // non-completed state continues; any duplicate or replayed callback
+        // updates zero rows and becomes a no-op. This is what makes retries —
+        // which Safaricom performs on non-200 responses — safe.
+        $claimed = Payment::whereKey($payment->getKey())
+            ->where('status', '!=', 'completed')
+            ->update([
+                'status'               => 'completed',
+                'mpesa_transaction_id' => $transactionId,
+                'mpesa_response'       => empty($responseData) ? null : $responseData,
+                'paid_at'              => now(),
+            ]);
+
+        if (! $claimed) {
+            Log::info('M-Pesa payment already finalised — skipping duplicate processing', [
+                'payment_id'          => $payment->id,
+                'checkout_request_id' => $checkoutRequestId,
+            ]);
+
+            return;
+        }
+
+        $payment->refresh();
 
         // Deduct wallet balance if partial wallet was used
         if ($payment->wallet_deduction > 0) {
@@ -393,15 +426,36 @@ class MpesaController extends Controller
      * M-Pesa Callback from Safaricom.
      * This endpoint handles both platform and custom-trader STK responses.
      * The routing is determined from the stored payment record, not from the callback.
+     *
+     * Safaricom signs nothing, so this endpoint is a hostile surface: the caller
+     * decides which CheckoutRequestID to settle. Three defences apply —
+     *   1. optional source verification (shared secret and/or IP allowlist),
+     *   2. strict payload coercion, so a malformed body can never 500,
+     *   3. idempotent settlement, so replays cannot double-credit a wallet.
      */
     public function callback(Request $request): JsonResponse
     {
         $data = $request->all();
         Log::info('M-Pesa Callback Received:', $data);
 
-        $body             = $data['Body']['stkCallback'];
-        $checkoutRequestId = $body['CheckoutRequestID'];
-        $resultCode       = $body['ResultCode'];
+        if (! $this->isCallbackAuthorised($request)) {
+            Log::warning('M-Pesa Callback rejected — source verification failed', [
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json(['ResultCode' => 1, 'ResultDesc' => 'Rejected'], 403);
+        }
+
+        $checkoutRequestId = data_get($data, 'Body.stkCallback.CheckoutRequestID');
+        $resultCode        = data_get($data, 'Body.stkCallback.ResultCode');
+
+        // Malformed body: acknowledge so Safaricom stops retrying something we
+        // can never process, but never touch payment state.
+        if (! is_string($checkoutRequestId) || $checkoutRequestId === '' || $resultCode === null) {
+            Log::warning('M-Pesa Callback: malformed payload ignored');
+
+            return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Success']);
+        }
 
         $payment = Payment::where('mpesa_checkout_request_id', $checkoutRequestId)->first();
         if (!$payment) {
@@ -409,31 +463,100 @@ class MpesaController extends Controller
             return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Success']);
         }
 
-        if ($resultCode == 0) {
-            $meta          = $body['CallbackMetadata']['Item'];
-            $transactionId = collect($meta)->firstWhere('Name', 'MpesaReceiptNumber')['Value'];
-
-            $this->processSuccessfulPayment($payment, $checkoutRequestId, $transactionId, $data);
-
-            Log::info('M-Pesa Payment Successful', [
-                'txn'     => $transactionId,
-                'routing' => $payment->routing,
-            ]);
-        } else {
-            $payment->update([
-                'status'         => 'failed',
-                'mpesa_response' => $data,
+        // A payment is settled exactly once. Anything that arrives afterwards —
+        // a Safaricom retry, or a forged "failed" callback trying to cancel a
+        // paid reservation — is discarded.
+        if ($payment->status === 'completed') {
+            Log::info('M-Pesa Callback: payment already completed, duplicate ignored', [
+                'checkout_request_id' => $checkoutRequestId,
+                'result_code'         => $resultCode,
             ]);
 
-            if ($payment->type === 'reservation') {
-                Reservation::where('mpesa_checkout_request_id', $checkoutRequestId)
-                    ->update(['status' => 'cancelled']);
+            return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Success']);
+        }
+
+        try {
+            if ((int) $resultCode === 0) {
+                $transactionId = collect(data_get($data, 'Body.stkCallback.CallbackMetadata.Item', []))
+                    ->firstWhere('Name', 'MpesaReceiptNumber')['Value'] ?? null;
+
+                if (! $transactionId) {
+                    Log::error('M-Pesa Callback: successful result without a receipt number', [
+                        'checkout_request_id' => $checkoutRequestId,
+                    ]);
+
+                    return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Success']);
+                }
+
+                $this->processSuccessfulPayment($payment, $checkoutRequestId, $transactionId, $data);
+
+                Log::info('M-Pesa Payment Successful', [
+                    'txn'     => $transactionId,
+                    'routing' => $payment->routing,
+                ]);
+            } else {
+                $payment->update([
+                    'status'         => 'failed',
+                    'mpesa_response' => $data,
+                ]);
+
+                if ($payment->type === 'reservation') {
+                    Reservation::where('mpesa_checkout_request_id', $checkoutRequestId)
+                        ->update(['status' => 'cancelled']);
+                }
+
+                Log::warning('M-Pesa Payment Failed for ' . $checkoutRequestId);
             }
+        } catch (\Throwable $e) {
+            // Return non-2xx so Safaricom retries. Retrying is safe because
+            // settlement is idempotent.
+            Log::error('M-Pesa Callback processing failed', [
+                'checkout_request_id' => $checkoutRequestId,
+                'error'               => $e->getMessage(),
+                'trace'               => $e->getTraceAsString(),
+            ]);
 
-            Log::warning('M-Pesa Payment Failed for ' . $checkoutRequestId);
+            return response()->json(['ResultCode' => 1, 'ResultDesc' => 'Error'], 500);
         }
 
         return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Success']);
+    }
+
+    /**
+     * Verify that an inbound callback really came from Safaricom.
+     *
+     * Verification is only enforced for the controls that are configured, so an
+     * existing deployment without MPESA_CALLBACK_SECRET (or an IP allowlist)
+     * keeps working while the operator rolls them out.
+     */
+    protected function isCallbackAuthorised(Request $request): bool
+    {
+        $secret     = (string) config('mpesa.callback_secret', '');
+        $allowedIps = (array) config('mpesa.callback_allowed_ips', []);
+
+        if ($secret === '' && empty($allowedIps)) {
+            // Callbacks are infrequent but not rare — warn once a day, not per hit.
+            if (Cache::add('mpesa:callback-unprotected-warned', true, now()->addDay())) {
+                Log::warning(
+                    'M-Pesa callback source verification is DISABLED. '
+                    . 'Set MPESA_CALLBACK_SECRET and/or MPESA_CALLBACK_ALLOWED_IPS before going live.'
+                );
+            }
+
+            return true;
+        }
+
+        if (! empty($allowedIps) && ! in_array($request->ip(), $allowedIps, true)) {
+            return false;
+        }
+
+        if ($secret !== '') {
+            $provided = (string) $request->query('token', $request->header('X-Mpesa-Callback-Token', ''));
+
+            return hash_equals($secret, $provided);
+        }
+
+        return true;
     }
 
     /**

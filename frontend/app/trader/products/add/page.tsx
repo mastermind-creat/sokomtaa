@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { 
-    ChevronLeft, 
-    Camera, 
-    Loader2, 
-    Package, 
-    Tag, 
+import {
+    ChevronLeft,
+    Camera,
+    Loader2,
+    Package,
+    Tag,
     Coins,
     Layers,
     Plus,
@@ -45,7 +45,7 @@ interface AddProductForm {
 }
 
 const DEFAULT_UNITS = [
-    'kg', 'g', 'piece', 'bunch', 'litre', 'ml', 'tray', 'crate', 'box', 'bag', 
+    'kg', 'g', 'piece', 'bunch', 'litre', 'ml', 'tray', 'crate', 'box', 'bag',
     'packet', 'bundle', 'net', 'bucket', 'dozen', 'cup', 'tin'
 ];
 
@@ -63,8 +63,11 @@ export default function AddProductPage() {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     const isMissingProfile = user?.role === 'trader' && !user?.trader;
-    const isPendingAllocation = user?.role === 'trader' && user?.trader && !user?.trader.stall_id;
-    
+    // Independent traders don't get a stall_id — they operate by GPS location
+    const isPendingAllocation = user?.role === 'trader' && user?.trader
+        && user?.trader.stall_type !== 'independent'
+        && !user?.trader.stall_id;
+
     // New Category State
     const [isAddingCategory, setIsAddingCategory] = useState(false);
     const [newCatName, setNewCatName] = useState('');
@@ -139,7 +142,7 @@ export default function AddProductPage() {
         onError: (error: any) => {
             console.error('Submission error:', error);
             let errorMessage = 'Server error occurred';
-            
+
             if (typeof error === 'string') {
                 errorMessage = error;
             } else if (error?.errors) {
@@ -152,7 +155,7 @@ export default function AddProductPage() {
             } else if (error?.message) {
                 errorMessage = error.message;
             }
-            
+
             alert(`Failed to save: ${errorMessage}`);
         }
     });
@@ -165,23 +168,23 @@ export default function AddProductPage() {
         formData.append('unit', data.unit);
         formData.append('stock_quantity', String(data.stock_quantity || 0));
         formData.append('description', data.description || '');
-        
+
         if (data.discount_price) formData.append('discount_price', data.discount_price);
         if (data.discount_start_date) formData.append('discount_start_date', data.discount_start_date);
         if (data.discount_end_date) formData.append('discount_end_date', data.discount_end_date);
-        
+
         if (data.image && data.image[0]) {
             formData.append('image', data.image[0]);
         }
-        
+
         mutation.mutate(formData);
     };
 
     return (
         <div className="flex flex-col min-h-screen bg-[#FAFAF8] pb-32 max-w-4xl mx-auto w-full pt-6">
             <div className="p-6">
-                <button 
-                    onClick={() => router.back()} 
+                <button
+                    onClick={() => router.back()}
                     aria-label="Go back"
                     title="Go back"
                     className="p-3 bg-white border border-gray-100 rounded-2xl text-text-secondary hover:text-green-950 transition-all active:scale-95 shadow-sm"
@@ -197,7 +200,7 @@ export default function AddProductPage() {
 
             <AnimatePresence>
                 {isMissingProfile && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="mx-6 mb-8 p-6 bg-rose-50 border border-rose-100 rounded-[2rem] flex items-center gap-4 shadow-sm"
@@ -213,7 +216,7 @@ export default function AddProductPage() {
                     </motion.div>
                 )}
                 {isPendingAllocation && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="mx-6 mb-8 p-6 bg-blue-50 border border-blue-100 rounded-[2rem] flex items-center gap-4 shadow-sm"
@@ -240,7 +243,7 @@ export default function AddProductPage() {
                             </div>
                             <label className="text-sm font-black text-green-950 uppercase tracking-wider">Product Photo</label>
                         </div>
-                        
+
                         <div className="relative aspect-square w-full max-w-[320px] mx-auto md:mx-0 rounded-[40px] border-2 border-dashed border-neutral-200 bg-white flex flex-col items-center justify-center overflow-hidden group hover:border-brand-500 transition-all shadow-sm">
                             {imagePreview ? (
                                 <>
@@ -262,9 +265,9 @@ export default function AddProductPage() {
                                     </div>
                                 </div>
                             )}
-                            <input 
-                                type="file" 
-                                accept="image/*" 
+                            <input
+                                type="file"
+                                accept="image/*"
                                 {...register('image', { required: 'Product photo is required' })}
                                 className="absolute inset-0 opacity-0 cursor-pointer"
                             />
@@ -281,7 +284,7 @@ export default function AddProductPage() {
                                 </div>
                                 <label className="text-sm font-black text-green-950 uppercase tracking-wider">Product Name</label>
                             </div>
-                            <input 
+                            <input
                                 {...register('name', { required: 'Name is required' })}
                                 className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl text-lg font-bold text-green-950 focus:ring-2 ring-brand-500 outline-none transition-all shadow-sm"
                                 placeholder="e.g. Fresh Sukuma Wiki"
@@ -299,7 +302,7 @@ export default function AddProductPage() {
                                     <label className="text-sm font-black text-green-950 uppercase tracking-wider">Price</label>
                                 </div>
                                 <div className="relative">
-                                    <input 
+                                    <input
                                         type="number"
                                         {...register('price', { required: 'Price is required' })}
                                         className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl font-black text-xl text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
@@ -318,7 +321,7 @@ export default function AddProductPage() {
                                     <label className="text-sm font-black text-green-950 uppercase tracking-wider">Initial Stock</label>
                                 </div>
                                 <div className="relative">
-                                    <input 
+                                    <input
                                         type="number"
                                         {...register('stock_quantity', { required: 'Quantity is required', min: 0 })}
                                         className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl font-black text-xl text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
@@ -340,7 +343,7 @@ export default function AddProductPage() {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="relative">
-                                    <input 
+                                    <input
                                         type="number"
                                         {...register('discount_price')}
                                         className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl font-bold text-base text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
@@ -350,7 +353,7 @@ export default function AddProductPage() {
                                 </div>
                                 <div className="relative">
                                     <label className="absolute -top-2 left-4 px-1 bg-[#FAFAF8] text-[9px] font-black uppercase text-neutral-500 z-10">Start Date</label>
-                                    <input 
+                                    <input
                                         type="datetime-local"
                                         {...register('discount_start_date')}
                                         className="w-full h-16 px-4 bg-white border border-gray-100 rounded-2xl font-bold text-sm text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
@@ -358,7 +361,7 @@ export default function AddProductPage() {
                                 </div>
                                 <div className="relative">
                                     <label className="absolute -top-2 left-4 px-1 bg-[#FAFAF8] text-[9px] font-black uppercase text-neutral-500 z-10">End Date</label>
-                                    <input 
+                                    <input
                                         type="datetime-local"
                                         {...register('discount_end_date')}
                                         className="w-full h-16 px-4 bg-white border border-gray-100 rounded-2xl font-bold text-sm text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm"
@@ -379,8 +382,8 @@ export default function AddProductPage() {
                             </div>
                             <label className="text-sm font-black text-green-950 uppercase tracking-wider">Category</label>
                         </div>
-                        
-                        <button 
+
+                        <button
                             type="button"
                             onClick={() => setIsAddingCategory(!isAddingCategory)}
                             className={cn(
@@ -394,7 +397,7 @@ export default function AddProductPage() {
 
                     <AnimatePresence>
                         {isAddingCategory && (
-                            <motion.div 
+                            <motion.div
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
                                 exit={{ opacity: 0, height: 0 }}
@@ -404,7 +407,7 @@ export default function AddProductPage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-800">English Name</label>
-                                            <input 
+                                            <input
                                                 value={newCatName}
                                                 onChange={(e) => setNewCatName(e.target.value)}
                                                 className="w-full h-12 px-4 bg-white border border-brand-100 rounded-xl text-sm font-bold text-green-950 outline-none"
@@ -413,7 +416,7 @@ export default function AddProductPage() {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase tracking-widest text-brand-800">Swahili Name</label>
-                                            <input 
+                                            <input
                                                 value={newCatNameSw}
                                                 onChange={(e) => setNewCatNameSw(e.target.value)}
                                                 className="w-full h-12 px-4 bg-white border border-brand-100 rounded-xl text-sm font-bold text-green-950 outline-none"
@@ -421,7 +424,7 @@ export default function AddProductPage() {
                                             />
                                         </div>
                                     </div>
-                                    <button 
+                                    <button
                                         type="button"
                                         disabled={!newCatName || !newCatNameSw || createCategoryMutation.isPending}
                                         onClick={() => createCategoryMutation.mutate({ name: newCatName, name_sw: newCatNameSw })}
@@ -443,8 +446,8 @@ export default function AddProductPage() {
                             categories.map((cat: Category) => (
                                 <label key={cat.id} className={cn(
                                     "flex items-center justify-center p-4 border-2 rounded-2xl cursor-pointer transition-all shadow-sm",
-                                    watch('category_id') === String(cat.id) 
-                                        ? 'border-brand-600 bg-brand-50' 
+                                    watch('category_id') === String(cat.id)
+                                        ? 'border-brand-600 bg-brand-50'
                                         : 'border-white bg-white hover:border-neutral-100'
                                 )}>
                                     <input type="radio" value={cat.id} {...register('category_id', { required: 'Please select a category' })} className="hidden" />
@@ -469,7 +472,7 @@ export default function AddProductPage() {
                                 </div>
                                 <label className="text-sm font-black text-green-950 uppercase tracking-wider">Unit</label>
                             </div>
-                            <button 
+                            <button
                                 type="button"
                                 onClick={() => setIsAddingUnit(!isAddingUnit)}
                                 className="text-[10px] font-black uppercase tracking-widest text-brand-600 hover:text-brand-700 transition-colors"
@@ -480,21 +483,21 @@ export default function AddProductPage() {
 
                         <AnimatePresence mode="wait">
                             {isAddingUnit ? (
-                                <motion.div 
+                                <motion.div
                                     key="new-unit"
                                     initial={{ opacity: 0, x: 10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -10 }}
                                     className="flex gap-2"
                                 >
-                                    <input 
+                                    <input
                                         value={newUnit}
                                         onChange={(e) => setNewUnit(e.target.value)}
                                         className="flex-1 h-16 px-6 bg-white border-2 border-brand-200 rounded-2xl font-bold text-green-950 outline-none shadow-sm"
                                         placeholder="Enter unit name..."
                                         autoFocus
                                     />
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={handleAddUnit}
                                         className="w-16 h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-200 active:scale-95 transition-all"
@@ -509,7 +512,7 @@ export default function AddProductPage() {
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: 10 }}
                                 >
-                                    <select 
+                                    <select
                                         {...register('unit', { required: 'Unit is required' })}
                                         className="w-full h-16 px-6 bg-white border border-gray-100 rounded-2xl font-bold text-green-950 outline-none focus:ring-2 ring-brand-500 shadow-sm appearance-none cursor-pointer"
                                     >
@@ -532,13 +535,13 @@ export default function AddProductPage() {
                                 </div>
                                 <label className="text-sm font-black text-green-950 uppercase tracking-wider">Description</label>
                             </div>
-                            <AiSuggestionButton 
-                                productName={watch('name')} 
+                            <AiSuggestionButton
+                                productName={watch('name')}
                                 category={categories.find((c: any) => String(c.id) === watch('category_id'))?.name}
                                 onSuggestion={(s) => setValue('description', s)}
                             />
                         </div>
-                        <textarea 
+                        <textarea
                             {...register('description')}
                             rows={2}
                             className="w-full p-6 bg-white border border-gray-100 rounded-2xl text-base font-medium text-green-950 focus:ring-2 ring-brand-500 outline-none transition-all shadow-sm resize-none"

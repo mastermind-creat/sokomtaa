@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import ReservationFlow from '@/components/resident/ReservationFlow';
 import CartFlow from '@/components/resident/CartFlow';
 import ReviewCard from '@/components/shared/ReviewCard';
+import ProductDetailSheet from '@/components/resident/ProductDetailSheet';
 import { useCartStore } from '@/store/cartStore';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -37,6 +38,7 @@ export default function TraderStorefrontPage() {
     const router = useRouter();
     const [selectedTab, setSelectedTab] = useState<Tab>('products');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [detailProduct, setDetailProduct] = useState<Product | null>(null);
     const { t } = useTranslation();
     const { addItem, items, getTotalItems, getTotalAmount } = useCartStore();
     const [showCart, setShowCart] = useState(false);
@@ -226,7 +228,7 @@ export default function TraderStorefrontPage() {
                                 <motion.div
                                     key={product.id}
                                     whileTap={{ scale: 0.98 }}
-                                    onClick={() => setSelectedProduct(product)}
+                                    onClick={() => setDetailProduct(product)}
                                     className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden group cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
                                 >
                                     <div className="aspect-square bg-neutral-50 relative overflow-hidden">
@@ -478,6 +480,28 @@ export default function TraderStorefrontPage() {
 
             {/* ── Sheets ─────────────────────────────────────────────── */}
             <AnimatePresence>
+                {/* Product Detail Sheet — opens first when product is tapped */}
+                {detailProduct && (
+                    <ProductDetailSheet
+                        product={detailProduct}
+                        trader={trader}
+                        similarProducts={products.filter(
+                            (p) =>
+                                p.id !== detailProduct.id &&
+                                p.category_id === detailProduct.category_id &&
+                                p.stock_status !== 'out_of_stock'
+                        ).slice(0, 8)}
+                        onClose={() => setDetailProduct(null)}
+                        onReserve={(p) => {
+                            setDetailProduct(null);
+                            setSelectedProduct(p);
+                        }}
+                        onAddToCart={(p) => {
+                            addItem(p);
+                            setDetailProduct(null);
+                        }}
+                    />
+                )}
                 {selectedProduct && (
                     <ReservationFlow
                         product={selectedProduct}

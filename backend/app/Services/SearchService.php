@@ -8,6 +8,7 @@ use App\Models\Trader;
 use App\Models\Market;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class SearchService
@@ -168,6 +169,12 @@ class SearchService
         ?float $lng,
         float  $radius
     ): Collection {
+        // MATCH ... AGAINST is MySQL-only. On any other driver (the SQLite test
+        // database) fall through to the fuzzy LIKE stage instead of throwing.
+        if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            return collect();
+        }
+
         $searchString = implode(' ', $terms);
 
         $q = $this->baseProductQuery($categoryId, $lat, $lng, $radius);

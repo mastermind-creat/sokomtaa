@@ -49,6 +49,26 @@ class MpesaService
     }
 
     /**
+     * The CallBackURL handed to Daraja.
+     *
+     * When MPESA_CALLBACK_SECRET is configured it is appended as a token query
+     * parameter, which the callback endpoint verifies before processing. An
+     * empty secret leaves the URL untouched so existing deployments keep working.
+     */
+    protected function callbackUrlWithToken(): string
+    {
+        $secret = (string) config('mpesa.callback_secret', '');
+
+        if ($secret === '' || (string) $this->callbackUrl === '') {
+            return (string) $this->callbackUrl;
+        }
+
+        $separator = str_contains($this->callbackUrl, '?') ? '&' : '?';
+
+        return $this->callbackUrl . $separator . 'token=' . urlencode($secret);
+    }
+
+    /**
      * Create an MpesaService instance pre-loaded with a trader's own Daraja credentials.
      * Falls back to the platform instance if the trader has no valid custom credentials.
      */
@@ -135,7 +155,7 @@ class MpesaService
             'PartyA'            => $phoneNumber,
             'PartyB'            => $this->shortcode,
             'PhoneNumber'       => $phoneNumber,
-            'CallBackURL'       => $this->callbackUrl,
+            'CallBackURL'       => $this->callbackUrlWithToken(),
             'AccountReference'  => $accountReference,
             'TransactionDesc'   => $transactionDesc,
         ];
