@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Loader2, CheckCircle2, XCircle, MailCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -16,8 +16,12 @@ type Status = 'loading' | 'success' | 'error' | 'already_verified';
  * The backend sends this URL in the verification email. This page reads the
  * params, calls the backend, shows the result, and then directs the user to
  * sign in — it never auto-redirects to the dashboard.
+ *
+ * The work lives in a child component because useSearchParams() opts the page
+ * out of static prerendering; without a Suspense boundary above it the export
+ * fails with "useSearchParams() should be wrapped in a suspense boundary".
  */
-export default function VerifyEmailConfirmPage() {
+function VerifyEmailConfirmContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { logout } = useAuthStore();
@@ -159,5 +163,20 @@ export default function VerifyEmailConfirmPage() {
                 </div>
             </motion.div>
         </div>
+    );
+}
+
+export default function VerifyEmailConfirmPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen w-full bg-[#FAFAF8] flex flex-col items-center justify-center gap-4">
+                    <Loader2 size={36} className="text-brand-600 animate-spin" />
+                    <p className="text-text-secondary">Verifying your email...</p>
+                </div>
+            }
+        >
+            <VerifyEmailConfirmContent />
+        </Suspense>
     );
 }

@@ -8,6 +8,12 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+  // Keep dev artifacts apart from build artifacts. When `next dev` and
+  // `next build` share .next, the dev server rewrites chunks while the build
+  // reads them, which surfaces as "Could not find files for /_error in
+  // .next/build-manifest.json" followed by "Cannot read properties of
+  // undefined (reading 'call')" while prerendering the first page.
+  distDir: process.env.NODE_ENV === 'development' ? '.next-dev' : '.next',
   eslint: {
     ignoreDuringBuilds: true,
   },
